@@ -1,16 +1,18 @@
-import { useState, useEffect, useContext, createContext, ReactNode } from "react";
+import { useState, useEffect, useContext, createContext, ReactNode, useCallback } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  isAdmin: boolean;
+  applicationStatus: string | null;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
+  refreshApplicationStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,22 +21,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
+
+  const fetchUserMeta = useCallback(async (userId: string) => {
+    // Check admin role
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    setIsAdmin(!!roleData);
+
+    // Check application status via security definer function
+    const { data: statusData } = await supabase.rpc("get_application_status", { _user_id: userId });
+    setApplicationStatus(statusData ?? null);
+  }, []);
+
+  const refreshApplicationStatus = useCallback(async () => {
+    if (user) {
+      await fetchUserMeta(user.id);
+    }
+  }, [user, fetchUserMeta]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        // Defer to avoid deadlocks with Supabase auth
+        setTimeout(() => fetchUserMeta(session.user.id), 0);
+      } else {
+        setIsAdmin(false);
+        setApplicationStatus(null);
+      }
       setLoading(false);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      if (session?.user) {
+        fetchUserMeta(session.user.id).then(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchUserMeta]);
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const { error } = await supabase.auth.signUp({
@@ -65,7 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signUp, signIn, signOut, resetPassword }}>
+    <AuthContext.Provider value={{ session, user, loading, isAdmin, applicationStatus, signUp, signIn, signOut, resetPassword, refreshApplicationStatus }}>
       {children}
     </AuthContext.Provider>
   );
