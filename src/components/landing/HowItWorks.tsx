@@ -28,7 +28,7 @@ const HowItWorks = () => {
       <div className="container mx-auto px-6">
         <div className="text-center mb-20">
           <span className="text-xs font-mono uppercase tracking-[0.2em] text-primary font-bold">How It Works</span>
-          <h2 className="text-3xl md:text-5xl font-extrabold mt-4 tracking-tight">
+          <h2 className="text-3xl md:text-5xl font-extrabold mt-4 tracking-tight text-foreground">
             Three steps. Zero friction.
           </h2>
         </div>
@@ -43,12 +43,12 @@ const HowItWorks = () => {
               transition={{ delay: i * 0.15, duration: 0.6 }}
               className="relative group"
             >
-              <div className="text-6xl font-black text-gradient opacity-20 absolute -top-4 -left-2">{step.num}</div>
+              <div className="text-6xl font-extrabold text-gradient opacity-20 absolute -top-4 -left-2">{step.num}</div>
               <div className="relative pt-8">
                 <div className="w-14 h-14 rounded-2xl bg-gradient-primary flex items-center justify-center mb-6 shadow-glow group-hover:shadow-glow-strong transition-shadow">
                   <step.icon className="w-6 h-6 text-primary-foreground" />
                 </div>
-                <h3 className="text-xl font-bold mb-3">{step.title}</h3>
+                <h3 className="text-xl font-bold mb-3 text-foreground">{step.title}</h3>
                 <p className="text-muted-foreground leading-relaxed">{step.description}</p>
               </div>
             </motion.div>

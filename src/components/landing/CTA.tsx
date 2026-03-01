@@ -5,8 +5,7 @@ import { motion } from "framer-motion";
 
 const CTA = () => {
   return (
-    <section className="py-28 bg-hero relative overflow-hidden">
-      {/* Glowing orbs */}
+    <section className="py-28 section-dark relative overflow-hidden">
       <div className="absolute top-1/2 left-1/4 w-80 h-80 bg-primary/8 blur-[150px] rounded-full" />
       <div className="absolute bottom-0 right-1/4 w-60 h-60 bg-primary/5 blur-[120px] rounded-full" />
 
@@ -28,12 +27,12 @@ const CTA = () => {
             <Sparkles className="w-8 h-8 text-primary" />
           </motion.div>
 
-          <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight mb-6" style={{ color: "hsl(0 0% 96%)" }}>
+          <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight mb-6 text-white">
             Ready to forge<br />
             <span className="text-gradient">your data?</span>
           </h2>
 
-          <p className="text-lg mb-10 max-w-xl mx-auto" style={{ color: "hsl(0 0% 50%)" }}>
+          <p className="text-lg mb-10 max-w-xl mx-auto text-white/50">
             Join thousands of analysts, founders, and researchers who've already made the switch. Start free — no credit card required.
           </p>
 
@@ -43,21 +42,19 @@ const CTA = () => {
                 Get Started Free <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="h-14 text-base font-medium rounded-xl" style={{ color: "hsl(0 0% 70%)", borderColor: "hsl(0 0% 18%)" }}>
+            <Button asChild variant="outline" size="lg" className="h-14 text-base font-medium rounded-xl text-white/70 border-white/15 hover:bg-white/5 hover:text-white">
               <Link to="/dashboard">
                 View Demo
               </Link>
             </Button>
           </div>
 
-          {/* Trust bar */}
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ delay: 0.5, duration: 0.6 }}
-            className="mt-12 flex flex-wrap items-center justify-center gap-6 text-xs font-mono uppercase tracking-wider"
-            style={{ color: "hsl(0 0% 35%)" }}
+            className="mt-12 flex flex-wrap items-center justify-center gap-6 text-xs font-mono uppercase tracking-wider text-white/30"
           >
             <span>🔒 SOC 2 Compliant</span>
             <span className="hidden sm:inline">•</span>
