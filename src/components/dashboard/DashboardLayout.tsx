@@ -16,7 +16,8 @@ const breadcrumbMap: Record<string, string> = {
 const DashboardLayout = () => {
   const location = useLocation();
   const pathSegments = location.pathname.split("/").filter(Boolean);
-  const pageTitle = breadcrumbMap[location.pathname] || pathSegments[pathSegments.length - 1] || "Dashboard";
+  const isProjectDetail = /^\/dashboard\/projects\/[^/]+$/.test(location.pathname);
+  const pageTitle = breadcrumbMap[location.pathname] || (isProjectDetail ? "Project" : pathSegments[pathSegments.length - 1] || "Dashboard");
 
   return (
     <SidebarProvider>
@@ -33,7 +34,7 @@ const DashboardLayout = () => {
               <ThemeToggle />
             </div>
           </header>
-          <main className="flex-1 p-4 sm:p-6 overflow-auto">
+          <main className={`flex-1 overflow-auto ${isProjectDetail ? "" : "p-4 sm:p-6"}`}>
             <Outlet />
           </main>
         </div>
