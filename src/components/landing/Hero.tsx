@@ -138,7 +138,25 @@ const Hero = () => {
         </div>
 
 
-
+        {/* Trusted by logos */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.9, duration: 0.7 }}
+          className="mt-20 flex flex-col items-center gap-5"
+        >
+          <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-white/20">Trusted by teams at</p>
+          <div className="flex items-center gap-8 md:gap-12 flex-wrap justify-center">
+            {["Deloitte", "McKinsey", "Accenture", "PwC", "KPMG"].map((name) => (
+              <span
+                key={name}
+                className="text-sm md:text-base font-semibold tracking-wide text-white/[0.12] hover:text-white/25 transition-colors duration-300 select-none"
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+        </motion.div>
       </div>
 
       {/* Scroll indicator */}
