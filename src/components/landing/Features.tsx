@@ -12,7 +12,7 @@ const features = [
 
 const Features = () => {
   return (
-    <section className="py-28 bg-hero relative" id="features">
+    <section className="py-28 section-dark relative" id="features">
       {/* Subtle grid pattern */}
       <div className="absolute inset-0 opacity-[0.03]" style={{
         backgroundImage: "linear-gradient(hsl(0 0% 100%) 1px, transparent 1px), linear-gradient(90deg, hsl(0 0% 100%) 1px, transparent 1px)",
@@ -22,10 +22,10 @@ const Features = () => {
       <div className="container mx-auto px-6 relative">
         <div className="text-center mb-20">
           <span className="text-xs font-mono uppercase tracking-[0.2em] text-primary font-bold">Features</span>
-          <h2 className="text-3xl md:text-5xl font-extrabold mt-4 tracking-tight" style={{ color: "hsl(0 0% 96%)" }}>
+          <h2 className="text-3xl md:text-5xl font-extrabold mt-4 tracking-tight text-white">
             Built different. Built bold.
           </h2>
-          <p className="text-lg mt-4 max-w-2xl mx-auto" style={{ color: "hsl(0 0% 50%)" }}>
+          <p className="text-lg mt-4 max-w-2xl mx-auto text-white/50">
             Everything you need to turn chaos into clarity.
           </p>
         </div>
@@ -38,17 +38,13 @@ const Features = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.08, duration: 0.5 }}
-              className="group p-6 rounded-2xl border transition-all duration-300 hover:border-primary/30"
-              style={{
-                background: "hsl(0 0% 6%)",
-                borderColor: "hsl(0 0% 12%)",
-              }}
+              className="group p-6 rounded-2xl border transition-all duration-300 hover:border-primary/30 bg-white/[0.03] border-white/[0.08]"
             >
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary/20 transition-colors">
                 <feature.icon className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="text-lg font-bold mb-2" style={{ color: "hsl(0 0% 92%)" }}>{feature.title}</h3>
-              <p className="text-sm leading-relaxed" style={{ color: "hsl(0 0% 50%)" }}>{feature.description}</p>
+              <h3 className="text-lg font-bold mb-2 text-white/90">{feature.title}</h3>
+              <p className="text-sm leading-relaxed text-white/50">{feature.description}</p>
             </motion.div>
           ))}
         </div>

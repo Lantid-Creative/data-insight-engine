@@ -6,7 +6,7 @@ import heroBg from "@/assets/hero-bg.jpg";
 
 const Hero = () => {
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-hero">
+    <section className="relative min-h-screen flex items-center overflow-hidden section-dark">
       {/* Background */}
       <div className="absolute inset-0">
         <img src={heroBg} alt="" className="w-full h-full object-cover opacity-40" />
@@ -14,8 +14,8 @@ const Hero = () => {
       </div>
 
       {/* Floating orbs */}
-      <div className="absolute top-1/3 right-1/4 w-72 h-72 rounded-full bg-primary/8 blur-[120px] animate-pulse-glow" />
-      <div className="absolute bottom-1/4 left-1/3 w-96 h-96 rounded-full bg-primary/5 blur-[150px] animate-pulse-glow" style={{ animationDelay: "1.5s" }} />
+      <div className="absolute top-1/3 right-1/4 w-72 h-72 rounded-full bg-primary/8 blur-[120px] animate-pulse" />
+      <div className="absolute bottom-1/4 left-1/3 w-96 h-96 rounded-full bg-primary/5 blur-[150px] animate-pulse" style={{ animationDelay: "1.5s" }} />
 
       <div className="container relative z-10 mx-auto px-6 py-32">
         <motion.div
@@ -35,13 +35,13 @@ const Hero = () => {
             <span className="text-sm font-medium text-primary font-mono uppercase tracking-wider">Now in Beta</span>
           </motion.div>
 
-          <h1 className="text-5xl sm:text-6xl md:text-8xl font-black tracking-tight leading-[0.95] mb-8" style={{ color: "hsl(0 0% 98%)" }}>
+          <h1 className="text-5xl sm:text-6xl md:text-8xl font-extrabold tracking-tight leading-[0.95] mb-8 text-white">
             Your Data.
             <br />
             <span className="text-gradient">Forged Bold.</span>
           </h1>
 
-          <p className="text-lg md:text-xl max-w-xl mb-12 leading-relaxed" style={{ color: "hsl(0 0% 60%)" }}>
+          <p className="text-lg md:text-xl max-w-xl mb-12 leading-relaxed text-white/60">
             Drop any file. Get AI-powered analysis, insights, and professionally formatted reports — in seconds, not hours.
           </p>
 
@@ -51,7 +51,7 @@ const Hero = () => {
                 Start for Free <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="h-14 text-base font-medium rounded-xl border-primary/20 hover:bg-primary/5" style={{ color: "hsl(0 0% 80%)", borderColor: "hsl(0 0% 20%)" }}>
+            <Button asChild variant="outline" size="lg" className="h-14 text-base font-medium rounded-xl border-white/15 text-white/70 hover:bg-white/5 hover:text-white">
               <Link to="/dashboard">
                 See it in action
               </Link>
@@ -72,8 +72,8 @@ const Hero = () => {
             { value: "<5s", label: "Avg. Analysis Time" },
           ].map((stat) => (
             <div key={stat.label}>
-              <div className="text-2xl md:text-3xl font-black text-gradient">{stat.value}</div>
-              <div className="text-xs font-mono uppercase tracking-wider mt-1" style={{ color: "hsl(0 0% 45%)" }}>{stat.label}</div>
+              <div className="text-2xl md:text-3xl font-extrabold text-gradient">{stat.value}</div>
+              <div className="text-xs font-mono uppercase tracking-wider mt-1 text-white/35">{stat.label}</div>
             </div>
           ))}
         </motion.div>

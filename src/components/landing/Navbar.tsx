@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -28,27 +29,31 @@ const Navbar = () => {
           <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
             <span className="text-sm font-black text-primary-foreground">DA</span>
           </div>
-          <span className="text-xl font-extrabold tracking-tight">
+          <span className="text-xl font-extrabold tracking-tight text-foreground">
             Data<span className="text-gradient">Afro</span>
           </span>
         </Link>
 
         {/* Desktop */}
-        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-          <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-          <a href="#use-cases" className="hover:text-foreground transition-colors">Use Cases</a>
-          <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
-          <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
-          <Link to="/login" className="hover:text-foreground transition-colors">Log In</Link>
+        <div className="hidden md:flex items-center gap-6 text-sm font-medium">
+          <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</a>
+          <a href="#use-cases" className="text-muted-foreground hover:text-foreground transition-colors">Use Cases</a>
+          <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
+          <a href="#faq" className="text-muted-foreground hover:text-foreground transition-colors">FAQ</a>
+          <Link to="/login" className="text-muted-foreground hover:text-foreground transition-colors">Log In</Link>
+          <ThemeToggle />
           <Button asChild size="sm" className="bg-gradient-primary text-primary-foreground hover:opacity-90 shadow-glow rounded-lg">
             <Link to="/register">Get Started Free</Link>
           </Button>
         </div>
 
         {/* Mobile toggle */}
-        <button className="md:hidden text-foreground" onClick={() => setOpen(!open)}>
-          {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="md:hidden flex items-center gap-2">
+          <ThemeToggle />
+          <button className="text-foreground" onClick={() => setOpen(!open)}>
+            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile menu */}
