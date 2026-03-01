@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import heroBg from "@/assets/hero-bg.jpg";
 
-const rotatingWords = ["Forged Bold.", "Made Clear.", "Turned Smart.", "Unleashed."];
+const rotatingWords = ["Forged Bold.", "Made Clear.", "Turned Smart.", "Decoded."];
 
 const Hero = () => {
   const [wordIndex, setWordIndex] = useState(0);
@@ -45,7 +45,7 @@ const Hero = () => {
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/10 mb-8"
             >
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-sm font-medium text-primary font-mono uppercase tracking-wider">Now in Beta</span>
+              <span className="text-sm font-medium text-primary font-mono uppercase tracking-wider">Private Beta · Invite Only</span>
             </motion.div>
 
             <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight leading-[0.95] mb-8 text-white">
@@ -68,13 +68,13 @@ const Hero = () => {
             </h1>
 
             <p className="text-lg md:text-xl max-w-xl mb-12 leading-relaxed text-white/55">
-              Drop any file — CSV, PDF, Excel, images. Get AI-powered analysis, insights, and professionally formatted reports in seconds.
+              Enterprise-grade file intelligence for data teams and research labs. Ingest any format — CSV, PDF, Excel, DICOM, Parquet — and get structured insights in seconds, not sprints.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Button asChild size="lg" className="bg-gradient-primary text-primary-foreground px-8 h-14 text-base font-bold shadow-glow-strong hover:opacity-90 transition-all rounded-xl group">
                 <Link to="/register">
-                  Start for Free
+                  Request Early Access
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
@@ -145,9 +145,9 @@ const Hero = () => {
           transition={{ delay: 0.9, duration: 0.7 }}
           className="mt-20 flex flex-col items-center gap-5"
         >
-          <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-white/20">Trusted by teams at</p>
+          <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-white/20">Early adopters from</p>
           <div className="flex items-center gap-8 md:gap-12 flex-wrap justify-center">
-            {["Deloitte", "McKinsey", "Accenture", "PwC", "KPMG"].map((name) => (
+            {["Palantir", "Snowflake", "Databricks", "MIT Media Lab", "DeepMind"].map((name) => (
               <span
                 key={name}
                 className="text-sm md:text-base font-semibold tracking-wide text-white/[0.12] hover:text-white/25 transition-colors duration-300 select-none"
