@@ -1,10 +1,24 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import { Clock, LogOut, Mail } from "lucide-react";
 
 const PendingApprovalPage = () => {
-  const { user, signOut, applicationStatus } = useAuth();
+  const navigate = useNavigate();
+  const { user, signOut, applicationStatus, isAdmin, loading } = useAuth();
+
+  useEffect(() => {
+    if (loading || !user) return;
+    if (isAdmin) {
+      navigate("/admin", { replace: true });
+      return;
+    }
+    if (applicationStatus === "approved") {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [loading, user, isAdmin, applicationStatus, navigate]);
 
   const isRejected = applicationStatus === "rejected";
 
@@ -46,7 +60,7 @@ const PendingApprovalPage = () => {
           </div>
         )}
 
-        <Button variant="outline" onClick={signOut} className="rounded-xl gap-2">
+        <Button variant="outline" onClick={() => void signOut()} className="rounded-xl gap-2">
           <LogOut className="w-4 h-4" />
           Sign Out
         </Button>
