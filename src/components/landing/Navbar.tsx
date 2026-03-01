@@ -39,7 +39,7 @@ const Navbar = () => {
           <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</a>
           <a href="#use-cases" className="text-muted-foreground hover:text-foreground transition-colors">Use Cases</a>
           <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
-          <a href="#faq" className="text-muted-foreground hover:text-foreground transition-colors">FAQ</a>
+          <Link to="/consulting" className="text-muted-foreground hover:text-foreground transition-colors">Consulting</Link>
           <Link to="/login" className="text-muted-foreground hover:text-foreground transition-colors">Log In</Link>
           <ThemeToggle />
           <Button asChild size="sm" className="bg-gradient-primary text-primary-foreground hover:opacity-90 shadow-glow rounded-lg">
