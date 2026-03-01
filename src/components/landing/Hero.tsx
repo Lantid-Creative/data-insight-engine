@@ -137,24 +137,8 @@ const Hero = () => {
           </motion.div>
         </div>
 
-        {/* Stats bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7, duration: 0.7 }}
-          className="mt-20 grid grid-cols-3 gap-8 max-w-lg"
-        >
-          {[
-            { value: "50K+", label: "Files Processed" },
-            { value: "12", label: "Output Formats" },
-            { value: "4s", label: "Avg. Analysis" },
-          ].map((stat) => (
-            <div key={stat.label}>
-              <div className="text-2xl md:text-3xl font-extrabold text-gradient">{stat.value}</div>
-              <div className="text-[10px] font-mono uppercase tracking-wider mt-1 text-white/30">{stat.label}</div>
-            </div>
-          ))}
-        </motion.div>
+
+
       </div>
 
       {/* Scroll indicator */}
