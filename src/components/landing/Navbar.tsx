@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LayoutDashboard, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAuth } from "@/hooks/useAuth";
 
 const navLinks = [
   { label: "Features", href: "#features" },
@@ -17,6 +18,7 @@ const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("");
+  const { user, isAdmin, loading } = useAuth();
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -24,7 +26,6 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
-  // Active section tracking
   useEffect(() => {
     const sectionIds = navLinks.map((l) => l.href.replace("#", ""));
     const observer = new IntersectionObserver(
@@ -52,6 +53,9 @@ const Navbar = () => {
     setOpen(false);
   };
 
+  const dashboardLink = isAdmin ? "/admin" : "/dashboard";
+  const dashboardLabel = isAdmin ? "Admin Panel" : "Dashboard";
+
   return (
     <motion.nav
       initial={{ y: -100 }}
@@ -71,7 +75,7 @@ const Navbar = () => {
           </span>
         </Link>
 
-        {/* Desktop */}
+        {/* Desktop nav links */}
         <div className="hidden md:flex items-center gap-1 text-sm font-medium">
           {navLinks.map((link) => (
             <a
@@ -96,14 +100,26 @@ const Navbar = () => {
           ))}
         </div>
 
+        {/* Desktop auth buttons */}
         <div className="hidden md:flex items-center gap-3">
-          <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2">
-            Log In
-          </Link>
+          {!loading && user ? (
+            <Button asChild size="sm" className="bg-gradient-primary text-primary-foreground hover:opacity-90 shadow-glow rounded-lg font-bold gap-2">
+              <Link to={dashboardLink}>
+                {isAdmin ? <Shield className="w-3.5 h-3.5" /> : <LayoutDashboard className="w-3.5 h-3.5" />}
+                {dashboardLabel}
+              </Link>
+            </Button>
+          ) : !loading ? (
+            <>
+              <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2">
+                Log In
+              </Link>
+              <Button asChild size="sm" className="bg-gradient-primary text-primary-foreground hover:opacity-90 shadow-glow rounded-lg font-bold">
+                <Link to="/register">Request Access</Link>
+              </Button>
+            </>
+          ) : null}
           <ThemeToggle />
-          <Button asChild size="sm" className="bg-gradient-primary text-primary-foreground hover:opacity-90 shadow-glow rounded-lg font-bold">
-            <Link to="/register">Get Started Free</Link>
-          </Button>
         </div>
 
         {/* Mobile toggle */}
@@ -134,12 +150,23 @@ const Navbar = () => {
                 {link.label}
               </a>
             ))}
-            <Link to="/login" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2">
-              Log In
-            </Link>
-            <Button asChild className="w-full bg-gradient-primary text-primary-foreground mt-2">
-              <Link to="/register">Get Started Free</Link>
-            </Button>
+            {!loading && user ? (
+              <Button asChild className="w-full bg-gradient-primary text-primary-foreground mt-2 gap-2">
+                <Link to={dashboardLink}>
+                  {isAdmin ? <Shield className="w-3.5 h-3.5" /> : <LayoutDashboard className="w-3.5 h-3.5" />}
+                  {dashboardLabel}
+                </Link>
+              </Button>
+            ) : !loading ? (
+              <>
+                <Link to="/login" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2">
+                  Log In
+                </Link>
+                <Button asChild className="w-full bg-gradient-primary text-primary-foreground mt-2">
+                  <Link to="/register">Request Access</Link>
+                </Button>
+              </>
+            ) : null}
           </motion.div>
         )}
       </AnimatePresence>
