@@ -30,6 +30,7 @@ import UploadPage from "./pages/dashboard/UploadPage";
 import ProcessingPage from "./pages/dashboard/ProcessingPage";
 import ReportsPage from "./pages/dashboard/ReportsPage";
 import ProjectsPage from "./pages/dashboard/ProjectsPage";
+import ProjectDetailPage from "./pages/dashboard/ProjectDetailPage";
 import BillingPage from "./pages/dashboard/BillingPage";
 import SettingsPage from "./pages/dashboard/SettingsPage";
 import ApiAccessPage from "./pages/dashboard/ApiAccessPage";
@@ -68,6 +69,7 @@ const App = () => (
                 <Route path="process" element={<ProcessingPage />} />
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="projects" element={<ProjectsPage />} />
+                <Route path="projects/:projectId" element={<ProjectDetailPage />} />
                 <Route path="billing" element={<BillingPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="api" element={<ApiAccessPage />} />
