@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Eye, EyeOff, Zap, Shield, BarChart3 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,10 +22,30 @@ const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
     const { error } = await signIn(email, password);
-    setLoading(false);
     if (error) {
+      setLoading(false);
       toast({ title: "Sign in failed", description: error, variant: "destructive" });
+      return;
+    }
+
+    // Check role to route appropriately
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      setLoading(false);
+      if (roleData) {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
     } else {
+      setLoading(false);
       navigate("/dashboard");
     }
   };
@@ -151,7 +172,7 @@ const LoginPage = () => {
 
           <p className="text-center text-sm text-muted-foreground mt-8">
             Don't have an account?{" "}
-            <Link to="/register" className="text-primary hover:underline font-semibold">Create one free</Link>
+            <Link to="/register" className="text-primary hover:underline font-semibold">Request early access</Link>
           </p>
         </motion.div>
       </div>
