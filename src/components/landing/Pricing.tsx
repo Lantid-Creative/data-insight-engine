@@ -5,83 +5,85 @@ import { motion } from "framer-motion";
 
 const tiers = [
   {
-    name: "Free",
+    name: "Starter",
     price: "$0",
     period: "forever",
-    description: "Get started with basic analysis",
-    features: ["3 analyses per month", "2 file outputs", "CSV & JSON uploads", "Basic insights", "Community support"],
-    cta: "Get Started",
+    description: "For trying things out",
+    features: ["3 analyses / month", "2 output files", "CSV & JSON uploads", "Basic insights"],
+    cta: "Start Free",
     highlighted: false,
   },
   {
     name: "Pro",
     price: "$29",
-    period: "per month",
-    description: "For professionals and teams",
-    features: ["50 analyses per month", "5 file outputs per analysis", "All file formats", "Advanced reports", "Priority support", "API access"],
-    cta: "Start Pro Trial",
+    period: "mo",
+    description: "For serious builders",
+    features: ["50 analyses / month", "5 outputs per analysis", "All file formats", "Advanced AI reports", "Priority support", "API access"],
+    cta: "Go Pro",
     highlighted: true,
   },
   {
     name: "Enterprise",
     price: "Custom",
-    period: "contact us",
-    description: "Unlimited power for organizations",
-    features: ["Unlimited analyses", "Unlimited outputs", "White-label reports", "Custom AI prompts", "Dedicated support", "SSO & SAML", "SLA guarantee"],
-    cta: "Contact Sales",
+    period: "",
+    description: "For teams & orgs",
+    features: ["Unlimited everything", "White-label exports", "Custom AI prompts", "Dedicated support", "SSO & SAML", "SLA guarantee"],
+    cta: "Talk to Us",
     highlighted: false,
   },
 ];
 
 const Pricing = () => {
   return (
-    <section className="py-24 bg-background" id="pricing">
+    <section className="py-28 bg-background" id="pricing">
       <div className="container mx-auto px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold font-heading mb-4">
-            Simple, Transparent Pricing
+        <div className="text-center mb-20">
+          <span className="text-xs font-mono uppercase tracking-[0.2em] text-primary font-bold">Pricing</span>
+          <h2 className="text-3xl md:text-5xl font-extrabold mt-4 tracking-tight">
+            Pay only for what you use
           </h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Start free and scale as your data needs grow.
-          </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
           {tiers.map((tier, i) => (
             <motion.div
               key={tier.name}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.12 }}
+              transition={{ delay: i * 0.12, duration: 0.5 }}
               className={`relative rounded-2xl p-8 border ${
                 tier.highlighted
-                  ? "border-primary bg-card shadow-elevated scale-[1.02]"
+                  ? "border-primary/40 bg-card shadow-glow-strong"
                   : "border-border bg-card shadow-soft"
               }`}
             >
               {tier.highlighted && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-primary text-primary-foreground text-xs font-semibold">
-                  Most Popular
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-primary text-primary-foreground text-xs font-bold font-mono uppercase tracking-wider">
+                  Popular
                 </div>
               )}
-              <h3 className="text-xl font-bold font-heading">{tier.name}</h3>
-              <div className="mt-4 mb-2">
-                <span className="text-4xl font-bold">{tier.price}</span>
-                <span className="text-muted-foreground ml-2 text-sm">/{tier.period}</span>
+              <h3 className="text-lg font-bold">{tier.name}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{tier.description}</p>
+              <div className="mt-6 mb-6">
+                <span className="text-5xl font-black">{tier.price}</span>
+                {tier.period && <span className="text-muted-foreground ml-1 text-sm">/{tier.period}</span>}
               </div>
-              <p className="text-muted-foreground text-sm mb-6">{tier.description}</p>
               <Button
                 asChild
-                className={`w-full mb-6 ${tier.highlighted ? "bg-gradient-primary text-primary-foreground hover:opacity-90" : ""}`}
+                className={`w-full rounded-xl h-12 font-bold ${
+                  tier.highlighted
+                    ? "bg-gradient-primary text-primary-foreground hover:opacity-90 shadow-glow"
+                    : ""
+                }`}
                 variant={tier.highlighted ? "default" : "outline"}
               >
                 <Link to="/register">{tier.cta}</Link>
               </Button>
-              <ul className="space-y-3">
+              <ul className="mt-8 space-y-3">
                 {tier.features.map((f) => (
                   <li key={f} className="flex items-center gap-3 text-sm">
-                    <Check className="w-4 h-4 text-success flex-shrink-0" />
+                    <Check className="w-4 h-4 text-primary flex-shrink-0" />
                     <span>{f}</span>
                   </li>
                 ))}

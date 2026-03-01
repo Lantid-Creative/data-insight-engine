@@ -20,7 +20,7 @@ const mainItems = [
   { title: "Reports", url: "/dashboard/reports", icon: FileText },
 ];
 
-const settingsItems = [
+const accountItems = [
   { title: "API Access", url: "/dashboard/api", icon: Key },
   { title: "Billing", url: "/dashboard/billing", icon: CreditCard },
   { title: "Settings", url: "/dashboard/settings", icon: Settings },
@@ -50,10 +50,15 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
-        <div className="p-4">
-          <span className="text-lg font-bold font-heading text-sidebar-primary">
-            {collapsed ? "DF" : "DataForge AI"}
-          </span>
+        <div className="p-4 flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
+            <span className="text-xs font-black text-primary-foreground">DA</span>
+          </div>
+          {!collapsed && (
+            <span className="text-base font-extrabold text-sidebar-accent-foreground">
+              DataAfro
+            </span>
+          )}
         </div>
         <SidebarGroup>
           <SidebarGroupLabel>Main</SidebarGroupLabel>
@@ -61,7 +66,7 @@ export function AppSidebar() {
         </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel>Account</SidebarGroupLabel>
-          <SidebarGroupContent>{renderItems(settingsItems)}</SidebarGroupContent>
+          <SidebarGroupContent>{renderItems(accountItems)}</SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
