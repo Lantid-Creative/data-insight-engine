@@ -8,18 +8,21 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { STRIPE_PLANS, getPlanFromProductId, getPlanFromPriceId } from "@/lib/stripe-plans";
 import {
   LogOut, CheckCircle2, XCircle, Clock, Users, Shield, Building2,
   MapPin, FileText, LayoutDashboard, ClipboardList, MessageSquare,
   Settings, Search, ChevronRight, Home, BarChart3, UserCheck, UserX,
-  Mail, Globe
+  Mail, Globe, CreditCard, TrendingUp, DollarSign, Tag, Percent,
+  Trash2, ArrowUpDown, RefreshCw, Activity, ChevronDown
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-type AdminPage = "overview" | "applications" | "users" | "consulting" | "settings";
+type AdminPage = "overview" | "applications" | "users" | "subscriptions" | "analytics" | "promotions" | "consulting" | "settings";
 
 const AdminDashboard = () => {
   const { signOut, user } = useAuth();
@@ -34,22 +37,25 @@ const AdminDashboard = () => {
   const { data: applications = [], isLoading: appsLoading } = useQuery({
     queryKey: ["admin-applications"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("user_applications")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("user_applications").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
 
-  const { data: consultingSubmissions = [], isLoading: consultingLoading } = useQuery({
+  const { data: consultingSubmissions = [] } = useQuery({
     queryKey: ["admin-consulting"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("consulting_submissions")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("consulting_submissions").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: userRoles = [] } = useQuery({
+    queryKey: ["admin-roles"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("user_roles").select("*");
       if (error) throw error;
       return data;
     },
@@ -58,15 +64,9 @@ const AdminDashboard = () => {
   // ── Mutations ────────────────────────────────────────────
   const updateAppMutation = useMutation({
     mutationFn: async ({ id, status, notes }: { id: string; status: string; notes?: string }) => {
-      const { error } = await supabase
-        .from("user_applications")
-        .update({
-          status,
-          reviewed_by: user?.id,
-          reviewed_at: new Date().toISOString(),
-          admin_notes: notes || null,
-        })
-        .eq("id", id);
+      const { error } = await supabase.from("user_applications").update({
+        status, reviewed_by: user?.id, reviewed_at: new Date().toISOString(), admin_notes: notes || null,
+      }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -75,9 +75,22 @@ const AdminDashboard = () => {
       setSelectedApp(null);
       setAdminNotes("");
     },
-    onError: (err: Error) => {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const changeRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      // Remove existing roles
+      await supabase.from("user_roles").delete().eq("user_id", userId);
+      // Insert new role
+      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: role as "admin" | "user" });
+      if (error) throw error;
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-roles"] });
+      toast({ title: "Role updated" });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   // ── Computed ─────────────────────────────────────────────
@@ -86,25 +99,22 @@ const AdminDashboard = () => {
   const rejectedApps = applications.filter((a) => a.status === "rejected");
 
   const filteredApplications = applications.filter((a) =>
-    !searchQuery || 
-    a.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    a.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (a.company_name && a.company_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    !searchQuery || a.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || a.email.toLowerCase().includes(searchQuery.toLowerCase()) || (a.company_name && a.company_name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const filteredConsulting = consultingSubmissions.filter((c) =>
-    !searchQuery || 
-    c.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.message.toLowerCase().includes(searchQuery.toLowerCase())
+    !searchQuery || c.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || c.email.toLowerCase().includes(searchQuery.toLowerCase()) || c.message.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // ── Sidebar ──────────────────────────────────────────────
   const sidebarItems: { id: AdminPage; label: string; icon: typeof Home; count?: number }[] = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "applications", label: "Applications", icon: ClipboardList, count: pendingApps.length },
-    { id: "users", label: "Users", icon: Users, count: approvedApps.length },
-    { id: "consulting", label: "Consulting Leads", icon: MessageSquare, count: consultingSubmissions.length },
+    { id: "users", label: "Users & Roles", icon: Users, count: approvedApps.length },
+    { id: "subscriptions", label: "Subscriptions", icon: CreditCard },
+    { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "promotions", label: "Promotions", icon: Tag },
+    { id: "consulting", label: "Consulting", icon: MessageSquare, count: consultingSubmissions.length },
     { id: "settings", label: "Settings", icon: Settings },
   ];
 
@@ -117,9 +127,7 @@ const AdminDashboard = () => {
             <h3 className="font-bold text-base">{app.full_name}</h3>
             <p className="text-sm text-muted-foreground font-mono">{app.email}</p>
           </div>
-          <Badge variant={app.status === "pending" ? "secondary" : app.status === "approved" ? "default" : "destructive"} className="capitalize">
-            {app.status}
-          </Badge>
+          <Badge variant={app.status === "pending" ? "secondary" : app.status === "approved" ? "default" : "destructive"} className="capitalize">{app.status}</Badge>
         </div>
         <div className="grid grid-cols-2 gap-2 mb-3 text-sm text-muted-foreground">
           <span className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" />{app.company_name || "—"}</span>
@@ -142,19 +150,13 @@ const AdminDashboard = () => {
             <div className="space-y-2 pt-2 border-t border-border">
               <Textarea placeholder="Internal notes (optional)..." value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={2} className="rounded-lg bg-muted/50 border-border resize-none text-sm" />
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => updateAppMutation.mutate({ id: app.id, status: "approved", notes: adminNotes })} disabled={updateAppMutation.isPending} className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-lg gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Approve
-                </Button>
-                <Button size="sm" variant="destructive" onClick={() => updateAppMutation.mutate({ id: app.id, status: "rejected", notes: adminNotes })} disabled={updateAppMutation.isPending} className="flex-1 rounded-lg gap-1">
-                  <XCircle className="w-3.5 h-3.5" /> Reject
-                </Button>
+                <Button size="sm" onClick={() => updateAppMutation.mutate({ id: app.id, status: "approved", notes: adminNotes })} disabled={updateAppMutation.isPending} className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-lg gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Approve</Button>
+                <Button size="sm" variant="destructive" onClick={() => updateAppMutation.mutate({ id: app.id, status: "rejected", notes: adminNotes })} disabled={updateAppMutation.isPending} className="flex-1 rounded-lg gap-1"><XCircle className="w-3.5 h-3.5" /> Reject</Button>
                 <Button size="sm" variant="outline" onClick={() => setSelectedApp(null)} className="rounded-lg">Cancel</Button>
               </div>
             </div>
           ) : (
-            <Button size="sm" variant="outline" onClick={() => { setSelectedApp(app.id); setAdminNotes(""); }} className="w-full rounded-lg mt-2">
-              Review Application
-            </Button>
+            <Button size="sm" variant="outline" onClick={() => { setSelectedApp(app.id); setAdminNotes(""); }} className="w-full rounded-lg mt-2">Review Application</Button>
           )
         )}
       </CardContent>
@@ -162,89 +164,47 @@ const AdminDashboard = () => {
   );
 
   // ── Pages ────────────────────────────────────────────────
+
+  // ─── OVERVIEW ───
   const OverviewPage = () => {
-    const overviewStats = [
+    const stats = [
       { label: "Pending Review", value: pendingApps.length, icon: Clock, color: "text-primary", bg: "bg-primary/10" },
       { label: "Approved Users", value: approvedApps.length, icon: UserCheck, color: "text-green-500", bg: "bg-green-500/10" },
       { label: "Rejected", value: rejectedApps.length, icon: UserX, color: "text-destructive", bg: "bg-destructive/10" },
       { label: "Consulting Leads", value: consultingSubmissions.length, icon: MessageSquare, color: "text-blue-500", bg: "bg-blue-500/10" },
     ];
-
     return (
       <>
         <h2 className="text-2xl font-extrabold mb-1">Overview</h2>
         <p className="text-muted-foreground mb-6">Platform health at a glance</p>
-
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {overviewStats.map((s) => (
+          {stats.map((s) => (
             <Card key={s.label} className="border-border hover:border-primary/20 transition-colors cursor-pointer" onClick={() => s.label.includes("Consulting") ? setCurrentPage("consulting") : setCurrentPage("applications")}>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg ${s.bg} flex items-center justify-center`}>
-                  <s.icon className={`w-5 h-5 ${s.color}`} />
-                </div>
-                <div>
-                  <p className="text-2xl font-extrabold">{s.value}</p>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
-                </div>
+                <div className={`w-10 h-10 rounded-lg ${s.bg} flex items-center justify-center`}><s.icon className={`w-5 h-5 ${s.color}`} /></div>
+                <div><p className="text-2xl font-extrabold">{s.value}</p><p className="text-xs text-muted-foreground">{s.label}</p></div>
               </CardContent>
             </Card>
           ))}
         </div>
-
-        {/* Recent pending */}
         <h3 className="text-lg font-bold mb-3">Recent Pending Applications</h3>
         {pendingApps.length === 0 ? (
           <Card className="border-dashed"><CardContent className="p-8 text-center text-muted-foreground">No pending applications 🎉</CardContent></Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {pendingApps.slice(0, 4).map((app) => <ApplicationCard key={app.id} app={app} />)}
-          </div>
+          <div className="grid gap-4 md:grid-cols-2">{pendingApps.slice(0, 4).map((app) => <ApplicationCard key={app.id} app={app} />)}</div>
         )}
-        {pendingApps.length > 4 && (
-          <Button variant="outline" className="mt-4 gap-1" onClick={() => setCurrentPage("applications")}>
-            View all {pendingApps.length} applications <ChevronRight className="w-4 h-4" />
-          </Button>
-        )}
-
-        {/* Recent consulting */}
-        {consultingSubmissions.length > 0 && (
-          <>
-            <h3 className="text-lg font-bold mb-3 mt-8">Recent Consulting Leads</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              {consultingSubmissions.slice(0, 2).map((c) => (
-                <Card key={c.id} className="border-border">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <p className="font-bold text-sm">{c.full_name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{c.email}</p>
-                      </div>
-                      {c.service_needed && <Badge variant="secondary" className="text-xs">{c.service_needed}</Badge>}
-                    </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{c.message}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </>
-        )}
+        {pendingApps.length > 4 && <Button variant="outline" className="mt-4 gap-1" onClick={() => setCurrentPage("applications")}>View all {pendingApps.length} applications <ChevronRight className="w-4 h-4" /></Button>}
       </>
     );
   };
 
+  // ─── APPLICATIONS ───
   const ApplicationsPage = () => (
     <>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-extrabold mb-1">Applications</h2>
-          <p className="text-muted-foreground">Manage early access requests</p>
-        </div>
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Search name, email, company..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 rounded-lg" />
-        </div>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div><h2 className="text-2xl font-extrabold mb-1">Applications</h2><p className="text-muted-foreground">Manage early access requests</p></div>
+        <div className="relative w-64"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 rounded-lg" /></div>
       </div>
-
       <Tabs defaultValue="pending">
         <TabsList className="mb-4">
           <TabsTrigger value="pending" className="gap-1"><Clock className="w-3.5 h-3.5" /> Pending ({pendingApps.length})</TabsTrigger>
@@ -252,7 +212,6 @@ const AdminDashboard = () => {
           <TabsTrigger value="rejected" className="gap-1"><XCircle className="w-3.5 h-3.5" /> Rejected ({rejectedApps.length})</TabsTrigger>
           <TabsTrigger value="all" className="gap-1"><Users className="w-3.5 h-3.5" /> All ({applications.length})</TabsTrigger>
         </TabsList>
-
         {appsLoading ? (
           <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
         ) : (
@@ -275,76 +234,470 @@ const AdminDashboard = () => {
     </>
   );
 
-  const UsersPage = () => (
-    <>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-extrabold mb-1">Approved Users</h2>
-          <p className="text-muted-foreground">Users with platform access</p>
-        </div>
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 rounded-lg" />
-        </div>
-      </div>
+  // ─── USERS & ROLES ───
+  const UsersPage = () => {
+    const getUserRole = (userId: string) => {
+      const role = userRoles.find((r) => r.user_id === userId);
+      return role?.role || "user";
+    };
 
-      {approvedApps.length === 0 ? (
-        <Card className="border-dashed"><CardContent className="p-12 text-center text-muted-foreground">No approved users yet</CardContent></Card>
-      ) : (
-        <div className="rounded-lg border border-border overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-muted/50">
-              <tr className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                <th className="p-3">Name</th>
-                <th className="p-3">Email</th>
-                <th className="p-3 hidden md:table-cell">Company</th>
-                <th className="p-3 hidden lg:table-cell">Location</th>
-                <th className="p-3 hidden lg:table-cell">Approved</th>
-                <th className="p-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {approvedApps.filter((a) => !searchQuery || a.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || a.email.toLowerCase().includes(searchQuery.toLowerCase())).map((u) => (
-                <tr key={u.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="p-3 font-medium text-sm">{u.full_name}</td>
-                  <td className="p-3 text-sm text-muted-foreground font-mono">{u.email}</td>
-                  <td className="p-3 text-sm text-muted-foreground hidden md:table-cell">{u.company_name || "—"}</td>
-                  <td className="p-3 text-sm text-muted-foreground hidden lg:table-cell">{u.location || "—"}</td>
-                  <td className="p-3 text-sm text-muted-foreground hidden lg:table-cell">{u.reviewed_at ? new Date(u.reviewed_at).toLocaleDateString() : "—"}</td>
-                  <td className="p-3">
-                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive gap-1 text-xs" onClick={() => {
-                      if (confirm(`Revoke access for ${u.full_name}?`)) {
-                        updateAppMutation.mutate({ id: u.id, status: "rejected", notes: "Access revoked by admin" });
-                      }
-                    }}>
-                      <XCircle className="w-3 h-3" /> Revoke
-                    </Button>
-                  </td>
+    return (
+      <>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div><h2 className="text-2xl font-extrabold mb-1">Users & Roles</h2><p className="text-muted-foreground">Manage user accounts and permissions</p></div>
+          <div className="relative w-64"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><Input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 rounded-lg" /></div>
+        </div>
+        {approvedApps.length === 0 ? (
+          <Card className="border-dashed"><CardContent className="p-12 text-center text-muted-foreground">No approved users yet</CardContent></Card>
+        ) : (
+          <div className="rounded-lg border border-border overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-muted/50">
+                <tr className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="p-3">Name</th>
+                  <th className="p-3">Email</th>
+                  <th className="p-3 hidden md:table-cell">Company</th>
+                  <th className="p-3">Role</th>
+                  <th className="p-3">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </>
-  );
+              </thead>
+              <tbody className="divide-y divide-border">
+                {approvedApps.filter((a) => !searchQuery || a.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || a.email.toLowerCase().includes(searchQuery.toLowerCase())).map((u) => (
+                  <tr key={u.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="p-3 font-medium text-sm">{u.full_name}</td>
+                    <td className="p-3 text-sm text-muted-foreground font-mono">{u.email}</td>
+                    <td className="p-3 text-sm text-muted-foreground hidden md:table-cell">{u.company_name || "—"}</td>
+                    <td className="p-3">
+                      <Select defaultValue={getUserRole(u.user_id)} onValueChange={(role) => {
+                        if (confirm(`Change ${u.full_name}'s role to ${role}?`)) {
+                          changeRoleMutation.mutate({ userId: u.user_id, role });
+                        }
+                      }}>
+                        <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-3">
+                      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive gap-1 text-xs" onClick={() => {
+                        if (confirm(`Revoke access for ${u.full_name}?`)) {
+                          updateAppMutation.mutate({ id: u.id, status: "rejected", notes: "Access revoked by admin" });
+                        }
+                      }}>
+                        <XCircle className="w-3 h-3" /> Revoke
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </>
+    );
+  };
 
+  // ─── SUBSCRIPTIONS ───
+  const SubscriptionsPage = () => {
+    const [subFilter, setSubFilter] = useState("all");
+    const [subSearch, setSubSearch] = useState("");
+
+    const { data: subsData, isLoading: subsLoading, refetch: refetchSubs } = useQuery({
+      queryKey: ["admin-subscriptions", subFilter],
+      queryFn: async () => {
+        const { data, error } = await supabase.functions.invoke("admin-subscriptions", {
+          body: { action: "list", status: subFilter },
+        });
+        if (error) throw error;
+        return data;
+      },
+    });
+
+    const cancelSubMutation = useMutation({
+      mutationFn: async (subscriptionId: string) => {
+        const { data, error } = await supabase.functions.invoke("admin-subscriptions", {
+          body: { action: "cancel", subscription_id: subscriptionId },
+        });
+        if (error) throw error;
+        return data;
+      },
+      onSuccess: () => {
+        refetchSubs();
+        toast({ title: "Subscription canceled" });
+      },
+      onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    });
+
+    const updateSubMutation = useMutation({
+      mutationFn: async ({ subscriptionId, newPriceId }: { subscriptionId: string; newPriceId: string }) => {
+        const { data, error } = await supabase.functions.invoke("admin-subscriptions", {
+          body: { action: "update", subscription_id: subscriptionId, new_price_id: newPriceId },
+        });
+        if (error) throw error;
+        return data;
+      },
+      onSuccess: () => {
+        refetchSubs();
+        toast({ title: "Subscription updated" });
+      },
+      onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    });
+
+    const subscriptions = subsData?.subscriptions || [];
+    const filteredSubs = subscriptions.filter((s: any) =>
+      !subSearch || s.customer_email?.toLowerCase().includes(subSearch.toLowerCase()) || s.customer_name?.toLowerCase().includes(subSearch.toLowerCase())
+    );
+
+    // Build flat list of all price options
+    const allPlans: { label: string; priceId: string }[] = [];
+    for (const [planName, cycles] of Object.entries(STRIPE_PLANS)) {
+      for (const [cycle, tiers] of Object.entries(cycles)) {
+        for (const [credits, plan] of Object.entries(tiers)) {
+          allPlans.push({ label: `${planName} ${credits}cr/${cycle === "annual" ? "yr" : "mo"} - $${plan.amount}`, priceId: plan.priceId });
+        }
+      }
+    }
+
+    const statusColors: Record<string, string> = {
+      active: "bg-green-500/10 text-green-600",
+      canceled: "bg-destructive/10 text-destructive",
+      past_due: "bg-yellow-500/10 text-yellow-600",
+      trialing: "bg-blue-500/10 text-blue-600",
+      incomplete: "bg-muted text-muted-foreground",
+    };
+
+    return (
+      <>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div><h2 className="text-2xl font-extrabold mb-1">Subscriptions</h2><p className="text-muted-foreground">Manage all customer subscriptions</p></div>
+          <div className="flex items-center gap-2">
+            <Select value={subFilter} onValueChange={setSubFilter}>
+              <SelectTrigger className="w-36 h-9"><SelectValue placeholder="Filter" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="canceled">Canceled</SelectItem>
+                <SelectItem value="past_due">Past Due</SelectItem>
+                <SelectItem value="trialing">Trialing</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="relative w-56"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><Input placeholder="Search email..." value={subSearch} onChange={(e) => setSubSearch(e.target.value)} className="pl-9 rounded-lg h-9" /></div>
+            <Button size="sm" variant="outline" onClick={() => refetchSubs()} className="gap-1"><RefreshCw className="w-3.5 h-3.5" /></Button>
+          </div>
+        </div>
+
+        {subsLoading ? (
+          <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+        ) : filteredSubs.length === 0 ? (
+          <Card className="border-dashed"><CardContent className="p-12 text-center text-muted-foreground">No subscriptions found</CardContent></Card>
+        ) : (
+          <div className="rounded-lg border border-border overflow-x-auto">
+            <table className="w-full min-w-[800px]">
+              <thead className="bg-muted/50">
+                <tr className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="p-3">Customer</th>
+                  <th className="p-3">Plan</th>
+                  <th className="p-3">Amount</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3">Period End</th>
+                  <th className="p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredSubs.map((sub: any) => {
+                  const plan = sub.product_id ? getPlanFromProductId(sub.product_id) : null;
+                  return (
+                    <tr key={sub.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="p-3">
+                        <p className="font-medium text-sm">{sub.customer_name || "—"}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{sub.customer_email}</p>
+                      </td>
+                      <td className="p-3 text-sm">
+                        {plan ? (
+                          <span className="capitalize">{plan.plan} {plan.credits}cr/{plan.cycle === "annual" ? "yr" : "mo"}</span>
+                        ) : sub.price_id ? (
+                          <span className="text-muted-foreground font-mono text-xs">{sub.price_id.slice(0, 16)}...</span>
+                        ) : "—"}
+                      </td>
+                      <td className="p-3 text-sm font-medium">${sub.amount}/{sub.interval === "year" ? "yr" : "mo"}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${statusColors[sub.status] || "bg-muted text-muted-foreground"}`}>{sub.status}</span>
+                      </td>
+                      <td className="p-3 text-sm text-muted-foreground">{new Date(sub.current_period_end).toLocaleDateString()}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-1">
+                          {sub.status === "active" && (
+                            <>
+                              <Select onValueChange={(newPriceId) => {
+                                if (confirm("Change this customer's plan?")) {
+                                  updateSubMutation.mutate({ subscriptionId: sub.id, newPriceId });
+                                }
+                              }}>
+                                <SelectTrigger className="w-28 h-7 text-[10px]"><SelectValue placeholder="Change plan" /></SelectTrigger>
+                                <SelectContent>
+                                  {allPlans.filter((p) => p.priceId !== sub.price_id).map((p) => (
+                                    <SelectItem key={p.priceId} value={p.priceId} className="text-xs">{p.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button size="sm" variant="ghost" className="h-7 text-destructive text-[10px] gap-0.5 px-2" onClick={() => {
+                                if (confirm(`Cancel subscription for ${sub.customer_email}?`)) cancelSubMutation.mutate(sub.id);
+                              }} disabled={cancelSubMutation.isPending}>
+                                <XCircle className="w-3 h-3" /> Cancel
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </>
+    );
+  };
+
+  // ─── ANALYTICS ───
+  const AnalyticsPage = () => {
+    const [period, setPeriod] = useState("month");
+
+    const { data: revenueData, isLoading: revLoading, refetch: refetchRevenue } = useQuery({
+      queryKey: ["admin-revenue", period],
+      queryFn: async () => {
+        const { data, error } = await supabase.functions.invoke("admin-subscriptions", {
+          body: { action: "revenue", period },
+        });
+        if (error) throw error;
+        return data;
+      },
+    });
+
+    const metricCards = [
+      { label: "Total Revenue", value: `$${revenueData?.total_revenue?.toLocaleString() || "0"}`, icon: DollarSign, color: "text-green-500", bg: "bg-green-500/10" },
+      { label: "MRR", value: `$${revenueData?.mrr?.toLocaleString() || "0"}`, icon: TrendingUp, color: "text-primary", bg: "bg-primary/10" },
+      { label: "Active Subscribers", value: revenueData?.active_subscribers || 0, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
+      { label: "Transactions", value: revenueData?.total_charges || 0, icon: Activity, color: "text-purple-500", bg: "bg-purple-500/10" },
+    ];
+
+    return (
+      <>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div><h2 className="text-2xl font-extrabold mb-1">Analytics</h2><p className="text-muted-foreground">Revenue and subscription metrics</p></div>
+          <div className="flex items-center gap-2">
+            <Select value={period} onValueChange={setPeriod}>
+              <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="quarter">This Quarter</SelectItem>
+                <SelectItem value="year">This Year</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button size="sm" variant="outline" onClick={() => refetchRevenue()} className="gap-1"><RefreshCw className="w-3.5 h-3.5" /></Button>
+          </div>
+        </div>
+
+        {revLoading ? (
+          <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {metricCards.map((m) => (
+                <Card key={m.label} className="border-border">
+                  <CardContent className="p-4 flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${m.bg} flex items-center justify-center`}><m.icon className={`w-5 h-5 ${m.color}`} /></div>
+                    <div><p className="text-2xl font-extrabold">{m.value}</p><p className="text-xs text-muted-foreground">{m.label}</p></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Daily revenue chart (simple bar chart) */}
+            <Card className="border-border">
+              <CardContent className="p-5">
+                <h3 className="font-bold mb-4">Daily Revenue</h3>
+                {revenueData?.daily_revenue?.length > 0 ? (
+                  <div className="flex items-end gap-1 h-40 overflow-x-auto pb-6 relative">
+                    {revenueData.daily_revenue.map((d: { date: string; amount: number }, i: number) => {
+                      const maxAmt = Math.max(...revenueData.daily_revenue.map((r: { amount: number }) => r.amount));
+                      const h = maxAmt > 0 ? (d.amount / maxAmt) * 100 : 0;
+                      return (
+                        <div key={i} className="flex flex-col items-center gap-1 min-w-[28px] group relative">
+                          <div className="absolute -top-6 bg-card border border-border rounded px-1.5 py-0.5 text-[10px] font-mono opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                            ${d.amount.toFixed(0)} · {d.date.slice(5)}
+                          </div>
+                          <div className="w-5 bg-primary/80 rounded-t transition-all hover:bg-primary" style={{ height: `${Math.max(h, 4)}%` }} />
+                          <span className="text-[8px] text-muted-foreground -rotate-45 origin-top-left mt-1">{d.date.slice(5)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">No revenue data for this period</p>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </>
+    );
+  };
+
+  // ─── PROMOTIONS ───
+  const PromotionsPage = () => {
+    const [couponName, setCouponName] = useState("");
+    const [discountType, setDiscountType] = useState<"percent" | "amount">("percent");
+    const [discountValue, setDiscountValue] = useState("");
+    const [duration, setDuration] = useState("once");
+    const [durationMonths, setDurationMonths] = useState("3");
+
+    const { data: couponsData, isLoading: couponsLoading, refetch: refetchCoupons } = useQuery({
+      queryKey: ["admin-coupons"],
+      queryFn: async () => {
+        const { data, error } = await supabase.functions.invoke("admin-subscriptions", {
+          body: { action: "list_coupons" },
+        });
+        if (error) throw error;
+        return data;
+      },
+    });
+
+    const createCouponMutation = useMutation({
+      mutationFn: async () => {
+        const body: any = { action: "create_coupon", name: couponName, duration };
+        if (discountType === "percent") body.percent_off = parseFloat(discountValue);
+        else body.amount_off = parseFloat(discountValue);
+        if (duration === "repeating") body.duration_in_months = parseInt(durationMonths);
+        const { data, error } = await supabase.functions.invoke("admin-subscriptions", { body });
+        if (error) throw error;
+        return data;
+      },
+      onSuccess: () => {
+        refetchCoupons();
+        toast({ title: "Coupon created" });
+        setCouponName("");
+        setDiscountValue("");
+      },
+      onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    });
+
+    const deleteCouponMutation = useMutation({
+      mutationFn: async (couponId: string) => {
+        const { data, error } = await supabase.functions.invoke("admin-subscriptions", {
+          body: { action: "delete_coupon", coupon_id: couponId },
+        });
+        if (error) throw error;
+        return data;
+      },
+      onSuccess: () => {
+        refetchCoupons();
+        toast({ title: "Coupon deleted" });
+      },
+      onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    });
+
+    const coupons = couponsData?.coupons || [];
+
+    return (
+      <>
+        <h2 className="text-2xl font-extrabold mb-1">Promotions & Coupons</h2>
+        <p className="text-muted-foreground mb-6">Create and manage discount codes</p>
+
+        {/* Create coupon form */}
+        <Card className="border-border mb-8">
+          <CardContent className="p-5">
+            <h3 className="font-bold mb-4 flex items-center gap-2"><Tag className="w-4 h-4 text-primary" /> Create New Coupon</h3>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Name</label>
+                <Input placeholder="e.g. LAUNCH20" value={couponName} onChange={(e) => setCouponName(e.target.value)} className="rounded-lg" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Discount Type</label>
+                <Select value={discountType} onValueChange={(v) => setDiscountType(v as "percent" | "amount")}>
+                  <SelectTrigger className="rounded-lg"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percent">Percentage (%)</SelectItem>
+                    <SelectItem value="amount">Fixed Amount ($)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">{discountType === "percent" ? "Percentage" : "Amount ($)"}</label>
+                <Input type="number" placeholder={discountType === "percent" ? "e.g. 20" : "e.g. 10"} value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} className="rounded-lg" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Duration</label>
+                <Select value={duration} onValueChange={setDuration}>
+                  <SelectTrigger className="rounded-lg"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="once">Once</SelectItem>
+                    <SelectItem value="repeating">Repeating</SelectItem>
+                    <SelectItem value="forever">Forever</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {duration === "repeating" && (
+              <div className="mt-3 max-w-[200px]">
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Duration (months)</label>
+                <Input type="number" value={durationMonths} onChange={(e) => setDurationMonths(e.target.value)} className="rounded-lg" />
+              </div>
+            )}
+            <Button className="mt-4 gap-1" onClick={() => createCouponMutation.mutate()} disabled={!couponName || !discountValue || createCouponMutation.isPending}>
+              <Tag className="w-4 h-4" /> Create Coupon
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Existing coupons */}
+        <h3 className="font-bold mb-3">Active Coupons</h3>
+        {couponsLoading ? (
+          <div className="flex justify-center py-10"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+        ) : coupons.length === 0 ? (
+          <Card className="border-dashed"><CardContent className="p-8 text-center text-muted-foreground">No coupons created yet</CardContent></Card>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {coupons.map((c: any) => (
+              <Card key={c.id} className="border-border">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="font-bold text-sm">{c.name || c.id}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{c.id}</p>
+                    </div>
+                    <Badge variant="secondary" className="gap-1">
+                      {c.percent_off ? <><Percent className="w-3 h-3" />{c.percent_off}% off</> : `$${(c.amount_off / 100).toFixed(0)} off`}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="capitalize">{c.duration}{c.duration_in_months ? ` · ${c.duration_in_months}mo` : ""}</span>
+                    <span>{c.times_redeemed || 0} redeemed</span>
+                  </div>
+                  <Button size="sm" variant="ghost" className="w-full mt-2 text-destructive gap-1 text-xs" onClick={() => {
+                    if (confirm(`Delete coupon "${c.name || c.id}"?`)) deleteCouponMutation.mutate(c.id);
+                  }}><Trash2 className="w-3 h-3" /> Delete</Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  };
+
+  // ─── CONSULTING ───
   const ConsultingPage = () => (
     <>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-extrabold mb-1">Consulting Leads</h2>
-          <p className="text-muted-foreground">Inbound consulting requests from the website</p>
-        </div>
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Search leads..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 rounded-lg" />
-        </div>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div><h2 className="text-2xl font-extrabold mb-1">Consulting Leads</h2><p className="text-muted-foreground">Inbound consulting requests</p></div>
+        <div className="relative w-64"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><Input placeholder="Search leads..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 rounded-lg" /></div>
       </div>
-
-      {consultingLoading ? (
-        <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
-      ) : filteredConsulting.length === 0 ? (
+      {filteredConsulting.length === 0 ? (
         <Card className="border-dashed"><CardContent className="p-12 text-center text-muted-foreground">No consulting submissions yet</CardContent></Card>
       ) : (
         <div className="grid gap-4">
@@ -364,14 +717,10 @@ const AdminDashboard = () => {
                     <span className="text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{c.message}</p>
-                </div>
+                <div className="bg-muted/50 rounded-lg p-3"><p className="text-sm text-muted-foreground whitespace-pre-wrap">{c.message}</p></div>
                 <div className="flex gap-2 mt-3">
                   <Button size="sm" variant="outline" className="gap-1 text-xs" asChild>
-                    <a href={`mailto:${c.email}?subject=Re: DataAfro Consulting Request`}>
-                      <Mail className="w-3 h-3" /> Reply via Email
-                    </a>
+                    <a href={`mailto:${c.email}?subject=Re: DataAfro Consulting Request`}><Mail className="w-3 h-3" /> Reply via Email</a>
                   </Button>
                 </div>
               </CardContent>
@@ -382,58 +731,22 @@ const AdminDashboard = () => {
     </>
   );
 
+  // ─── SETTINGS ───
   const SettingsPage = () => (
     <>
       <h2 className="text-2xl font-extrabold mb-1">Platform Settings</h2>
       <p className="text-muted-foreground mb-6">Configuration and admin preferences</p>
-
       <div className="grid gap-6 max-w-2xl">
         <Card className="border-border">
           <CardContent className="p-5">
             <h3 className="font-bold mb-1 flex items-center gap-2"><Shield className="w-4 h-4 text-primary" /> Admin Account</h3>
-            <p className="text-sm text-muted-foreground mb-3">Currently signed in as admin</p>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between py-2 border-b border-border">
-                <span className="text-muted-foreground">Email</span>
-                <span className="font-mono">{user?.email}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-border">
-                <span className="text-muted-foreground">Role</span>
-                <Badge variant="default">Admin</Badge>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-muted-foreground">User ID</span>
-                <span className="font-mono text-xs">{user?.id?.slice(0, 8)}...</span>
-              </div>
+            <div className="space-y-2 text-sm mt-3">
+              <div className="flex justify-between py-2 border-b border-border"><span className="text-muted-foreground">Email</span><span className="font-mono">{user?.email}</span></div>
+              <div className="flex justify-between py-2 border-b border-border"><span className="text-muted-foreground">Role</span><Badge variant="default">Admin</Badge></div>
+              <div className="flex justify-between py-2"><span className="text-muted-foreground">User ID</span><span className="font-mono text-xs">{user?.id?.slice(0, 8)}...</span></div>
             </div>
           </CardContent>
         </Card>
-
-        <Card className="border-border">
-          <CardContent className="p-5">
-            <h3 className="font-bold mb-1 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-primary" /> Platform Stats</h3>
-            <p className="text-sm text-muted-foreground mb-3">Quick summary of platform activity</p>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between py-2 border-b border-border">
-                <span className="text-muted-foreground">Total Applications</span>
-                <span className="font-bold">{applications.length}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-border">
-                <span className="text-muted-foreground">Approval Rate</span>
-                <span className="font-bold">{applications.length > 0 ? Math.round((approvedApps.length / applications.length) * 100) : 0}%</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-border">
-                <span className="text-muted-foreground">Consulting Leads</span>
-                <span className="font-bold">{consultingSubmissions.length}</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-muted-foreground">Avg Review Time</span>
-                <span className="font-bold">~24h</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         <Card className="border-border">
           <CardContent className="p-5">
             <h3 className="font-bold mb-1 flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /> Quick Links</h3>
@@ -451,6 +764,9 @@ const AdminDashboard = () => {
     overview: <OverviewPage />,
     applications: <ApplicationsPage />,
     users: <UsersPage />,
+    subscriptions: <SubscriptionsPage />,
+    analytics: <AnalyticsPage />,
+    promotions: <PromotionsPage />,
     consulting: <ConsultingPage />,
     settings: <SettingsPage />,
   };
@@ -461,35 +777,20 @@ const AdminDashboard = () => {
       <aside className="hidden md:flex w-64 flex-col border-r border-border bg-card fixed inset-y-0 left-0 z-40">
         <div className="p-4 border-b border-border">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <span className="text-sm font-black text-primary-foreground">DA</span>
-            </div>
+            <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center"><span className="text-sm font-black text-primary-foreground">DA</span></div>
             <span className="text-lg font-extrabold">Data<span className="text-gradient">Afro</span></span>
           </Link>
-          <Badge variant="outline" className="gap-1 mt-2 w-full justify-center">
-            <Shield className="w-3 h-3" /> Admin Panel
-          </Badge>
+          <Badge variant="outline" className="gap-1 mt-2 w-full justify-center"><Shield className="w-3 h-3" /> Admin Panel</Badge>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {sidebarItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => { setCurrentPage(item.id); setSearchQuery(""); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                currentPage === item.id
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              }`}
-            >
+            <button key={item.id} onClick={() => { setCurrentPage(item.id); setSearchQuery(""); }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${currentPage === item.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}>
               <item.icon className="w-4 h-4" />
               {item.label}
               {item.count !== undefined && item.count > 0 && (
-                <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
-                  currentPage === item.id ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                }`}>
-                  {item.count}
-                </span>
+                <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${currentPage === item.id ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>{item.count}</span>
               )}
             </button>
           ))}
@@ -497,50 +798,33 @@ const AdminDashboard = () => {
 
         <div className="p-3 border-t border-border space-y-2">
           <div className="flex items-center gap-2 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-xs font-bold text-primary">{user?.email?.[0]?.toUpperCase()}</span>
-            </div>
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center"><span className="text-xs font-bold text-primary">{user?.email?.[0]?.toUpperCase()}</span></div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium truncate">{user?.user_metadata?.full_name || "Admin"}</p>
               <p className="text-[10px] text-muted-foreground truncate">{user?.email}</p>
             </div>
             <ThemeToggle />
           </div>
-          <Button variant="ghost" size="sm" onClick={() => void signOut()} className="w-full gap-2 justify-start text-muted-foreground hover:text-destructive">
-            <LogOut className="w-4 h-4" /> Sign Out
-          </Button>
+          <Button variant="ghost" size="sm" onClick={() => void signOut()} className="w-full gap-2 justify-start text-muted-foreground hover:text-destructive"><LogOut className="w-4 h-4" /> Sign Out</Button>
         </div>
       </aside>
 
       {/* Mobile header */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 border-b border-border bg-card h-14 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-primary flex items-center justify-center">
-            <span className="text-xs font-black text-primary-foreground">DA</span>
-          </div>
+          <div className="w-7 h-7 rounded-lg bg-gradient-primary flex items-center justify-center"><span className="text-xs font-black text-primary-foreground">DA</span></div>
           <Badge variant="outline" className="gap-1 text-xs"><Shield className="w-3 h-3" /> Admin</Badge>
         </div>
-        <div className="flex items-center gap-1">
-          <ThemeToggle />
-          <Button variant="ghost" size="sm" onClick={() => void signOut()}><LogOut className="w-4 h-4" /></Button>
-        </div>
+        <div className="flex items-center gap-1"><ThemeToggle /><Button variant="ghost" size="sm" onClick={() => void signOut()}><LogOut className="w-4 h-4" /></Button></div>
       </header>
 
-      {/* Mobile nav tabs */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card flex">
+      {/* Mobile nav (scrollable) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card flex overflow-x-auto">
         {sidebarItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => { setCurrentPage(item.id); setSearchQuery(""); }}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${
-              currentPage === item.id ? "text-primary" : "text-muted-foreground"
-            }`}
-          >
+          <button key={item.id} onClick={() => { setCurrentPage(item.id); setSearchQuery(""); }}
+            className={`flex-shrink-0 flex flex-col items-center gap-0.5 py-2.5 px-3 text-[10px] font-medium transition-colors ${currentPage === item.id ? "text-primary" : "text-muted-foreground"}`}>
             <item.icon className="w-4 h-4" />
             {item.label.split(" ")[0]}
-            {item.count !== undefined && item.count > 0 && (
-              <span className="absolute -mt-1 ml-4 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center">{item.count}</span>
-            )}
           </button>
         ))}
       </div>
