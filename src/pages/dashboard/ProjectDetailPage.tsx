@@ -6,8 +6,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
-  Upload, File, X, Send, Bot, Loader2, Sparkles, Paperclip,
-  BarChart3, FileText, Wand2, Database, ArrowUp, Copy, Check, RefreshCw,
+  Upload, File, X, Loader2, Sparkles, Paperclip,
+  BarChart3, FileText, Wand2, Database, ArrowUp, Copy, Check,
+  RotateCcw, ThumbsUp, ThumbsDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
@@ -16,104 +17,136 @@ import { motion, AnimatePresence } from "framer-motion";
 const ACCEPTED = ".csv,.xlsx,.xls,.json,.pdf,.docx,.txt,.png,.jpg,.jpeg";
 
 const QUICK_ACTIONS = [
-  { icon: BarChart3, label: "Analyze Data", prompt: "Analyze the key patterns and insights from my uploaded data", gradient: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-500", border: "border-emerald-500/20 hover:border-emerald-500/40" },
-  { icon: FileText, label: "Generate Report", prompt: "Generate a comprehensive report based on my files", gradient: "from-blue-500/10 to-blue-500/5", iconColor: "text-blue-500", border: "border-blue-500/20 hover:border-blue-500/40" },
-  { icon: Wand2, label: "Clean Dataset", prompt: "Help me clean and prepare this dataset for analysis", gradient: "from-purple-500/10 to-purple-500/5", iconColor: "text-purple-500", border: "border-purple-500/20 hover:border-purple-500/40" },
-  { icon: Database, label: "Data Summary", prompt: "Summarize the structure and content of my uploaded files", gradient: "from-amber-500/10 to-amber-500/5", iconColor: "text-amber-500", border: "border-amber-500/20 hover:border-amber-500/40" },
+  { icon: BarChart3, label: "Analyze Data", desc: "Find patterns & insights", prompt: "Analyze the key patterns and insights from my uploaded data" },
+  { icon: FileText, label: "Generate Report", desc: "Create formatted reports", prompt: "Generate a comprehensive report based on my files" },
+  { icon: Wand2, label: "Clean Dataset", desc: "Fix & prepare data", prompt: "Help me clean and prepare this dataset for analysis" },
+  { icon: Database, label: "Summarize", desc: "Overview of your data", prompt: "Summarize the structure and content of my uploaded files" },
 ];
 
-/* ─── Message Bubble ─── */
-function MessageBubble({ message, onCopy }: { message: any; onCopy: (text: string) => void }) {
+/* ─── Message Component ─── */
+function ChatMessage({ message, onCopy, onRetry, isLast }: {
+  message: any; onCopy: (t: string) => void; onRetry?: () => void; isLast?: boolean;
+}) {
   const isUser = message.role === "user";
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    onCopy(message.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, ease: "easeOut" }}
-      className={`group relative ${isUser ? "flex justify-end" : ""}`}
+      transition={{ duration: 0.2 }}
+      className="group"
     >
-      <div className={`${isUser ? "max-w-[75%]" : "max-w-full"}`}>
-        {/* Assistant label */}
-        {!isUser && (
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-6 h-6 rounded-lg bg-gradient-primary flex items-center justify-center shadow-sm">
+      {isUser ? (
+        /* User message — right-aligned, warm bg */
+        <div className="flex justify-end">
+          <div className="max-w-[80%] rounded-3xl rounded-br-lg bg-muted px-5 py-3">
+            <p className="text-[15px] leading-relaxed text-foreground whitespace-pre-wrap">
+              {message.content}
+            </p>
+          </div>
+        </div>
+      ) : (
+        /* Assistant message — full width, no bubble */
+        <div className="space-y-2">
+          {/* Avatar row */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
               <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
             </div>
-            <span className="text-xs font-medium text-muted-foreground">DataAfro AI</span>
+            <span className="text-sm font-semibold text-foreground">DataAfro</span>
           </div>
-        )}
 
-        {/* Content */}
-        <div className={`${
-          isUser
-            ? "bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-4 py-3"
-            : "pl-8"
-        }`}>
-          {!isUser ? (
-            <div className="prose prose-sm dark:prose-invert max-w-none text-[0.9rem] leading-relaxed [&>p]:mb-3 [&>ul]:mb-3 [&>ol]:mb-3 [&>h1]:text-lg [&>h2]:text-base [&>h3]:text-sm [&>h1]:font-semibold [&>h2]:font-semibold [&>h3]:font-semibold [&>pre]:bg-muted [&>pre]:rounded-xl [&>pre]:border [&>pre]:border-border [&>pre]:p-4 [&>blockquote]:border-l-primary/40 [&>blockquote]:bg-muted/50 [&>blockquote]:rounded-r-lg [&>blockquote]:py-1 [&>blockquote]:px-4">
+          {/* Content */}
+          <div className="pl-[38px]">
+            <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-[1.7] 
+              [&>p]:mb-4 [&>p:last-child]:mb-0
+              [&>ul]:mb-4 [&>ol]:mb-4 [&>li]:mb-1
+              [&>h1]:text-xl [&>h2]:text-lg [&>h3]:text-base
+              [&>h1]:font-semibold [&>h2]:font-semibold [&>h3]:font-semibold
+              [&>h1]:mt-6 [&>h2]:mt-5 [&>h3]:mt-4
+              [&>pre]:bg-[hsl(var(--muted))] [&>pre]:rounded-xl [&>pre]:border [&>pre]:border-border [&>pre]:p-4 [&>pre]:text-sm [&>pre]:overflow-x-auto
+              [&>blockquote]:border-l-2 [&>blockquote]:border-primary/30 [&>blockquote]:pl-4 [&>blockquote]:text-muted-foreground [&>blockquote]:italic
+              [&_code]:bg-[hsl(var(--muted))] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-sm [&_code]:font-mono
+              [&>pre_code]:bg-transparent [&>pre_code]:p-0">
               <ReactMarkdown>{message.content}</ReactMarkdown>
             </div>
-          ) : (
-            <p className="text-sm leading-relaxed">{message.content}</p>
-          )}
-        </div>
 
-        {/* Actions for assistant messages */}
-        {!isUser && (
-          <div className="flex items-center gap-1 mt-2 pl-8 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={() => onCopy(message.content)}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-muted"
-            >
-              <Copy className="w-3 h-3" /> Copy
-            </button>
+            {/* Hover actions */}
+            <div className="flex items-center gap-0.5 mt-3 -ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+              <button
+                onClick={handleCopy}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Copy"
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </button>
+              {isLast && onRetry && (
+                <button
+                  onClick={onRetry}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  title="Retry"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Good response"
+              >
+                <ThumbsUp className="w-4 h-4" />
+              </button>
+              <button
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Bad response"
+              >
+                <ThumbsDown className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </motion.div>
   );
 }
 
-/* ─── Streaming Indicator ─── */
-function StreamingMessage({ content }: { content: string }) {
-  if (content) {
-    return (
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-6 h-6 rounded-lg bg-gradient-primary flex items-center justify-center shadow-sm">
-            <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
-          </div>
-          <span className="text-xs font-medium text-muted-foreground">DataAfro AI</span>
-        </div>
-        <div className="pl-8">
-          <div className="prose prose-sm dark:prose-invert max-w-none text-[0.9rem] leading-relaxed [&>p]:mb-3">
-            <ReactMarkdown>{content}</ReactMarkdown>
-            <span className="inline-block w-0.5 h-4 bg-primary animate-pulse ml-0.5 -mb-0.5" />
-          </div>
-        </div>
-      </motion.div>
-    );
-  }
-
+/* ─── Thinking Indicator ─── */
+function ThinkingIndicator({ content }: { content: string }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-6 h-6 rounded-lg bg-gradient-primary flex items-center justify-center shadow-sm animate-pulse">
-          <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-2"
+    >
+      <div className="flex items-center gap-2.5">
+        <div className="w-7 h-7 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
+          <Sparkles className="w-3.5 h-3.5 text-primary-foreground animate-pulse" />
         </div>
-        <span className="text-xs font-medium text-muted-foreground">Thinking…</span>
+        <span className="text-sm font-semibold text-foreground">DataAfro</span>
+        {!content && (
+          <div className="flex items-center gap-1 ml-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+            <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+            <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+          </div>
+        )}
       </div>
-      <div className="pl-8">
-        <div className="flex gap-3">
-          <div className="h-3 w-48 rounded-full bg-muted animate-pulse" />
-        </div>
-        <div className="flex gap-3 mt-2">
-          <div className="h-3 w-72 rounded-full bg-muted animate-pulse" style={{ animationDelay: "150ms" }} />
-        </div>
-        <div className="flex gap-3 mt-2">
-          <div className="h-3 w-36 rounded-full bg-muted animate-pulse" style={{ animationDelay: "300ms" }} />
-        </div>
+
+      <div className="pl-[38px]">
+        {content ? (
+          <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-[1.7] [&>p]:mb-4 [&>p:last-child]:mb-0">
+            <ReactMarkdown>{content}</ReactMarkdown>
+            <span className="inline-block w-[2px] h-5 bg-foreground/70 animate-pulse ml-0.5 align-text-bottom" />
+          </div>
+        ) : (
+          <p className="text-[15px] text-muted-foreground">Thinking…</p>
+        )}
       </div>
     </motion.div>
   );
@@ -130,10 +163,10 @@ const ProjectDetailPage = () => {
   const [chatInput, setChatInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [inputFocused, setInputFocused] = useState(false);
 
   const { data: project, isLoading: projLoading } = useQuery({
     queryKey: ["project", projectId],
@@ -176,15 +209,13 @@ const ProjectDetailPage = () => {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 160) + "px";
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + "px";
     }
   }, [chatInput]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    setCopiedId(text);
     toast.success("Copied to clipboard");
-    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleFiles = useCallback(async (fileList: FileList | File[]) => {
@@ -281,17 +312,60 @@ const ProjectDetailPage = () => {
   if (projLoading) return (
     <div className="flex items-center justify-center h-[60vh]">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center animate-pulse">
-          <Sparkles className="w-5 h-5 text-primary-foreground" />
+        <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center animate-pulse">
+          <Sparkles className="w-4 h-4 text-primary-foreground" />
         </div>
-        <span className="text-sm text-muted-foreground">Loading project…</span>
+        <span className="text-sm text-muted-foreground">Loading…</span>
       </div>
     </div>
   );
-  if (!project) return <div className="text-center py-20"><p>Project not found</p></div>;
+  if (!project) return <div className="text-center py-20"><p className="text-muted-foreground">Project not found</p></div>;
 
   const hasMessages = messages.length > 0 || streaming;
-  const userName = user?.email?.split("@")[0] || "there";
+
+  /* ─── Input Bar (shared between both states) ─── */
+  const InputBar = ({ className = "" }: { className?: string }) => (
+    <div className={className}>
+      <div className={`rounded-[20px] border bg-card transition-all duration-200 ${
+        inputFocused ? "border-primary/40 shadow-[0_0_0_1px_hsl(var(--primary)/0.15)]" : "border-border shadow-soft"
+      }`}>
+        <textarea
+          ref={textareaRef}
+          placeholder="Message DataAfro…"
+          value={chatInput}
+          onChange={(e) => setChatInput(e.target.value)}
+          onFocus={() => setInputFocused(true)}
+          onBlur={() => setInputFocused(false)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+          rows={1}
+          className="w-full bg-transparent border-0 outline-none resize-none text-[15px] placeholder:text-muted-foreground px-5 pt-4 pb-1 min-h-[44px] max-h-[200px]"
+        />
+        <div className="flex items-center justify-between px-3 pb-3">
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+                  onClick={() => document.getElementById("file-input")?.click()}
+                >
+                  <Paperclip className="w-[18px] h-[18px]" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Attach files</TooltipContent>
+            </Tooltip>
+            {uploading && <Loader2 className="w-4 h-4 animate-spin text-primary ml-1" />}
+          </div>
+          <button
+            onClick={() => sendMessage()}
+            disabled={!chatInput.trim() || streaming}
+            className="w-8 h-8 rounded-xl bg-foreground text-background flex items-center justify-center transition-all hover:opacity-80 disabled:opacity-20 disabled:cursor-not-allowed"
+          >
+            <ArrowUp className="w-4 h-4" strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <TooltipProvider>
@@ -306,13 +380,13 @@ const ProjectDetailPage = () => {
           {dragOver && (
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 z-50 bg-primary/10 border-2 border-dashed border-primary rounded-xl flex items-center justify-center backdrop-blur-sm"
+              className="absolute inset-0 z-50 bg-primary/5 border-2 border-dashed border-primary/40 rounded-2xl flex items-center justify-center backdrop-blur-sm"
             >
               <div className="flex flex-col items-center gap-3">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow">
-                  <Upload className="w-7 h-7 text-primary-foreground" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow">
+                  <Upload className="w-6 h-6 text-primary-foreground" />
                 </div>
-                <p className="text-base font-semibold text-primary">Drop files to upload</p>
+                <p className="text-base font-semibold text-foreground">Drop files here</p>
                 <p className="text-xs text-muted-foreground">CSV, PDF, Excel, JSON, and more</p>
               </div>
             </motion.div>
@@ -325,56 +399,33 @@ const ProjectDetailPage = () => {
             /* ===== EMPTY STATE ===== */
             <div className="flex-1 flex flex-col items-center justify-center px-4">
               <motion.div
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="flex flex-col items-center max-w-2xl w-full"
+                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="flex flex-col items-center max-w-[680px] w-full"
               >
-                {/* Animated brand icon */}
-                <motion.div
-                  initial={{ scale: 0.8 }} animate={{ scale: 1 }}
-                  transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-                  className="w-14 h-14 rounded-2xl bg-gradient-primary flex items-center justify-center mb-6 shadow-glow"
-                >
-                  <Sparkles className="w-7 h-7 text-primary-foreground" />
-                </motion.div>
-
-                <h2 className="text-2xl sm:text-3xl font-bold font-heading text-center mb-2">
-                  What can I help you with?
-                </h2>
-                <p className="text-muted-foreground text-center mb-8 text-sm">
-                  Ask anything about <span className="font-medium text-foreground">{project.name}</span> — analyze data, generate reports, or get insights
-                </p>
-
-                {/* Quick actions */}
-                <div className="grid grid-cols-2 gap-3 w-full mb-8">
-                  {QUICK_ACTIONS.map((action, i) => (
-                    <motion.button
-                      key={action.label}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 + i * 0.05 }}
-                      onClick={() => sendMessage(action.prompt)}
-                      className={`flex items-center gap-3 p-4 rounded-xl border bg-gradient-to-br ${action.gradient} ${action.border} transition-all hover:shadow-soft text-left group`}
-                    >
-                      <action.icon className={`w-5 h-5 ${action.iconColor} flex-shrink-0`} />
-                      <span className="text-sm font-medium text-foreground">{action.label}</span>
-                    </motion.button>
-                  ))}
+                <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center mb-8">
+                  <Sparkles className="w-5 h-5 text-primary-foreground" />
                 </div>
+
+                <h1 className="text-3xl sm:text-4xl font-semibold font-heading text-center mb-3 tracking-tight">
+                  How can I help you today?
+                </h1>
+                <p className="text-muted-foreground text-center mb-10 text-base max-w-md">
+                  Upload your data and ask anything — analysis, reports, cleaning, or insights.
+                </p>
 
                 {/* Attached files */}
                 {files.length > 0 && (
-                  <div className="flex items-center flex-wrap gap-2 mb-4 w-full">
-                    <span className="text-xs text-muted-foreground mr-1">Files:</span>
+                  <div className="flex items-center flex-wrap gap-2 mb-6 w-full justify-center">
                     {files.map((f: any) => (
-                      <div key={f.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/60 text-xs group border border-border/50">
-                        <File className="w-3 h-3 text-primary" />
-                        <span className="truncate max-w-[100px]">{f.file_name}</span>
+                      <div key={f.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-sm group border border-border/50 hover:border-border transition-colors">
+                        <File className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="truncate max-w-[120px] text-foreground">{f.file_name}</span>
                         <button
                           onClick={() => deleteFile.mutate(f)}
                           className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))}
@@ -382,60 +433,42 @@ const ProjectDetailPage = () => {
                 )}
 
                 {/* Input */}
-                <div className="w-full">
-                  <div className="rounded-2xl border border-border bg-card shadow-card overflow-hidden transition-shadow focus-within:shadow-elevated focus-within:border-primary/30">
-                    <textarea
-                      ref={textareaRef}
-                      placeholder="Ask me anything about your data…"
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                      rows={3}
-                      className="w-full bg-transparent border-0 outline-none resize-none text-sm placeholder:text-muted-foreground p-4 pb-2"
-                    />
-                    <div className="flex items-center justify-between px-3 py-2">
-                      <div className="flex items-center gap-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                              onClick={() => document.getElementById("file-input")?.click()}
-                            >
-                              <Paperclip className="w-4 h-4" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>Attach files</TooltipContent>
-                        </Tooltip>
-                        {uploading && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
-                      </div>
-                      <Button
-                        onClick={() => sendMessage()}
-                        disabled={!chatInput.trim() || streaming}
-                        size="icon"
-                        className="h-8 w-8 rounded-lg bg-gradient-primary text-primary-foreground hover:opacity-90 disabled:opacity-30"
-                      >
-                        <ArrowUp className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground text-center mt-2">
-                    DataAfro AI can make mistakes. Verify important insights.
-                  </p>
+                <InputBar className="w-full mb-6" />
+
+                {/* Quick actions */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full">
+                  {QUICK_ACTIONS.map((action, i) => (
+                    <motion.button
+                      key={action.label}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.15 + i * 0.04 }}
+                      onClick={() => sendMessage(action.prompt)}
+                      className="flex flex-col items-start gap-1.5 p-3.5 rounded-2xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all text-left group"
+                    >
+                      <action.icon className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <span className="text-sm font-medium text-foreground">{action.label}</span>
+                      <span className="text-xs text-muted-foreground leading-snug">{action.desc}</span>
+                    </motion.button>
+                  ))}
                 </div>
+
+                <p className="text-[11px] text-muted-foreground text-center mt-6">
+                  DataAfro can make mistakes. Verify important information.
+                </p>
               </motion.div>
             </div>
           ) : (
             /* ===== CHAT MESSAGES ===== */
             <>
               <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
-                {/* Attached files bar */}
+                {/* Sticky files */}
                 {files.length > 0 && (
-                  <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/50">
-                    <div className="max-w-3xl mx-auto flex items-center gap-2 px-4 py-2 overflow-x-auto scrollbar-hide">
-                      <span className="text-xs text-muted-foreground flex-shrink-0">Files:</span>
+                  <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b border-border/40">
+                    <div className="max-w-[680px] mx-auto flex items-center gap-2 px-4 py-2 overflow-x-auto scrollbar-hide">
                       {files.map((f: any) => (
-                        <div key={f.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/60 text-xs group flex-shrink-0 border border-border/50">
-                          <File className="w-3 h-3 text-primary" />
+                        <div key={f.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs group flex-shrink-0 border border-border/50">
+                          <File className="w-3 h-3 text-muted-foreground" />
                           <span className="truncate max-w-[100px]">{f.file_name}</span>
                           <button
                             onClick={() => deleteFile.mutate(f)}
@@ -445,69 +478,41 @@ const ProjectDetailPage = () => {
                           </button>
                         </div>
                       ))}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex-shrink-0"
-                            onClick={() => document.getElementById("file-input")?.click()}
-                          >
-                            <Paperclip className="w-3.5 h-3.5" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>Add more files</TooltipContent>
-                      </Tooltip>
+                      <button
+                        className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex-shrink-0"
+                        onClick={() => document.getElementById("file-input")?.click()}
+                      >
+                        <Paperclip className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 )}
 
-                <div className="max-w-3xl mx-auto space-y-6 py-6 px-4">
-                  {messages.map((m: any) => (
-                    <MessageBubble key={m.id} message={m} onCopy={handleCopy} />
+                <div className="max-w-[680px] mx-auto space-y-8 py-8 px-4">
+                  {messages.map((m: any, i: number) => (
+                    <ChatMessage
+                      key={m.id}
+                      message={m}
+                      onCopy={handleCopy}
+                      onRetry={m.role === "assistant" ? () => {
+                        const lastUserMsg = [...messages].reverse().find((msg: any) => msg.role === "user");
+                        if (lastUserMsg) sendMessage(lastUserMsg.content);
+                      } : undefined}
+                      isLast={i === messages.length - 1}
+                    />
                   ))}
 
-                  {streaming && <StreamingMessage content={streamingContent} />}
+                  {streaming && <ThinkingIndicator content={streamingContent} />}
                   <div ref={chatEndRef} />
                 </div>
               </div>
 
-              {/* Bottom input bar */}
-              <div className="flex-shrink-0 border-t border-border/50 bg-background/80 backdrop-blur-xl">
-                <div className="max-w-3xl mx-auto px-4 py-3">
-                  <div className="rounded-2xl border border-border bg-card shadow-soft overflow-hidden transition-shadow focus-within:shadow-card focus-within:border-primary/30">
-                    <div className="flex items-end gap-2 p-2">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex-shrink-0 mb-0.5"
-                            onClick={() => document.getElementById("file-input")?.click()}
-                          >
-                            <Paperclip className="w-4 h-4" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>Attach files</TooltipContent>
-                      </Tooltip>
-                      <textarea
-                        ref={textareaRef}
-                        placeholder="Ask a follow up…"
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                        rows={1}
-                        className="flex-1 bg-transparent border-0 outline-none resize-none text-sm placeholder:text-muted-foreground py-2 min-h-[36px]"
-                      />
-                      {uploading && <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0 mb-2" />}
-                      <Button
-                        onClick={() => sendMessage()}
-                        disabled={!chatInput.trim() || streaming}
-                        size="icon"
-                        className="h-8 w-8 rounded-lg bg-gradient-primary text-primary-foreground hover:opacity-90 disabled:opacity-30 flex-shrink-0 mb-0.5"
-                      >
-                        <ArrowUp className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground text-center mt-1.5">
-                    DataAfro AI can make mistakes. Verify important insights.
+              {/* Bottom input */}
+              <div className="flex-shrink-0 bg-gradient-to-t from-background via-background to-background/0 pt-2">
+                <div className="max-w-[680px] mx-auto px-4 pb-4">
+                  <InputBar />
+                  <p className="text-[11px] text-muted-foreground text-center mt-2">
+                    DataAfro can make mistakes. Verify important information.
                   </p>
                 </div>
               </div>
