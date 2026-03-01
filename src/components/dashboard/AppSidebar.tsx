@@ -29,11 +29,6 @@ const mainItems = [
   { title: "Reports", url: "/dashboard/reports", icon: FileText },
 ];
 
-const accountItems = [
-  { title: "API Access", url: "/dashboard/api", icon: Key },
-  { title: "Billing", url: "/dashboard/billing", icon: CreditCard },
-  { title: "Settings", url: "/dashboard/settings", icon: Settings },
-];
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -164,10 +159,6 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Account</SidebarGroupLabel>
-          <SidebarGroupContent>{renderItems(accountItems)}</SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
 
       {/* User footer */}
@@ -191,11 +182,14 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-56">
-                <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
-                  <Settings className="mr-2 h-4 w-4" /> Settings
+                <DropdownMenuItem onClick={() => navigate("/dashboard/api")}>
+                  <Key className="mr-2 h-4 w-4" /> API Access
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/dashboard/billing")}>
                   <CreditCard className="mr-2 h-4 w-4" /> Billing
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
+                  <Settings className="mr-2 h-4 w-4" /> Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
