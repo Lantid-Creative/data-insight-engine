@@ -1,83 +1,177 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowRight, Play } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import heroBg from "@/assets/hero-bg.jpg";
 
+const rotatingWords = ["Forged Bold.", "Made Clear.", "Turned Smart.", "Unleashed."];
+
 const Hero = () => {
+  const [wordIndex, setWordIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWordIndex((prev) => (prev + 1) % rotatingWords.length);
+    }, 2800);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden section-dark">
       {/* Background */}
       <div className="absolute inset-0">
-        <img src={heroBg} alt="" className="w-full h-full object-cover opacity-40" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[hsl(0,0%,2%)] via-transparent to-[hsl(0,0%,2%,0.6)]" />
+        <img src={heroBg} alt="" className="w-full h-full object-cover opacity-30" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[hsl(0,0%,2%)] via-[hsl(0,0%,2%,0.5)] to-[hsl(0,0%,2%,0.7)]" />
       </div>
 
       {/* Floating orbs */}
-      <div className="absolute top-1/3 right-1/4 w-72 h-72 rounded-full bg-primary/8 blur-[120px] animate-pulse" />
-      <div className="absolute bottom-1/4 left-1/3 w-96 h-96 rounded-full bg-primary/5 blur-[150px] animate-pulse" style={{ animationDelay: "1.5s" }} />
+      <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] rounded-full bg-primary/6 blur-[180px] animate-pulse" />
+      <div className="absolute bottom-1/3 left-1/4 w-[400px] h-[400px] rounded-full bg-primary/4 blur-[150px] animate-pulse" style={{ animationDelay: "2s" }} />
 
-      <div className="container relative z-10 mx-auto px-6 py-32">
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-          className="max-w-3xl"
-        >
-          {/* Badge */}
+      <div className="container relative z-10 mx-auto px-6 pt-32 pb-20">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-16">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/10 mb-8"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+            className="max-w-2xl flex-1"
           >
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            <span className="text-sm font-medium text-primary font-mono uppercase tracking-wider">Now in Beta</span>
+            {/* Badge */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/10 mb-8"
+            >
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <span className="text-sm font-medium text-primary font-mono uppercase tracking-wider">Now in Beta</span>
+            </motion.div>
+
+            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight leading-[0.95] mb-8 text-white">
+              Your Data.
+              <br />
+              <span className="relative inline-block h-[1.1em] overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={wordIndex}
+                    initial={{ y: 40, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -40, opacity: 0 }}
+                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-gradient inline-block"
+                  >
+                    {rotatingWords[wordIndex]}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+            </h1>
+
+            <p className="text-lg md:text-xl max-w-xl mb-12 leading-relaxed text-white/55">
+              Drop any file — CSV, PDF, Excel, images. Get AI-powered analysis, insights, and professionally formatted reports in seconds.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button asChild size="lg" className="bg-gradient-primary text-primary-foreground px-8 h-14 text-base font-bold shadow-glow-strong hover:opacity-90 transition-all rounded-xl group">
+                <Link to="/register">
+                  Start for Free
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="h-14 text-base font-medium rounded-xl border-white/15 text-white/70 hover:bg-white/5 hover:text-white gap-2">
+                <a href="#how-it-works">
+                  <Play className="w-4 h-4 fill-current" />
+                  See how it works
+                </a>
+              </Button>
+            </div>
+
+            {/* Trust badges */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8, duration: 0.6 }}
+              className="mt-12 flex items-center gap-6 text-[11px] font-mono uppercase tracking-wider text-white/25"
+            >
+              <span>🔒 SOC 2</span>
+              <span className="w-px h-3 bg-white/10" />
+              <span>⚡ 99.9% Uptime</span>
+              <span className="w-px h-3 bg-white/10" />
+              <span>🌍 GDPR Ready</span>
+            </motion.div>
           </motion.div>
 
-          <h1 className="text-5xl sm:text-6xl md:text-8xl font-extrabold tracking-tight leading-[0.95] mb-8 text-white">
-            Your Data.
-            <br />
-            <span className="text-gradient">Forged Bold.</span>
-          </h1>
-
-          <p className="text-lg md:text-xl max-w-xl mb-12 leading-relaxed text-white/60">
-            Drop any file. Get AI-powered analysis, insights, and professionally formatted reports — in seconds, not hours.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button asChild size="lg" className="bg-gradient-primary text-primary-foreground px-8 h-14 text-base font-bold shadow-glow-strong hover:opacity-90 transition-all rounded-xl">
-              <Link to="/register">
-                Start for Free <ArrowRight className="ml-2 w-5 h-5" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="h-14 text-base font-medium rounded-xl border-white/15 text-white/70 hover:bg-white/5 hover:text-white">
-              <Link to="/dashboard">
-                See it in action
-              </Link>
-            </Button>
-          </div>
-        </motion.div>
+          {/* Right side — mini demo card */}
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.5, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="hidden lg:block flex-1 max-w-md w-full"
+          >
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm p-6 shadow-glow">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-3 h-3 rounded-full bg-destructive/60" />
+                <div className="w-3 h-3 rounded-full bg-primary/40" />
+                <div className="w-3 h-3 rounded-full bg-primary/60" />
+                <span className="ml-auto text-[10px] font-mono text-white/30">dataafro.app</span>
+              </div>
+              <div className="border border-dashed border-white/10 rounded-xl p-8 text-center mb-4 hover:border-primary/30 transition-colors">
+                <div className="text-3xl mb-2">📄</div>
+                <p className="text-xs text-white/40 font-mono">Drop your file here</p>
+              </div>
+              <div className="space-y-2">
+                <div className="h-2 rounded-full bg-primary/20 w-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: "100%" }}
+                    transition={{ delay: 1.2, duration: 2, ease: "easeInOut" }}
+                    className="h-full bg-gradient-primary rounded-full"
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] font-mono text-white/30">
+                  <span>Analyzing...</span>
+                  <span>report.pdf</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
 
         {/* Stats bar */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.7 }}
-          className="mt-20 grid grid-cols-3 gap-6 max-w-lg"
+          transition={{ delay: 0.7, duration: 0.7 }}
+          className="mt-20 grid grid-cols-3 gap-8 max-w-lg"
         >
           {[
             { value: "10K+", label: "Files Processed" },
             { value: "8+", label: "Export Formats" },
-            { value: "<5s", label: "Avg. Analysis Time" },
+            { value: "<5s", label: "Avg. Analysis" },
           ].map((stat) => (
             <div key={stat.label}>
               <div className="text-2xl md:text-3xl font-extrabold text-gradient">{stat.value}</div>
-              <div className="text-xs font-mono uppercase tracking-wider mt-1 text-white/35">{stat.label}</div>
+              <div className="text-[10px] font-mono uppercase tracking-wider mt-1 text-white/30">{stat.label}</div>
             </div>
           ))}
         </motion.div>
       </div>
+
+      {/* Scroll indicator */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5, duration: 0.5 }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2"
+      >
+        <motion.div
+          animate={{ y: [0, 8, 0] }}
+          transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+          className="w-5 h-8 rounded-full border-2 border-white/15 flex items-start justify-center p-1"
+        >
+          <div className="w-1 h-2 rounded-full bg-primary/60" />
+        </motion.div>
+      </motion.div>
     </section>
   );
 };
