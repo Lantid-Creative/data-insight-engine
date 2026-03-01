@@ -19,16 +19,30 @@ const Footer = () => {
             </p>
           </div>
           {[
-            { title: "Product", links: ["Features", "Pricing", "API Docs", "Changelog"] },
-            { title: "Company", links: ["About", "Blog", "Careers", "Contact"] },
-            { title: "Legal", links: ["Privacy", "Terms", "Security"] },
+            { title: "Product", links: [
+              { label: "Features", to: "/#features" },
+              { label: "Pricing", to: "/#pricing" },
+              { label: "API Docs", to: "/api-docs" },
+              { label: "Changelog", to: "/changelog" },
+            ]},
+            { title: "Company", links: [
+              { label: "About", to: "/about" },
+              { label: "Blog", to: "/blog" },
+              { label: "Careers", to: "/careers" },
+              { label: "Contact", to: "/contact" },
+            ]},
+            { title: "Legal", links: [
+              { label: "Privacy", to: "/privacy" },
+              { label: "Terms", to: "/terms" },
+              { label: "Security", to: "/security" },
+            ]},
           ].map((col) => (
             <div key={col.title}>
               <h4 className="text-xs font-mono uppercase tracking-[0.15em] font-bold mb-4 text-muted-foreground">{col.title}</h4>
               <ul className="space-y-2.5">
                 {col.links.map((link) => (
-                  <li key={link}>
-                    <Link to="#" className="text-sm text-muted-foreground transition-colors hover:text-primary">{link}</Link>
+                  <li key={link.label}>
+                    <Link to={link.to} className="text-sm text-muted-foreground transition-colors hover:text-primary">{link.label}</Link>
                   </li>
                 ))}
               </ul>

@@ -9,6 +9,15 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import ConsultingPage from "./pages/ConsultingPage";
 import NotFound from "./pages/NotFound";
+import AboutPage from "./pages/AboutPage";
+import BlogPage from "./pages/BlogPage";
+import CareersPage from "./pages/CareersPage";
+import ContactPage from "./pages/ContactPage";
+import ApiDocsPage from "./pages/ApiDocsPage";
+import ChangelogPage from "./pages/ChangelogPage";
+import PrivacyPage from "./pages/PrivacyPage";
+import TermsPage from "./pages/TermsPage";
+import SecurityPage from "./pages/SecurityPage";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
@@ -36,6 +45,15 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/consulting" element={<ConsultingPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/blog" element={<BlogPage />} />
+              <Route path="/careers" element={<CareersPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/api-docs" element={<ApiDocsPage />} />
+              <Route path="/changelog" element={<ChangelogPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/security" element={<SecurityPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
