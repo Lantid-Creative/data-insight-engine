@@ -81,26 +81,38 @@ Guidelines:
       { role: "user", content: message },
     ];
 
-    const AZURE_KIMI_ENDPOINT = Deno.env.get("AZURE_KIMI_ENDPOINT");
-    const AZURE_KIMI_API_KEY = Deno.env.get("AZURE_KIMI_API_KEY");
-
-    if (!AZURE_KIMI_ENDPOINT || !AZURE_KIMI_API_KEY) {
-      throw new Error("Azure Kimi credentials not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const aiResponse = await fetch(AZURE_KIMI_ENDPOINT, {
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "api-key": AZURE_KIMI_API_KEY,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
       },
       body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
         messages,
         stream: true,
         max_tokens: 4096,
         temperature: 0.7,
       }),
     });
+
+    if (aiResponse.status === 429) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (aiResponse.status === 402) {
+      return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }), {
+        status: 402,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
