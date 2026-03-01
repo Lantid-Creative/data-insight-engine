@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const services = [
   {
@@ -55,10 +57,26 @@ const process = [
 
 const ConsultingPage = () => {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({ name: "", email: "", org: "", service: "", message: "" });
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    const { error } = await supabase.from("consulting_submissions").insert({
+      full_name: formData.name,
+      email: formData.email,
+      organization: formData.org || null,
+      service_needed: formData.service || null,
+      message: formData.message,
+    });
+    setLoading(false);
+    if (error) {
+      toast({ title: "Error", description: "Failed to submit. Please try again.", variant: "destructive" });
+    } else {
+      setSubmitted(true);
+    }
   };
 
   return (
@@ -240,22 +258,22 @@ const ConsultingPage = () => {
                 <div className="grid md:grid-cols-2 gap-5">
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-white/70 text-sm">Full Name</Label>
-                    <Input id="name" placeholder="Your name" required className="h-12 rounded-xl bg-white/[0.05] border-white/[0.1] text-white placeholder:text-white/30 focus:border-primary" />
+                    <Input id="name" placeholder="Your name" required value={formData.name} onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))} className="h-12 rounded-xl bg-white/[0.05] border-white/[0.1] text-white placeholder:text-white/30 focus:border-primary" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-white/70 text-sm">Email</Label>
-                    <Input id="email" type="email" placeholder="you@org.com" required className="h-12 rounded-xl bg-white/[0.05] border-white/[0.1] text-white placeholder:text-white/30 focus:border-primary" />
+                    <Input id="email" type="email" placeholder="you@org.com" required value={formData.email} onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))} className="h-12 rounded-xl bg-white/[0.05] border-white/[0.1] text-white placeholder:text-white/30 focus:border-primary" />
                   </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-5">
                   <div className="space-y-2">
                     <Label htmlFor="org" className="text-white/70 text-sm">Organization</Label>
-                    <Input id="org" placeholder="Company / Org name" className="h-12 rounded-xl bg-white/[0.05] border-white/[0.1] text-white placeholder:text-white/30 focus:border-primary" />
+                    <Input id="org" placeholder="Company / Org name" value={formData.org} onChange={(e) => setFormData(p => ({ ...p, org: e.target.value }))} className="h-12 rounded-xl bg-white/[0.05] border-white/[0.1] text-white placeholder:text-white/30 focus:border-primary" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="service" className="text-white/70 text-sm">Service Needed</Label>
-                    <Select>
+                    <Select value={formData.service} onValueChange={(v) => setFormData(p => ({ ...p, service: v }))}>
                       <SelectTrigger className="h-12 rounded-xl bg-white/[0.05] border-white/[0.1] text-white">
                         <SelectValue placeholder="Select a service" />
                       </SelectTrigger>
@@ -272,11 +290,11 @@ const ConsultingPage = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="message" className="text-white/70 text-sm">Tell us about your project</Label>
-                  <Textarea id="message" placeholder="Describe your goals, data challenges, timeline, or anything you'd like us to know..." required rows={5} className="rounded-xl bg-white/[0.05] border-white/[0.1] text-white placeholder:text-white/30 focus:border-primary resize-none" />
+                  <Textarea id="message" placeholder="Describe your goals, data challenges, timeline, or anything you'd like us to know..." required rows={5} value={formData.message} onChange={(e) => setFormData(p => ({ ...p, message: e.target.value }))} className="rounded-xl bg-white/[0.05] border-white/[0.1] text-white placeholder:text-white/30 focus:border-primary resize-none" />
                 </div>
 
-                <Button type="submit" className="w-full h-12 bg-gradient-primary text-primary-foreground hover:opacity-90 font-bold rounded-xl shadow-glow text-base">
-                  Submit Request <ArrowRight className="ml-2 w-4 h-4" />
+                <Button type="submit" disabled={loading} className="w-full h-12 bg-gradient-primary text-primary-foreground hover:opacity-90 font-bold rounded-xl shadow-glow text-base">
+                  {loading ? "Submitting..." : <>Submit Request <ArrowRight className="ml-2 w-4 h-4" /></>}
                 </Button>
 
                 <p className="text-center text-xs text-white/30">Free consultation • No commitment • Response within 24h</p>
