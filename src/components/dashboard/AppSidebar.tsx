@@ -1,9 +1,13 @@
-import { Upload, FolderOpen, FileText, Key, CreditCard, Settings, LayoutDashboard } from "lucide-react";
+import { Upload, FolderOpen, FileText, Key, CreditCard, Settings, LayoutDashboard, Sparkles, Search, ChevronUp } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -15,8 +19,8 @@ import {
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Upload Data", url: "/dashboard/upload", icon: Upload },
   { title: "My Projects", url: "/dashboard/projects", icon: FolderOpen },
+  { title: "Upload Data", url: "/dashboard/upload", icon: Upload },
   { title: "Reports", url: "/dashboard/reports", icon: FileText },
 ];
 
@@ -30,15 +34,19 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const isActive = (path: string) => location.pathname === path;
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const isActive = (path: string) => location.pathname === path || (path !== "/dashboard" && location.pathname.startsWith(path + "/"));
+
+  const initials = user?.email?.slice(0, 2).toUpperCase() || "U";
 
   const renderItems = (items: typeof mainItems) => (
     <SidebarMenu>
       {items.map((item) => (
         <SidebarMenuItem key={item.title}>
           <SidebarMenuButton asChild isActive={isActive(item.url)}>
-            <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-              <item.icon className="mr-2 h-4 w-4" />
+            <NavLink to={item.url} end={item.url === "/dashboard"} className="hover:bg-sidebar-accent/50 transition-colors" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+              <item.icon className="mr-2 h-4 w-4 flex-shrink-0" />
               {!collapsed && <span>{item.title}</span>}
             </NavLink>
           </SidebarMenuButton>
@@ -50,18 +58,20 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
+        {/* Brand */}
         <div className="p-4 flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-black text-primary-foreground">DA</span>
+          <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
+            <Sparkles className="w-4 h-4 text-primary-foreground" />
           </div>
           {!collapsed && (
-            <span className="text-base font-extrabold text-sidebar-accent-foreground">
+            <span className="text-base font-extrabold text-sidebar-accent-foreground tracking-tight">
               DataAfro
             </span>
           )}
         </div>
+
         <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
+          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>{renderItems(mainItems)}</SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
@@ -69,6 +79,43 @@ export function AppSidebar() {
           <SidebarGroupContent>{renderItems(accountItems)}</SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      {/* User footer */}
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton className="h-12 cursor-pointer">
+                  <Avatar className="h-7 w-7 flex-shrink-0">
+                    <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-bold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  {!collapsed && (
+                    <div className="flex-1 min-w-0 flex items-center justify-between">
+                      <span className="text-sm truncate">{user?.email}</span>
+                      <ChevronUp className="w-4 h-4 text-sidebar-foreground/50" />
+                    </div>
+                  )}
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-56">
+                <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
+                  <Settings className="mr-2 h-4 w-4" /> Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/dashboard/billing")}>
+                  <CreditCard className="mr-2 h-4 w-4" /> Billing
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }
