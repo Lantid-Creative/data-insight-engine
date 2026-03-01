@@ -1,21 +1,26 @@
-import { Upload, FolderOpen, FileText, Key, CreditCard, Settings, LayoutDashboard, Sparkles, Search, ChevronUp } from "lucide-react";
-import { NavLink } from "@/components/NavLink";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
+  Upload, FolderOpen, FileText, Key, CreditCard, Settings,
+  LayoutDashboard, Sparkles, ChevronUp, Plus, MessageSquare, Search,
+} from "lucide-react";
+import { NavLink } from "@/components/NavLink";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup,
+  SidebarGroupContent, SidebarGroupLabel, SidebarMenu,
+  SidebarMenuButton, SidebarMenuItem, useSidebar,
 } from "@/components/ui/sidebar";
+import { useState } from "react";
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -36,16 +41,46 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const isActive = (path: string) => location.pathname === path || (path !== "/dashboard" && location.pathname.startsWith(path + "/"));
+  const [chatSearch, setChatSearch] = useState("");
+
+  const isInProject = location.pathname.startsWith("/dashboard/projects/");
+  const projectId = isInProject ? location.pathname.split("/")[3] : null;
+
+  const isActive = (path: string) =>
+    location.pathname === path || (path !== "/dashboard" && location.pathname.startsWith(path + "/"));
 
   const initials = user?.email?.slice(0, 2).toUpperCase() || "U";
+
+  // Fetch recent projects for sidebar
+  const { data: recentProjects = [] } = useQuery({
+    queryKey: ["sidebar-projects", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projects").select("id, name, updated_at")
+        .eq("user_id", user!.id)
+        .order("updated_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const filteredProjects = recentProjects.filter((p) =>
+    p.name.toLowerCase().includes(chatSearch.toLowerCase())
+  );
 
   const renderItems = (items: typeof mainItems) => (
     <SidebarMenu>
       {items.map((item) => (
         <SidebarMenuItem key={item.title}>
           <SidebarMenuButton asChild isActive={isActive(item.url)}>
-            <NavLink to={item.url} end={item.url === "/dashboard"} className="hover:bg-sidebar-accent/50 transition-colors" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+            <NavLink
+              to={item.url}
+              end={item.url === "/dashboard"}
+              className="hover:bg-sidebar-accent/50 transition-colors"
+              activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+            >
               <item.icon className="mr-2 h-4 w-4 flex-shrink-0" />
               {!collapsed && <span>{item.title}</span>}
             </NavLink>
@@ -70,10 +105,65 @@ export function AppSidebar() {
           )}
         </div>
 
+        {/* Search & New Project */}
+        {!collapsed && (
+          <div className="px-3 space-y-2 mb-1">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-sidebar-foreground/40" />
+              <Input
+                placeholder="Search projects…"
+                value={chatSearch}
+                onChange={(e) => setChatSearch(e.target.value)}
+                className="h-8 text-xs pl-8 bg-sidebar-accent/50 border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-foreground/40"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full h-8 text-xs gap-1.5 border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+              onClick={() => navigate("/dashboard/projects")}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Project
+            </Button>
+          </div>
+        )}
+
         <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>{renderItems(mainItems)}</SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Recent Projects */}
+        {!collapsed && filteredProjects.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Recent Projects</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <ScrollArea className="max-h-[200px]">
+                <SidebarMenu>
+                  {filteredProjects.map((p) => (
+                    <SidebarMenuItem key={p.id}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={projectId === p.id}
+                      >
+                        <NavLink
+                          to={`/dashboard/projects/${p.id}`}
+                          className="hover:bg-sidebar-accent/50 transition-colors"
+                          activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                        >
+                          <MessageSquare className="mr-2 h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="truncate text-xs">{p.name}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </ScrollArea>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         <SidebarGroup>
           <SidebarGroupLabel>Account</SidebarGroupLabel>
           <SidebarGroupContent>{renderItems(accountItems)}</SidebarGroupContent>

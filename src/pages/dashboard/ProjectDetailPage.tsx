@@ -3,23 +3,24 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Upload, File, X, Send, Bot, User, Loader2, Sparkles, Files, MessageSquare, PanelLeftClose, PanelLeft } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import {
+  Upload, File, X, Send, Bot, User, Loader2, Sparkles, Paperclip,
+  BarChart3, FileText, Wand2, Database, ArrowLeft,
+} from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 const ACCEPTED = ".csv,.xlsx,.xls,.json,.pdf,.docx,.txt,.png,.jpg,.jpeg";
 
-const SUGGESTED_PROMPTS = [
-  "Summarize the key insights from my data",
-  "What trends can you identify?",
-  "Generate a report based on my files",
-  "Help me clean and prepare this dataset",
+const QUICK_ACTIONS = [
+  { icon: BarChart3, label: "Analyze Data", prompt: "Analyze the key patterns and insights from my uploaded data", color: "text-emerald-500" },
+  { icon: FileText, label: "Generate Report", prompt: "Generate a comprehensive report based on my files", color: "text-blue-500" },
+  { icon: Wand2, label: "Clean Dataset", prompt: "Help me clean and prepare this dataset for analysis", color: "text-purple-500" },
+  { icon: Database, label: "Data Summary", prompt: "Summarize the structure and content of my uploaded files", color: "text-amber-500" },
 ];
 
 const ProjectDetailPage = () => {
@@ -27,15 +28,13 @@ const ProjectDetailPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const isMobile = useIsMobile();
-  const [showFiles, setShowFiles] = useState(!isMobile);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: project, isLoading: projLoading } = useQuery({
     queryKey: ["project", projectId],
@@ -47,13 +46,11 @@ const ProjectDetailPage = () => {
     enabled: !!projectId,
   });
 
-  const { data: files = [], isLoading: filesLoading } = useQuery({
+  const { data: files = [] } = useQuery({
     queryKey: ["project-files", projectId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("project_files")
-        .select("*")
-        .eq("project_id", projectId!)
+        .from("project_files").select("*").eq("project_id", projectId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -65,9 +62,7 @@ const ProjectDetailPage = () => {
     queryKey: ["chat-messages", projectId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("chat_messages")
-        .select("*")
-        .eq("project_id", projectId!)
+        .from("chat_messages").select("*").eq("project_id", projectId!)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data;
@@ -78,6 +73,14 @@ const ProjectDetailPage = () => {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingContent]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 160) + "px";
+    }
+  }, [chatInput]);
 
   const handleFiles = useCallback(async (fileList: FileList | File[]) => {
     if (!user || !projectId) return;
@@ -98,8 +101,7 @@ const ProjectDetailPage = () => {
   }, [user, projectId, queryClient]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
+    e.preventDefault(); setDragOver(false);
     handleFiles(e.dataTransfer.files);
   }, [handleFiles]);
 
@@ -170,200 +172,263 @@ const ProjectDetailPage = () => {
     }
   };
 
-  if (projLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+  if (projLoading) return <div className="flex items-center justify-center h-[60vh]"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   if (!project) return <div className="text-center py-20"><p>Project not found</p></div>;
 
   const hasMessages = messages.length > 0 || streaming;
+  const userName = user?.email?.split("@")[0] || "there";
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4.5rem)]">
-      {/* Header */}
-      <div className="flex items-center gap-3 pb-3 border-b border-border flex-shrink-0">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/dashboard/projects")}>
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-bold font-heading truncate">{project.name}</h1>
-          {project.description && <p className="text-xs text-muted-foreground truncate">{project.description}</p>}
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><Files className="w-3 h-3" /> {files.length}</span>
-          <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" /> {messages.length}</span>
-        </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowFiles(!showFiles)}>
-          {showFiles ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
-        </Button>
-      </div>
-
-      {/* Main area: Files panel + Chat */}
-      <div className="flex-1 flex min-h-0 mt-3 gap-3">
-        {/* Files Panel */}
+    <TooltipProvider>
+      <div
+        className="flex flex-col h-[calc(100vh-3.5rem)] relative"
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+      >
+        {/* Drag overlay */}
         <AnimatePresence>
-          {showFiles && (
+          {dragOver && (
             <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: isMobile ? "100%" : 280, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex-shrink-0 flex flex-col min-h-0 overflow-hidden"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 z-50 bg-primary/10 border-2 border-dashed border-primary rounded-xl flex items-center justify-center backdrop-blur-sm"
             >
-              {/* Drop zone */}
-              <Card
-                className={`border-2 border-dashed transition-colors cursor-pointer flex-shrink-0 ${
-                  dragOver ? "border-primary bg-accent" : "border-border hover:border-primary/50"
-                }`}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={handleDrop}
-                onClick={() => document.getElementById("project-file-input")?.click()}
-              >
-                <CardContent className="flex flex-col items-center justify-center py-6 px-3">
-                  {uploading ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-primary mb-1" />
-                  ) : (
-                    <Upload className="w-6 h-6 text-muted-foreground mb-1" />
-                  )}
-                  <p className="text-xs font-medium">{uploading ? "Uploading…" : "Drop files here"}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">CSV, Excel, JSON, PDF, etc.</p>
-                  <input id="project-file-input" type="file" multiple accept={ACCEPTED} onChange={(e) => e.target.files && handleFiles(e.target.files)} className="hidden" />
-                </CardContent>
-              </Card>
-
-              {/* File list */}
-              <ScrollArea className="flex-1 mt-2">
-                <div className="space-y-1">
-                  {files.map((f: any) => (
-                    <div key={f.id} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-muted/70 transition-colors group">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <File className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium truncate">{f.file_name}</p>
-                          <p className="text-[10px] text-muted-foreground">{(f.file_size / 1024).toFixed(0)} KB</p>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteFile.mutate(f)}>
-                        <X className="w-3 h-3 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                  {files.length === 0 && !filesLoading && (
-                    <p className="text-center text-xs text-muted-foreground py-6">No files yet</p>
-                  )}
-                </div>
-              </ScrollArea>
+              <div className="flex flex-col items-center gap-2">
+                <Upload className="w-10 h-10 text-primary" />
+                <p className="text-lg font-semibold text-primary">Drop files to upload</p>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Chat */}
-        <div className={`flex-1 flex flex-col min-h-0 min-w-0 ${showFiles && isMobile ? "hidden" : ""}`}>
-          <ScrollArea className="flex-1">
-            <div className="space-y-4 pb-4 pr-2">
-              {/* Empty state with suggested prompts */}
-              {!hasMessages && (
-                <div className="flex flex-col items-center justify-center py-8 sm:py-16">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                    <Sparkles className="w-7 h-7 text-primary" />
-                  </div>
-                  <h3 className="font-semibold text-lg">Chat with DataAfro AI</h3>
-                  <p className="text-muted-foreground text-sm mt-1 max-w-sm text-center mb-6">
-                    Ask anything about your data — analysis, reports, cleaning, insights.
-                  </p>
-                  <div className="grid sm:grid-cols-2 gap-2 w-full max-w-lg">
-                    {SUGGESTED_PROMPTS.map((prompt) => (
-                      <Button
-                        key={prompt}
-                        variant="outline"
-                        className="text-left h-auto py-3 px-4 justify-start text-xs hover:border-primary/40 hover:bg-primary/5 transition-colors"
-                        onClick={() => sendMessage(prompt)}
-                      >
-                        <Sparkles className="w-3.5 h-3.5 mr-2 text-primary flex-shrink-0" />
-                        <span className="line-clamp-1">{prompt}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Messages */}
-              {messages.map((m: any) => (
-                <div key={m.id} className={`flex gap-3 ${m.role === "user" ? "justify-end" : ""}`}>
-                  {m.role === "assistant" && (
-                    <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
-                      <Bot className="w-3.5 h-3.5 text-primary" />
-                    </div>
-                  )}
-                  <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                    m.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
-                  }`}>
-                    {m.role === "assistant" ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
-                        <ReactMarkdown>{m.content}</ReactMarkdown>
-                      </div>
-                    ) : (
-                      <p className="text-sm">{m.content}</p>
-                    )}
-                  </div>
-                  {m.role === "user" && (
-                    <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-1">
-                      <User className="w-3.5 h-3.5 text-primary-foreground" />
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {/* Streaming */}
-              {streaming && streamingContent && (
-                <div className="flex gap-3">
-                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
-                    <Bot className="w-3.5 h-3.5 text-primary" />
-                  </div>
-                  <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-muted">
-                    <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
-                      <ReactMarkdown>{streamingContent}</ReactMarkdown>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {streaming && !streamingContent && (
-                <div className="flex gap-3">
-                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
-                    <Bot className="w-3.5 h-3.5 text-primary" />
-                  </div>
-                  <div className="rounded-2xl px-4 py-3 bg-muted flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Thinking…</span>
-                  </div>
-                </div>
-              )}
-              <div ref={chatEndRef} />
-            </div>
-          </ScrollArea>
-
-          {/* Chat Input */}
-          <div className="flex gap-2 pt-3 border-t border-border flex-shrink-0">
-            <Input
-              ref={inputRef}
-              placeholder="Ask anything about your data…"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-              disabled={streaming}
-              className="text-sm"
-            />
+        {/* Uploaded files bar */}
+        {files.length > 0 && (
+          <div className="flex items-center gap-2 px-1 pb-3 overflow-x-auto flex-shrink-0 scrollbar-hide">
             <Button
-              onClick={() => sendMessage()}
-              disabled={!chatInput.trim() || streaming}
-              className="bg-gradient-primary text-primary-foreground hover:opacity-90 px-3"
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1 flex-shrink-0"
+              onClick={() => navigate("/dashboard/projects")}
             >
-              <Send className="w-4 h-4" />
+              <ArrowLeft className="w-3 h-3" />
+              Projects
             </Button>
+            <div className="h-4 w-px bg-border flex-shrink-0" />
+            {files.map((f: any) => (
+              <div key={f.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 text-xs group flex-shrink-0 border border-border/50">
+                <File className="w-3 h-3 text-primary" />
+                <span className="truncate max-w-[120px]">{f.file_name}</span>
+                <button
+                  onClick={() => deleteFile.mutate(f)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
           </div>
+        )}
+
+        {/* Chat area */}
+        <div className="flex-1 min-h-0 flex flex-col">
+          {!hasMessages ? (
+            /* ===== EMPTY STATE — Centered welcome ===== */
+            <div className="flex-1 flex flex-col items-center justify-center px-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="flex flex-col items-center max-w-2xl w-full"
+              >
+                {/* Brand icon */}
+                <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center mb-5 shadow-glow">
+                  <Sparkles className="w-8 h-8 text-primary-foreground" />
+                </div>
+
+                {/* Greeting */}
+                <h2 className="text-2xl sm:text-3xl font-bold font-heading text-center mb-1">
+                  Hey 👋 <span className="capitalize">{userName}</span>!
+                </h2>
+                <p className="text-muted-foreground text-center mb-8">
+                  What would you like to analyze in <span className="font-medium text-foreground">{project.name}</span>?
+                </p>
+
+                {/* Input area */}
+                <div className="w-full rounded-2xl border border-border bg-card shadow-card p-3 mb-6">
+                  <textarea
+                    ref={textareaRef}
+                    placeholder="Ask me anything about your data…"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                    rows={2}
+                    className="w-full bg-transparent border-0 outline-none resize-none text-sm placeholder:text-muted-foreground px-1"
+                  />
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+                    <div className="flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost" size="sm"
+                            className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                            onClick={() => document.getElementById("file-input")?.click()}
+                          >
+                            <Paperclip className="w-3.5 h-3.5" />
+                            Attach
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Upload files to this project</TooltipContent>
+                      </Tooltip>
+                      {uploading && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
+                    </div>
+                    <Button
+                      onClick={() => sendMessage()}
+                      disabled={!chatInput.trim() || streaming}
+                      size="sm"
+                      className="h-8 gap-1.5 bg-gradient-primary text-primary-foreground rounded-full px-4 hover:opacity-90"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      Send
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Quick actions */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
+                  {QUICK_ACTIONS.map((action) => (
+                    <button
+                      key={action.label}
+                      onClick={() => sendMessage(action.prompt)}
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-soft transition-all group cursor-pointer"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                        <action.icon className={`w-5 h-5 ${action.color}`} />
+                      </div>
+                      <span className="text-xs font-medium text-foreground">{action.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
+          ) : (
+            /* ===== CHAT MESSAGES ===== */
+            <>
+              <ScrollArea className="flex-1">
+                <div className="max-w-3xl mx-auto space-y-5 py-4 px-2">
+                  {messages.map((m: any) => (
+                    <div key={m.id} className={`flex gap-3 ${m.role === "user" ? "justify-end" : ""}`}>
+                      {m.role === "assistant" && (
+                        <div className="w-8 h-8 rounded-xl bg-gradient-primary flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+                          <Bot className="w-4 h-4 text-primary-foreground" />
+                        </div>
+                      )}
+                      <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                        m.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-br-md"
+                          : "bg-muted rounded-bl-md"
+                      }`}>
+                        {m.role === "assistant" ? (
+                          <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
+                            <ReactMarkdown>{m.content}</ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="text-sm">{m.content}</p>
+                        )}
+                      </div>
+                      {m.role === "user" && (
+                        <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <User className="w-4 h-4 text-primary-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Streaming */}
+                  {streaming && streamingContent && (
+                    <div className="flex gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-primary flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+                        <Bot className="w-4 h-4 text-primary-foreground" />
+                      </div>
+                      <div className="max-w-[80%] rounded-2xl rounded-bl-md px-4 py-3 bg-muted">
+                        <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
+                          <ReactMarkdown>{streamingContent}</ReactMarkdown>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {streaming && !streamingContent && (
+                    <div className="flex gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-primary flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+                        <Bot className="w-4 h-4 text-primary-foreground" />
+                      </div>
+                      <div className="rounded-2xl rounded-bl-md px-4 py-3 bg-muted">
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                            <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                            <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                          </div>
+                          <span className="text-xs text-muted-foreground">Analyzing…</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+              </ScrollArea>
+
+              {/* Bottom input bar — always visible */}
+              <div className="flex-shrink-0 border-t border-border bg-card/80 backdrop-blur-sm px-4 py-3">
+                <div className="max-w-3xl mx-auto">
+                  <div className="flex items-end gap-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost" size="icon"
+                          className="h-9 w-9 flex-shrink-0 text-muted-foreground hover:text-foreground"
+                          onClick={() => document.getElementById("file-input")?.click()}
+                        >
+                          <Paperclip className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Attach files</TooltipContent>
+                    </Tooltip>
+                    <div className="flex-1 rounded-xl border border-border bg-background px-3 py-2">
+                      <textarea
+                        ref={textareaRef}
+                        placeholder="Ask anything about your data…"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                        rows={1}
+                        className="w-full bg-transparent border-0 outline-none resize-none text-sm placeholder:text-muted-foreground"
+                      />
+                    </div>
+                    <Button
+                      onClick={() => sendMessage()}
+                      disabled={!chatInput.trim() || streaming}
+                      size="icon"
+                      className="h-9 w-9 flex-shrink-0 bg-gradient-primary text-primary-foreground rounded-full hover:opacity-90"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
+
+        {/* Hidden file input */}
+        <input
+          id="file-input"
+          type="file"
+          multiple
+          accept={ACCEPTED}
+          onChange={(e) => e.target.files && handleFiles(e.target.files)}
+          className="hidden"
+        />
       </div>
-    </div>
+    </TooltipProvider>
   );
 };
 
