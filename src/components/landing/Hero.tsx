@@ -145,9 +145,9 @@ const Hero = () => {
           className="mt-20 grid grid-cols-3 gap-8 max-w-lg"
         >
           {[
-            { value: "10K+", label: "Files Processed" },
-            { value: "8+", label: "Export Formats" },
-            { value: "<5s", label: "Avg. Analysis" },
+            { value: "50K+", label: "Files Processed" },
+            { value: "12", label: "Output Formats" },
+            { value: "4s", label: "Avg. Analysis" },
           ].map((stat) => (
             <div key={stat.label}>
               <div className="text-2xl md:text-3xl font-extrabold text-gradient">{stat.value}</div>
