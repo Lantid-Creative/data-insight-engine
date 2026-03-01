@@ -46,29 +46,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, fetchUserMeta]);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    let mounted = true;
+
+    setLoading(true);
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+
       setSession(session);
       setUser(session?.user ?? null);
+
       if (session?.user) {
-        await fetchUserMeta(session.user.id);
+        fetchUserMeta(session.user.id).finally(() => {
+          if (mounted) setLoading(false);
+        });
       } else {
         setIsAdmin(false);
         setApplicationStatus(null);
-      }
-      setLoading(false);
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserMeta(session.user.id).then(() => setLoading(false));
-      } else {
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        fetchUserMeta(session.user.id).finally(() => {
+          if (mounted) setLoading(false);
+        });
+      } else {
+        setIsAdmin(false);
+        setApplicationStatus(null);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchUserMeta]);
 
   const signUp = async (email: string, password: string, fullName: string) => {

@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Eye, EyeOff, Zap, Shield, BarChart3 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,38 +14,33 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, user, isAdmin, applicationStatus, loading: authLoading } = useAuth();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+
+    if (isAdmin) {
+      navigate("/admin", { replace: true });
+      return;
+    }
+
+    if (applicationStatus === "approved") {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+
+    navigate("/pending", { replace: true });
+  }, [authLoading, user, isAdmin, applicationStatus, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const { error } = await signIn(email, password);
+    setLoading(false);
+
     if (error) {
-      setLoading(false);
       toast({ title: "Sign in failed", description: error, variant: "destructive" });
-      return;
-    }
-
-    // Check role to route appropriately
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-
-      setLoading(false);
-      if (roleData) {
-        navigate("/admin");
-      } else {
-        navigate("/dashboard");
-      }
-    } else {
-      setLoading(false);
-      navigate("/dashboard");
     }
   };
 
