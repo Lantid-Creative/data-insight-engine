@@ -806,7 +806,7 @@ const ProjectDetailPage = () => {
                             key={action.label}
                             action={action}
                             index={i}
-                            onClick={() => sendMessage(action.prompt)}
+                            onClick={() => { setChatInput(action.prompt); textareaRef.current?.focus(); }}
                           />
                         ))}
                       </div>
