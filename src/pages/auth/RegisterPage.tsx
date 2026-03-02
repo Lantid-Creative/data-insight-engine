@@ -76,7 +76,7 @@ const RegisterPage = () => {
           </div>
           <h1 className="text-2xl font-extrabold mb-2">Application Submitted</h1>
           <p className="text-muted-foreground mb-2">We've received your early access request.</p>
-          <p className="text-sm text-muted-foreground mb-4">First, confirm your email at <span className="font-mono text-primary">{email}</span></p>
+          <p className="text-sm text-muted-foreground mb-4">Your account has been created with <span className="font-mono text-primary">{email}</span></p>
           <div className="rounded-xl border border-border bg-muted/30 p-4 text-left mb-8">
             <p className="text-sm text-muted-foreground">Our team will review your application and get back to you within <strong className="text-foreground">48 hours</strong>. You'll receive an email once approved.</p>
           </div>

@@ -34,6 +34,7 @@ import ProjectDetailPage from "./pages/dashboard/ProjectDetailPage";
 import BillingPage from "./pages/dashboard/BillingPage";
 import SettingsPage from "./pages/dashboard/SettingsPage";
 import ApiAccessPage from "./pages/dashboard/ApiAccessPage";
+import UseCaseDetailPage from "./pages/use-cases/UseCaseDetailPage";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const App = () => (
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/security" element={<SecurityPage />} />
+              <Route path="/use-cases/:slug" element={<UseCaseDetailPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
