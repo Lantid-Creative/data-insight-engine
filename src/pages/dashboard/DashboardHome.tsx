@@ -6,7 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, subDays, format, startOfDay } from "date-fns";
+import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
 const DashboardHome = () => {
   const { user } = useAuth();
@@ -41,6 +42,35 @@ const DashboardHome = () => {
     },
     enabled: !!user,
   });
+
+  // Weekly activity data for sparkline
+  const sevenDaysAgo = subDays(new Date(), 6).toISOString();
+  const { data: weeklyMessages = [] } = useQuery({
+    queryKey: ["weekly-activity"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("chat_messages")
+        .select("created_at")
+        .eq("user_id", user!.id)
+        .gte("created_at", sevenDaysAgo)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Bucket weekly messages into 7 days
+  const sparklineData = Array.from({ length: 7 }, (_, i) => {
+    const day = startOfDay(subDays(new Date(), 6 - i));
+    const nextDay = startOfDay(subDays(new Date(), 5 - i));
+    const count = weeklyMessages.filter((m: any) => {
+      const d = new Date(m.created_at);
+      return i < 6 ? d >= day && d < nextDay : d >= day;
+    }).length;
+    return { day: format(day, "EEE"), count };
+  });
+  const weekTotal = sparklineData.reduce((a, d) => a + d.count, 0);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -194,6 +224,34 @@ const DashboardHome = () => {
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Workspace Overview</h2>
             <Card className="shadow-soft">
               <CardContent className="p-4 space-y-4">
+                {/* Weekly Sparkline */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm font-medium">Weekly Activity</p>
+                    <span className="text-xs text-muted-foreground">{weekTotal} messages</span>
+                  </div>
+                  <div className="h-16">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={sparklineData}>
+                        <defs>
+                          <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="day" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                          labelStyle={{ color: "hsl(var(--foreground))" }}
+                          formatter={(value: number) => [`${value} msgs`, ""]}
+                        />
+                        <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#sparkFill)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="h-px bg-border" />
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
                     <BarChart3 className="w-4 h-4 text-primary" />
