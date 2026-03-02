@@ -12,13 +12,13 @@ import {
   FileSpreadsheet, FileImage, FileCode, FileArchive,
   Trash2, Clock, HardDrive, Layers, PieChart, Table2,
   MessageSquare, ChevronLeft, Zap, Brain, Eye, Command,
-  Workflow, TrendingUp, Search, Mic,
+  Workflow, TrendingUp, Search, Mic, Plus, Hash,
 } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 
-/* ─── File icon helper ─── */
+/* ─── Helpers ─── */
 function getFileIcon(mime: string | null) {
   if (!mime) return File;
   if (mime.includes("spreadsheet") || mime.includes("csv") || mime.includes("excel")) return FileSpreadsheet;
@@ -54,42 +54,67 @@ const WORKSPACE_MODES = [
 ] as const;
 
 const QUICK_ACTIONS = [
-  { icon: BarChart3, label: "Analyze", prompt: "Analyze the key patterns and insights from my uploaded data", gradient: "from-[hsl(217,91%,60%)] to-[hsl(217,91%,45%)]" },
-  { icon: FileText, label: "Report", prompt: "Generate a comprehensive report based on my files", gradient: "from-[hsl(152,69%,40%)] to-[hsl(152,69%,30%)]" },
-  { icon: Wand2, label: "Clean", prompt: "Help me clean and prepare this dataset for analysis", gradient: "from-[hsl(270,76%,55%)] to-[hsl(270,76%,40%)]" },
-  { icon: Database, label: "Summarize", prompt: "Summarize the structure and content of my uploaded files", gradient: "from-[hsl(38,92%,50%)] to-[hsl(38,92%,38%)]" },
-  { icon: PieChart, label: "Visualize", prompt: "Create visualizations and charts from my data", gradient: "from-[hsl(350,80%,55%)] to-[hsl(350,80%,42%)]" },
-  { icon: Table2, label: "Extract", prompt: "Extract all tables and structured data from my documents", gradient: "from-[hsl(190,85%,45%)] to-[hsl(190,85%,33%)]" },
+  { icon: BarChart3, label: "Analyze Data", desc: "Find patterns & insights", prompt: "Analyze the key patterns and insights from my uploaded data" },
+  { icon: FileText, label: "Generate Report", desc: "Comprehensive PDF report", prompt: "Generate a comprehensive report based on my files" },
+  { icon: Wand2, label: "Clean Dataset", desc: "Prepare for analysis", prompt: "Help me clean and prepare this dataset for analysis" },
+  { icon: PieChart, label: "Visualize", desc: "Charts & dashboards", prompt: "Create visualizations and charts from my data" },
+  { icon: Database, label: "Summarize", desc: "Quick data overview", prompt: "Summarize the structure and content of my uploaded files" },
+  { icon: Table2, label: "Extract Tables", desc: "Structured extraction", prompt: "Extract all tables and structured data from my documents" },
 ];
 
-/* ─── Animated Gradient Orb ─── */
-function GradientOrb() {
+/* ─── Ambient Mesh Background ─── */
+function AmbientMesh() {
   return (
-    <div className="relative w-28 h-28">
-      <motion.div
-        className="absolute inset-0 rounded-full bg-gradient-to-br from-primary via-primary/60 to-primary/30 blur-2xl"
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.4, 0.6, 0.4],
-          rotate: [0, 180, 360],
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute -top-[40%] -left-[20%] w-[70%] h-[70%] rounded-full bg-primary/[0.04] blur-[120px]" />
+      <div className="absolute -bottom-[30%] -right-[10%] w-[50%] h-[50%] rounded-full bg-primary/[0.03] blur-[100px]" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40%] h-[40%] rounded-full bg-primary/[0.02] blur-[80px]" />
+      {/* Subtle dot grid */}
+      <div
+        className="absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)",
+          backgroundSize: "32px 32px",
         }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
       />
+    </div>
+  );
+}
+
+/* ─── Animated Logo Mark ─── */
+function LogoMark({ size = "lg" }: { size?: "sm" | "lg" }) {
+  const dim = size === "lg" ? "w-20 h-20" : "w-9 h-9";
+  const iconDim = size === "lg" ? "w-8 h-8" : "w-4 h-4";
+
+  return (
+    <div className="relative">
+      {size === "lg" && (
+        <>
+          <motion.div
+            className="absolute inset-0 rounded-[28px] bg-primary/20 blur-2xl"
+            animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.5, 0.3] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute -inset-2 rounded-[32px] border border-primary/10"
+            animate={{ scale: [1, 1.05, 1], opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </>
+      )}
       <motion.div
-        className="absolute inset-3 rounded-full bg-gradient-to-tr from-primary to-primary/80 shadow-lg"
-        animate={{
-          scale: [1, 1.05, 1],
-        }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <div className="absolute inset-0 flex items-center justify-center">
-        <motion.div
-          animate={{ rotateY: [0, 360] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-        >
-          <Sparkles className="w-10 h-10 text-primary-foreground drop-shadow-lg" />
-        </motion.div>
-      </div>
+        className={`relative ${dim} rounded-[22px] bg-gradient-to-br from-primary via-primary/90 to-primary/70 flex items-center justify-center`}
+        style={{ boxShadow: "0 8px 32px hsl(var(--primary) / 0.3), inset 0 1px 0 hsl(0 0% 100% / 0.15)" }}
+        whileHover={size === "lg" ? { scale: 1.05, rotate: 2 } : undefined}
+        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      >
+        <Sparkles className={`${iconDim} text-primary-foreground drop-shadow-sm`} />
+        {/* Shine overlay */}
+        <div className="absolute inset-0 rounded-[22px] bg-gradient-to-b from-white/10 to-transparent" />
+      </motion.div>
+      {size === "sm" && (
+        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[hsl(var(--success))] border-2 border-background" />
+      )}
     </div>
   );
 }
@@ -109,16 +134,22 @@ function ChatMessage({ message, onCopy, onRetry, isLast }: {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className="group"
     >
       {isUser ? (
         <div className="flex justify-end">
-          <div className="max-w-[80%]">
-            <div className="rounded-2xl rounded-br-sm bg-primary text-primary-foreground px-5 py-3.5 shadow-lg shadow-primary/10">
-              <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{message.content}</p>
+          <div className="max-w-[75%]">
+            <div
+              className="rounded-2xl rounded-br-md px-5 py-3.5"
+              style={{
+                background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))",
+                boxShadow: "0 4px 24px hsl(var(--primary) / 0.2), inset 0 1px 0 hsl(0 0% 100% / 0.1)",
+              }}
+            >
+              <p className="text-[15px] leading-relaxed whitespace-pre-wrap text-primary-foreground">{message.content}</p>
             </div>
             <p className="text-[10px] text-muted-foreground/40 text-right mt-1.5 mr-1 font-mono">
               {timeAgo(message.created_at)}
@@ -127,33 +158,29 @@ function ChatMessage({ message, onCopy, onRetry, isLast }: {
         </div>
       ) : (
         <div className="space-y-3">
-          {/* Agent header */}
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md shadow-primary/20">
-                <Sparkles className="w-4.5 h-4.5 text-primary-foreground" />
-              </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[hsl(var(--success))] border-2 border-background" />
-            </div>
+            <LogoMark size="sm" />
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-foreground tracking-tight">DataAfro</span>
-                <span className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[9px] font-bold uppercase tracking-widest">AI</span>
+                <span className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[9px] font-bold uppercase tracking-widest border border-primary/10">AI</span>
               </div>
               <span className="text-[10px] text-muted-foreground/50 font-mono">{timeAgo(message.created_at)}</span>
             </div>
           </div>
 
-          {/* Message body */}
           <div className="ml-12">
-            <div className="rounded-2xl rounded-tl-sm bg-card border border-border/60 px-5 py-4 shadow-sm">
+            <div
+              className="rounded-2xl rounded-tl-md px-5 py-4 border border-border/50 bg-card"
+              style={{ boxShadow: "0 1px 3px hsl(0 0% 0% / 0.04), 0 8px 24px hsl(0 0% 0% / 0.04)" }}
+            >
               <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-[1.85]
                 [&>p]:mb-3 [&>p:last-child]:mb-0
                 [&>ul]:mb-3 [&>ol]:mb-3 [&>li]:mb-1
                 [&>h1]:text-lg [&>h2]:text-base [&>h3]:text-sm
                 [&>h1]:font-bold [&>h2]:font-bold [&>h3]:font-semibold
                 [&>h1]:mt-5 [&>h2]:mt-4 [&>h3]:mt-3
-                [&>pre]:bg-[hsl(var(--muted))] [&>pre]:rounded-xl [&>pre]:border [&>pre]:border-border [&>pre]:p-4 [&>pre]:text-sm [&>pre]:overflow-x-auto
+                [&>pre]:bg-muted [&>pre]:rounded-xl [&>pre]:border [&>pre]:border-border [&>pre]:p-4 [&>pre]:text-sm [&>pre]:overflow-x-auto
                 [&>blockquote]:border-l-2 [&>blockquote]:border-primary/40 [&>blockquote]:pl-4 [&>blockquote]:text-muted-foreground [&>blockquote]:italic
                 [&_code]:bg-primary/5 [&_code]:text-primary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-sm [&_code]:font-mono [&_code]:border [&_code]:border-primary/10
                 [&>pre_code]:bg-transparent [&>pre_code]:p-0 [&>pre_code]:border-0 [&>pre_code]:text-foreground">
@@ -161,11 +188,8 @@ function ChatMessage({ message, onCopy, onRetry, isLast }: {
               </div>
             </div>
 
-            {/* Floating action bar */}
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-all duration-300"
-            >
+            {/* Hover action bar */}
+            <div className="flex items-center gap-0.5 mt-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
               {[
                 { icon: copied ? Check : Copy, onClick: handleCopy, label: copied ? "Copied!" : "Copy", active: copied },
                 ...(isLast && onRetry ? [{ icon: RotateCcw, onClick: onRetry, label: "Retry", active: false }] : []),
@@ -179,7 +203,7 @@ function ChatMessage({ message, onCopy, onRetry, isLast }: {
                       className={`p-1.5 rounded-lg transition-all duration-200 ${
                         action.active
                           ? "text-primary bg-primary/10"
-                          : "text-muted-foreground/60 hover:text-foreground hover:bg-muted"
+                          : "text-muted-foreground/50 hover:text-foreground hover:bg-muted"
                       }`}
                     >
                       <action.icon className="w-3.5 h-3.5" />
@@ -188,7 +212,7 @@ function ChatMessage({ message, onCopy, onRetry, isLast }: {
                   <TooltipContent side="bottom" className="text-xs">{action.label}</TooltipContent>
                 </Tooltip>
               ))}
-            </motion.div>
+            </div>
           </div>
         </div>
       )}
@@ -200,18 +224,16 @@ function ChatMessage({ message, onCopy, onRetry, isLast }: {
 function ThinkingIndicator({ content }: { content: string }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-3"
     >
       <div className="flex items-center gap-3">
         <div className="relative">
-          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md shadow-primary/20">
-            <Sparkles className="w-4.5 h-4.5 text-primary-foreground" />
-          </div>
+          <LogoMark size="sm" />
           <motion.div
-            className="absolute inset-0 rounded-2xl border-2 border-primary/40"
-            animate={{ scale: [1, 1.4, 1], opacity: [0.6, 0, 0.6] }}
+            className="absolute -inset-1 rounded-2xl border border-primary/30"
+            animate={{ scale: [1, 1.3, 1], opacity: [0.6, 0, 0.6] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
           />
         </div>
@@ -219,7 +241,7 @@ function ThinkingIndicator({ content }: { content: string }) {
           <span className="text-sm font-bold text-foreground tracking-tight">DataAfro</span>
           {!content && (
             <motion.div
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/15"
               animate={{ opacity: [0.7, 1, 0.7] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
@@ -232,7 +254,10 @@ function ThinkingIndicator({ content }: { content: string }) {
 
       <div className="ml-12">
         {content ? (
-          <div className="rounded-2xl rounded-tl-sm bg-card border border-border/60 px-5 py-4 shadow-sm">
+          <div
+            className="rounded-2xl rounded-tl-md border border-border/50 bg-card px-5 py-4"
+            style={{ boxShadow: "0 1px 3px hsl(0 0% 0% / 0.04), 0 8px 24px hsl(0 0% 0% / 0.04)" }}
+          >
             <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-[1.85] [&>p]:mb-3 [&>p:last-child]:mb-0">
               <ReactMarkdown>{content}</ReactMarkdown>
               <motion.span
@@ -243,14 +268,17 @@ function ThinkingIndicator({ content }: { content: string }) {
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl rounded-tl-sm bg-card border border-border/60 px-5 py-4 shadow-sm">
+          <div
+            className="rounded-2xl rounded-tl-md border border-border/50 bg-card px-5 py-4"
+            style={{ boxShadow: "0 1px 3px hsl(0 0% 0% / 0.04)" }}
+          >
             <div className="flex items-center gap-3">
-              <div className="flex gap-1">
+              <div className="flex gap-1.5">
                 {[0, 1, 2].map((i) => (
                   <motion.div
                     key={i}
-                    className="w-2 h-2 rounded-full bg-primary/60"
-                    animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }}
+                    className="w-2 h-2 rounded-full bg-primary/50"
+                    animate={{ scale: [1, 1.4, 1], opacity: [0.3, 1, 0.3] }}
                     transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
                   />
                 ))}
@@ -273,26 +301,55 @@ function FileCard({ file, onDelete }: { file: any; onDelete: () => void }) {
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 8, scale: 0.95 }}
-      className="group relative flex items-center gap-3 rounded-xl p-3 hover:bg-muted/50 transition-all duration-200 cursor-default"
+      className="group relative flex items-center gap-3 rounded-xl p-2.5 hover:bg-muted/60 transition-all duration-200 cursor-default"
     >
-      <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors duration-200">
-        <Icon className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+      <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
+        <Icon className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-semibold text-foreground truncate">{file.file_name}</p>
+        <p className="text-[12px] font-semibold text-foreground truncate">{file.file_name}</p>
         <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-[10px] text-muted-foreground font-mono">{formatFileSize(file.file_size)}</span>
+          <span className="text-[10px] text-muted-foreground/70 font-mono">{formatFileSize(file.file_size)}</span>
           <span className="text-muted-foreground/20">·</span>
-          <span className="text-[10px] text-muted-foreground">{timeAgo(file.created_at)}</span>
+          <span className="text-[10px] text-muted-foreground/70">{timeAgo(file.created_at)}</span>
         </div>
       </div>
       <button
         onClick={(e) => { e.stopPropagation(); onDelete(); }}
-        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-all"
       >
-        <Trash2 className="w-3.5 h-3.5" />
+        <Trash2 className="w-3 h-3" />
       </button>
     </motion.div>
+  );
+}
+
+/* ─── Quick Action Card ─── */
+function QuickActionCard({ action, index, onClick }: { action: typeof QUICK_ACTIONS[0]; index: number; onClick: () => void }) {
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 + index * 0.06, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      onClick={onClick}
+      className="group relative flex flex-col items-start gap-3 p-4 rounded-2xl border border-border/50 bg-card hover:border-primary/30 transition-all duration-300 text-left overflow-hidden"
+      whileHover={{ y: -2, transition: { duration: 0.2 } }}
+    >
+      {/* Hover glow */}
+      <div className="absolute inset-0 bg-primary/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <div className="absolute top-0 right-0 w-20 h-20 rounded-full bg-primary/[0.03] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+      <div
+        className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center"
+        style={{ boxShadow: "0 4px 12px hsl(var(--primary) / 0.2)" }}
+      >
+        <action.icon className="w-5 h-5 text-primary-foreground" />
+      </div>
+      <div className="relative">
+        <p className="text-sm font-bold text-foreground">{action.label}</p>
+        <p className="text-[11px] text-muted-foreground mt-0.5">{action.desc}</p>
+      </div>
+    </motion.button>
   );
 }
 
@@ -465,12 +522,13 @@ const ProjectDetailPage = () => {
 
   /* ─── Loading ─── */
   if (projLoading) return (
-    <div className="flex items-center justify-center h-[calc(100vh-3.5rem)] bg-background">
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-5">
-        <GradientOrb />
+    <div className="flex items-center justify-center h-[calc(100vh-3.5rem)] bg-background relative">
+      <AmbientMesh />
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-6 relative z-10">
+        <LogoMark size="lg" />
         <motion.span
-          className="text-sm text-muted-foreground font-medium"
-          animate={{ opacity: [0.5, 1, 0.5] }}
+          className="text-sm text-muted-foreground font-medium tracking-wide"
+          animate={{ opacity: [0.4, 1, 0.4] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
           Initializing workspace…
@@ -493,7 +551,7 @@ const ProjectDetailPage = () => {
         onDrop={handleDrop}
       >
         {/* ═══ TOP BAR ═══ */}
-        <div className="h-12 flex items-center justify-between px-4 border-b border-border/50 bg-background/80 backdrop-blur-lg flex-shrink-0 z-20">
+        <div className="h-13 flex items-center justify-between px-4 border-b border-border/40 bg-background/80 backdrop-blur-xl flex-shrink-0 z-20">
           <div className="flex items-center gap-3">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -503,29 +561,42 @@ const ProjectDetailPage = () => {
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs">All projects</TooltipContent>
             </Tooltip>
-            <div className="w-px h-5 bg-border" />
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-                <Sparkles className="w-3 h-3 text-primary-foreground" />
+            <div className="w-px h-5 bg-border/50" />
+            <div className="flex items-center gap-2.5">
+              <div
+                className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center"
+                style={{ boxShadow: "0 2px 8px hsl(var(--primary) / 0.2)" }}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
               </div>
               <span className="text-sm font-bold text-foreground truncate max-w-[200px]">{project.name}</span>
             </div>
           </div>
 
           {/* Mode switcher */}
-          <div className="flex items-center gap-0.5 p-1 rounded-xl bg-muted/50 border border-border/50">
+          <div className="flex items-center gap-0.5 p-1 rounded-xl bg-muted/40 border border-border/40">
             {WORKSPACE_MODES.map((mode) => (
               <button
                 key={mode.id}
                 onClick={() => setActiveMode(mode.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                className={`relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 ${
                   activeMode === mode.id
-                    ? "bg-background text-foreground shadow-sm"
+                    ? "text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <mode.icon className="w-3.5 h-3.5" />
-                {mode.label}
+                {activeMode === mode.id && (
+                  <motion.div
+                    layoutId="mode-indicator"
+                    className="absolute inset-0 bg-card rounded-lg border border-border/60"
+                    style={{ boxShadow: "0 1px 4px hsl(0 0% 0% / 0.06)" }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <mode.icon className="w-3.5 h-3.5" />
+                  {mode.label}
+                </span>
               </button>
             ))}
           </div>
@@ -533,12 +604,12 @@ const ProjectDetailPage = () => {
           {/* Right controls */}
           <div className="flex items-center gap-2">
             {files.length > 0 && (
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border border-border/50">
+              <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-muted/30 border border-border/30">
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--success))]" />
                   <span className="text-[10px] font-mono text-muted-foreground">{files.length} files</span>
                 </div>
-                <div className="w-px h-3 bg-border" />
+                <div className="w-px h-3 bg-border/50" />
                 <span className="text-[10px] font-mono text-muted-foreground">{formatFileSize(totalSize)}</span>
               </div>
             )}
@@ -567,25 +638,28 @@ const ProjectDetailPage = () => {
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="absolute inset-0 z-50 flex items-center justify-center"
             >
-              <div className="absolute inset-0 bg-background/90 backdrop-blur-xl" />
+              <div className="absolute inset-0 bg-background/90 backdrop-blur-2xl" />
               <motion.div
                 initial={{ scale: 0.85, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.85, opacity: 0 }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                className="relative z-10 flex flex-col items-center gap-6 p-16 rounded-[2rem] border-2 border-dashed border-primary/40 bg-primary/[0.03]"
+                className="relative z-10 flex flex-col items-center gap-6 p-20 rounded-[2.5rem] border-2 border-dashed border-primary/30"
               >
                 <motion.div
                   animate={{ y: [0, -12, 0] }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-2xl shadow-primary/30">
+                  <div
+                    className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center"
+                    style={{ boxShadow: "0 16px 48px hsl(var(--primary) / 0.3)" }}
+                  >
                     <Upload className="w-10 h-10 text-primary-foreground" />
                   </div>
                 </motion.div>
                 <div className="text-center">
-                  <p className="text-xl font-bold text-foreground">Drop your files</p>
-                  <p className="text-sm text-muted-foreground mt-1.5">Any file type · Any size · Multiple files</p>
+                  <p className="text-2xl font-bold text-foreground">Drop your files here</p>
+                  <p className="text-sm text-muted-foreground mt-2">Any file type · Any size · Multiple files</p>
                 </div>
               </motion.div>
             </motion.div>
@@ -595,32 +669,29 @@ const ProjectDetailPage = () => {
         {/* ═══ BODY ═══ */}
         <div className="flex flex-1 min-h-0">
           {/* ─── Main Chat ─── */}
-          <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 flex flex-col min-w-0 relative">
+            <AmbientMesh />
+
             {!hasMessages ? (
               /* ===== EMPTY STATE ===== */
-              <div className="flex-1 flex flex-col items-center justify-center px-4 relative">
-                {/* Ambient background glow */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                  <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-primary/[0.03] blur-3xl" />
-                </div>
-
+              <div className="flex-1 flex flex-col items-center justify-center px-4 relative z-10">
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-                  className="flex flex-col items-center max-w-[680px] w-full relative z-10"
+                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex flex-col items-center max-w-[720px] w-full"
                 >
                   <div className="mb-8">
-                    <GradientOrb />
+                    <LogoMark size="lg" />
                   </div>
 
-                  <h1 className="text-3xl sm:text-[2.5rem] font-extrabold text-center mb-3 tracking-tight text-foreground leading-[1.1]">
+                  <h1 className="text-3xl sm:text-4xl font-extrabold text-center mb-3 tracking-tight text-foreground leading-[1.15]">
                     What should we build
                     <br />
                     <span className="text-gradient">from your data?</span>
                   </h1>
-                  <p className="text-muted-foreground text-center mb-10 text-base max-w-md leading-relaxed">
-                    Upload documents, ask questions, and let AI transform raw data into insights.
+                  <p className="text-muted-foreground text-center mb-10 text-[15px] max-w-md leading-relaxed">
+                    Upload documents, ask questions, and let AI transform raw data into actionable insights.
                   </p>
 
                   {/* File pills */}
@@ -628,7 +699,7 @@ const ProjectDetailPage = () => {
                     <motion.div
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
+                      transition={{ delay: 0.2 }}
                       className="flex items-center flex-wrap gap-2 mb-8 justify-center"
                     >
                       {files.slice(0, 5).map((f: any) => {
@@ -636,7 +707,7 @@ const ProjectDetailPage = () => {
                         return (
                           <div
                             key={f.id}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border text-xs font-medium text-foreground shadow-sm"
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border/60 text-xs font-medium text-foreground shadow-sm"
                           >
                             <FIcon className="w-3.5 h-3.5 text-muted-foreground" />
                             <span className="truncate max-w-[120px]">{f.file_name}</span>
@@ -651,30 +722,34 @@ const ProjectDetailPage = () => {
                     </motion.div>
                   )}
 
-                  {/* Input */}
-                  <InputBar textareaRef={textareaRef} chatInput={chatInput} setChatInput={setChatInput} inputFocused={inputFocused} setInputFocused={setInputFocused} sendMessage={sendMessage} streaming={streaming} uploading={uploading} large className="w-full mb-10" />
+                  {/* Command Input */}
+                  <div className="w-full mb-10">
+                    <CommandInput
+                      textareaRef={textareaRef}
+                      chatInput={chatInput}
+                      setChatInput={setChatInput}
+                      inputFocused={inputFocused}
+                      setInputFocused={setInputFocused}
+                      sendMessage={sendMessage}
+                      streaming={streaming}
+                      uploading={uploading}
+                      large
+                    />
+                  </div>
 
-                  {/* Quick action chips */}
-                  <div className="flex flex-wrap gap-2 justify-center">
+                  {/* Quick action CARDS (not chips) */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-[560px]">
                     {QUICK_ACTIONS.map((action, i) => (
-                      <motion.button
+                      <QuickActionCard
                         key={action.label}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.4 + i * 0.05, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                        action={action}
+                        index={i}
                         onClick={() => sendMessage(action.prompt)}
-                        className="group flex items-center gap-2 px-4 py-2.5 rounded-full border border-border bg-card hover:border-primary/30 hover:shadow-md hover:shadow-primary/5 transition-all duration-300"
-                      >
-                        <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${action.gradient} flex items-center justify-center`}>
-                          <action.icon className="w-3 h-3 text-white" />
-                        </div>
-                        <span className="text-[13px] font-semibold text-foreground">{action.label}</span>
-                        <ChevronLeft className="w-3 h-3 text-muted-foreground/40 rotate-180 group-hover:translate-x-0.5 transition-transform" />
-                      </motion.button>
+                      />
                     ))}
                   </div>
 
-                  <p className="text-[10px] text-muted-foreground/40 text-center mt-10 font-mono tracking-wider uppercase">
+                  <p className="text-[10px] text-muted-foreground/30 text-center mt-10 font-mono tracking-wider uppercase">
                     DataAfro may produce inaccurate results · Always verify critical data
                   </p>
                 </motion.div>
@@ -682,7 +757,7 @@ const ProjectDetailPage = () => {
             ) : (
               /* ===== CHAT MESSAGES ===== */
               <>
-                <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
+                <div ref={scrollContainerRef} className="flex-1 overflow-y-auto relative z-10">
                   <div className="max-w-[740px] mx-auto space-y-8 py-6 px-4">
                     {messages.map((m: any, i: number) => (
                       <ChatMessage
@@ -702,9 +777,18 @@ const ProjectDetailPage = () => {
                 </div>
 
                 {/* Bottom input */}
-                <div className="flex-shrink-0 border-t border-border/30">
+                <div className="flex-shrink-0 border-t border-border/30 bg-background/60 backdrop-blur-xl relative z-10">
                   <div className="max-w-[740px] mx-auto px-4 py-3">
-                    <InputBar textareaRef={textareaRef} chatInput={chatInput} setChatInput={setChatInput} inputFocused={inputFocused} setInputFocused={setInputFocused} sendMessage={sendMessage} streaming={streaming} uploading={uploading} />
+                    <CommandInput
+                      textareaRef={textareaRef}
+                      chatInput={chatInput}
+                      setChatInput={setChatInput}
+                      inputFocused={inputFocused}
+                      setInputFocused={setInputFocused}
+                      sendMessage={sendMessage}
+                      streaming={streaming}
+                      uploading={uploading}
+                    />
                   </div>
                 </div>
               </>
@@ -719,15 +803,21 @@ const ProjectDetailPage = () => {
                 animate={{ width: 300, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                className="hidden md:flex flex-shrink-0 border-l border-border/50 bg-muted/20 overflow-hidden"
+                className="hidden md:flex flex-shrink-0 border-l border-border/30 overflow-hidden"
+                style={{ background: "hsl(var(--muted) / 0.15)" }}
               >
                 <div className="w-[300px] h-full flex flex-col">
-                  {/* Panel content */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                  <div className="flex-1 overflow-y-auto p-4 space-y-5">
                     {/* Project card */}
-                    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+                    <div
+                      className="rounded-2xl border border-border/50 bg-card p-4"
+                      style={{ boxShadow: "0 1px 3px hsl(0 0% 0% / 0.03)" }}
+                    >
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-sm shadow-primary/15">
+                        <div
+                          className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center"
+                          style={{ boxShadow: "0 4px 12px hsl(var(--primary) / 0.15)" }}
+                        >
                           <Sparkles className="w-5 h-5 text-primary-foreground" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -738,17 +828,16 @@ const ProjectDetailPage = () => {
                       {project.description && (
                         <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{project.description}</p>
                       )}
-                      {/* Stats row */}
-                      <div className="flex items-center gap-4 pt-3 border-t border-border/50">
+                      <div className="flex items-center gap-4 pt-3 border-t border-border/40">
                         {[
                           { icon: File, value: files.length, label: "files" },
                           { icon: HardDrive, value: formatFileSize(totalSize), label: "" },
                           { icon: MessageSquare, value: messages.length, label: "msgs" },
                         ].map((s, i) => (
                           <div key={i} className="flex items-center gap-1.5">
-                            <s.icon className="w-3 h-3 text-muted-foreground/60" />
+                            <s.icon className="w-3 h-3 text-muted-foreground/50" />
                             <span className="text-[11px] font-semibold text-foreground">{s.value}</span>
-                            {s.label && <span className="text-[10px] text-muted-foreground">{s.label}</span>}
+                            {s.label && <span className="text-[10px] text-muted-foreground/70">{s.label}</span>}
                           </div>
                         ))}
                       </div>
@@ -757,30 +846,30 @@ const ProjectDetailPage = () => {
                     {/* Upload */}
                     <button
                       onClick={() => document.getElementById("file-input")?.click()}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border hover:border-primary/40 hover:bg-primary/5 text-sm font-semibold text-muted-foreground hover:text-primary transition-all duration-200"
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border/50 hover:border-primary/40 hover:bg-primary/[0.03] text-sm font-semibold text-muted-foreground hover:text-primary transition-all duration-300"
                     >
-                      <Upload className="w-4 h-4" />
+                      <Plus className="w-4 h-4" />
                       Upload Files
                     </button>
 
                     {/* Files */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Files</span>
+                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Files</span>
                         {files.length > 0 && (
-                          <span className="text-[10px] font-mono text-muted-foreground/70 bg-muted px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] font-mono text-muted-foreground/50 bg-muted/60 px-2 py-0.5 rounded-full">
                             {files.length}
                           </span>
                         )}
                       </div>
 
                       {files.length === 0 ? (
-                        <div className="flex flex-col items-center py-8 text-center">
-                          <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mb-3">
-                            <FileText className="w-6 h-6 text-muted-foreground/30" />
+                        <div className="flex flex-col items-center py-10 text-center">
+                          <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
+                            <FileText className="w-6 h-6 text-muted-foreground/20" />
                           </div>
-                          <p className="text-xs text-muted-foreground">No files yet</p>
-                          <p className="text-[10px] text-muted-foreground/50 mt-0.5">Drag files or click upload</p>
+                          <p className="text-xs text-muted-foreground/60">No files yet</p>
+                          <p className="text-[10px] text-muted-foreground/40 mt-0.5">Drag files or click upload</p>
                         </div>
                       ) : (
                         <div className="space-y-0.5">
@@ -812,10 +901,10 @@ const ProjectDetailPage = () => {
   );
 };
 
-/* ─── Input Bar (extracted) ─── */
-function InputBar({
+/* ─── Command Input ─── */
+function CommandInput({
   textareaRef, chatInput, setChatInput, inputFocused, setInputFocused,
-  sendMessage, streaming, uploading, large = false, className = "",
+  sendMessage, streaming, uploading, large = false,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   chatInput: string;
@@ -826,54 +915,66 @@ function InputBar({
   streaming: boolean;
   uploading: boolean;
   large?: boolean;
-  className?: string;
 }) {
   return (
-    <div className={className}>
-      <div className={`relative rounded-2xl border transition-all duration-300 ${
+    <div
+      className={`relative rounded-2xl border transition-all duration-300 ${
         inputFocused
-          ? "border-primary/40 bg-card shadow-[0_0_0_3px_hsl(var(--primary)/0.06),0_4px_20px_hsl(var(--primary)/0.08)]"
-          : "border-border bg-card/80 shadow-sm hover:shadow-md hover:border-border/80"
-      }`}>
-        <textarea
-          ref={textareaRef}
-          placeholder="Ask anything about your data…"
-          value={chatInput}
-          onChange={(e) => setChatInput(e.target.value)}
-          onFocus={() => setInputFocused(true)}
-          onBlur={() => setInputFocused(false)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-          rows={1}
-          className={`w-full bg-transparent border-0 outline-none resize-none text-foreground placeholder:text-muted-foreground/50 px-5 pt-4 pb-1 min-h-[44px] max-h-[200px] ${large ? "text-base" : "text-[15px]"}`}
-        />
-        <div className="flex items-center justify-between px-3 pb-3">
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  className="p-2 rounded-xl text-muted-foreground/50 hover:text-primary hover:bg-primary/5 transition-all duration-200"
-                  onClick={() => document.getElementById("file-input")?.click()}
-                >
-                  <Paperclip className="w-[18px] h-[18px]" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">Attach files</TooltipContent>
-            </Tooltip>
-            {uploading && (
-              <div className="flex items-center gap-2 ml-1">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                <span className="text-[11px] text-muted-foreground font-medium">Uploading…</span>
-              </div>
-            )}
-          </div>
+          ? "border-primary/30 bg-card"
+          : "border-border/50 bg-card/60 hover:border-border"
+      }`}
+      style={{
+        boxShadow: inputFocused
+          ? "0 0 0 3px hsl(var(--primary) / 0.06), 0 8px 32px hsl(var(--primary) / 0.08)"
+          : "0 1px 3px hsl(0 0% 0% / 0.04)",
+      }}
+    >
+      <textarea
+        ref={textareaRef}
+        placeholder="Ask anything about your data…"
+        value={chatInput}
+        onChange={(e) => setChatInput(e.target.value)}
+        onFocus={() => setInputFocused(true)}
+        onBlur={() => setInputFocused(false)}
+        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+        rows={1}
+        className={`w-full bg-transparent border-0 outline-none resize-none text-foreground placeholder:text-muted-foreground/40 px-5 pt-4 pb-1 min-h-[44px] max-h-[200px] ${large ? "text-base" : "text-[15px]"}`}
+      />
+      <div className="flex items-center justify-between px-3 pb-3">
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className="p-2 rounded-xl text-muted-foreground/40 hover:text-primary hover:bg-primary/5 transition-all duration-200"
+                onClick={() => document.getElementById("file-input")?.click()}
+              >
+                <Paperclip className="w-[18px] h-[18px]" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">Attach files</TooltipContent>
+          </Tooltip>
+          {uploading && (
+            <div className="flex items-center gap-2 ml-1">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+              <span className="text-[11px] text-muted-foreground font-medium">Uploading…</span>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {!chatInput.trim() && !streaming && (
+            <span className="text-[10px] text-muted-foreground/30 font-mono hidden sm:inline">⏎ Enter to send</span>
+          )}
           <button
             onClick={() => sendMessage()}
             disabled={!chatInput.trim() || streaming}
             className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200
               ${chatInput.trim() && !streaming
-                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 hover:scale-105 active:scale-95"
+                ? "bg-primary text-primary-foreground hover:scale-105 active:scale-95"
                 : "bg-muted text-muted-foreground/30 cursor-not-allowed"
               }`}
+            style={chatInput.trim() && !streaming ? {
+              boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)",
+            } : undefined}
           >
             <ArrowUp className="w-4 h-4" strokeWidth={2.5} />
           </button>
