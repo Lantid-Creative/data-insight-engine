@@ -1034,11 +1034,11 @@ const REPORT_SECTIONS = [
 ] as const;
 
 const TONE_OPTIONS = [
-  { id: "professional", label: "Professional", desc: "Formal business language" },
-  { id: "executive", label: "Executive", desc: "Concise, impact-focused" },
-  { id: "technical", label: "Technical", desc: "Detailed & precise" },
-  { id: "academic", label: "Academic", desc: "Scholarly & methodical" },
-  { id: "casual", label: "Casual", desc: "Friendly & accessible" },
+  { id: "professional", label: "Professional", desc: "Formal business language", emoji: "💼" },
+  { id: "executive", label: "Executive", desc: "Concise, impact-focused", emoji: "🎯" },
+  { id: "technical", label: "Technical", desc: "Detailed & precise", emoji: "⚙️" },
+  { id: "academic", label: "Academic", desc: "Scholarly & methodical", emoji: "📚" },
+  { id: "casual", label: "Casual", desc: "Friendly & accessible", emoji: "😊" },
 ] as const;
 
 const FOCUS_AREA_OPTIONS = [
@@ -1059,12 +1059,57 @@ const LANGUAGE_OPTIONS = [
   "Chinese", "Japanese", "Korean", "Arabic", "Hindi",
 ];
 
-/* ─── Report View ─── */
+const WIZARD_STEPS = [
+  { id: 1, label: "Basics", icon: FileText },
+  { id: 2, label: "Sections", icon: Layers },
+  { id: 3, label: "Style", icon: Wand2 },
+  { id: 4, label: "Review", icon: Eye },
+] as const;
+
+/* ─── Smart suggestion helper ─── */
+function extractChatSuggestions(messages: any[]): { suggestedFocusAreas: string[]; suggestedTitle: string; suggestedInstructions: string } {
+  const allText = messages.map(m => m.content).join(" ").toLowerCase();
+
+  const focusMap: Record<string, string[]> = {
+    "Revenue & Financial Metrics": ["revenue", "sales", "profit", "financial", "income", "cost", "budget", "price", "pricing", "money", "payment"],
+    "Customer Behavior": ["customer", "user", "behavior", "retention", "churn", "engagement", "satisfaction", "feedback"],
+    "Operational Efficiency": ["operation", "efficiency", "process", "workflow", "automation", "productivity", "performance"],
+    "Market Trends": ["market", "trend", "competitor", "industry", "growth", "share", "demand"],
+    "Risk & Compliance": ["risk", "compliance", "security", "audit", "regulation", "fraud", "threat"],
+    "Product Performance": ["product", "feature", "usage", "adoption", "conversion", "funnel"],
+    "User Engagement": ["engagement", "session", "click", "visit", "bounce", "page view", "active user"],
+    "Cost Optimization": ["cost", "expense", "optimization", "savings", "budget", "spend", "roi"],
+    "Growth Opportunities": ["growth", "opportunity", "expansion", "scale", "new market", "potential"],
+    "Data Quality & Integrity": ["data quality", "missing", "incomplete", "accuracy", "clean", "duplicate", "integrity"],
+  };
+
+  const suggestedFocusAreas: string[] = [];
+  for (const [area, keywords] of Object.entries(focusMap)) {
+    const matches = keywords.filter(k => allText.includes(k)).length;
+    if (matches >= 2) suggestedFocusAreas.push(area);
+  }
+
+  // Extract a suggested title from the most recent user messages
+  const userMessages = messages.filter(m => m.role === "user");
+  const lastUserMsg = userMessages[userMessages.length - 1]?.content || "";
+  const suggestedTitle = lastUserMsg.length > 10 && lastUserMsg.length < 80 ? lastUserMsg : "";
+
+  // Build smart instructions from chat themes
+  const topics = userMessages.slice(-5).map(m => m.content.slice(0, 100)).filter(Boolean);
+  const suggestedInstructions = topics.length > 0
+    ? `Based on our conversation, focus on: ${topics.slice(0, 3).join("; ")}`
+    : "";
+
+  return { suggestedFocusAreas, suggestedTitle, suggestedInstructions };
+}
+
+/* ─── Report View (Wizard) ─── */
 function ReportView({ projectId }: { projectId: string }) {
   const [reportContent, setReportContent] = useState("");
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
-  const [showConfig, setShowConfig] = useState(true);
+  const [wizardStep, setWizardStep] = useState(1);
+  const [showReport, setShowReport] = useState(false);
 
   // Config state
   const [selectedSections, setSelectedSections] = useState<string[]>(
@@ -1076,6 +1121,28 @@ function ReportView({ projectId }: { projectId: string }) {
   const [reportTitle, setReportTitle] = useState("");
   const [includeCharts, setIncludeCharts] = useState(false);
   const [language, setLanguage] = useState("English");
+
+  // Load chat messages for smart suggestions
+  const { data: chatMessages = [] } = useQuery({
+    queryKey: ["chat-messages", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("chat_messages").select("*").eq("project_id", projectId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projectId,
+  });
+
+  const suggestions = extractChatSuggestions(chatMessages);
+
+  // Auto-apply chat suggestions on first load
+  useEffect(() => {
+    if (chatMessages.length > 0 && focusAreas.length === 0 && suggestions.suggestedFocusAreas.length > 0) {
+      setFocusAreas(suggestions.suggestedFocusAreas);
+    }
+  }, [chatMessages.length]); // eslint-disable-line
 
   const toggleSection = (id: string) => {
     setSelectedSections(prev =>
@@ -1093,7 +1160,7 @@ function ReportView({ projectId }: { projectId: string }) {
     setGenerating(true);
     setReportContent("");
     setGenerated(false);
-    setShowConfig(false);
+    setShowReport(true);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -1118,16 +1185,8 @@ function ReportView({ projectId }: { projectId: string }) {
         }),
       });
 
-      if (resp.status === 429) {
-        toast.error("Rate limit exceeded. Please try again in a moment.");
-        setGenerating(false);
-        return;
-      }
-      if (resp.status === 402) {
-        toast.error("AI credits exhausted. Please add credits to continue.");
-        setGenerating(false);
-        return;
-      }
+      if (resp.status === 429) { toast.error("Rate limit exceeded. Please try again in a moment."); setGenerating(false); return; }
+      if (resp.status === 402) { toast.error("AI credits exhausted. Please add credits to continue."); setGenerating(false); return; }
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({ error: "Failed to generate report" }));
         throw new Error(err.error || "Failed to generate report");
@@ -1167,9 +1226,7 @@ function ReportView({ projectId }: { projectId: string }) {
         const blob = new Blob([reportContent], { type: "text/markdown" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
-        a.download = "project-report.md";
-        a.click();
+        a.href = url; a.download = "project-report.md"; a.click();
         URL.revokeObjectURL(url);
       } else if (format === "pdf") {
         const { exportToPdf } = await import("@/lib/document-export");
@@ -1189,169 +1246,196 @@ function ReportView({ projectId }: { projectId: string }) {
     }
   };
 
+  const canProceed = () => {
+    if (wizardStep === 1) return true;
+    if (wizardStep === 2) return selectedSections.length > 0;
+    if (wizardStep === 3) return true;
+    return true;
+  };
+
+  // Show generated report
+  if (showReport) {
+    return (
+      <div className="flex-1 overflow-y-auto relative z-10">
+        <div className="max-w-[800px] mx-auto py-8 px-6 space-y-6">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">{reportTitle || "Generated Report"}</h1>
+              <p className="text-sm text-muted-foreground mt-1">AI-generated from your project data & conversations</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => { setShowReport(false); setWizardStep(1); }}>
+                <Wand2 className="w-3.5 h-3.5" />
+                New Report
+              </Button>
+              {generated && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2" disabled={!!exporting}>
+                      {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                      {exporting ? `Exporting…` : "Export"}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleExport("pdf")} className="gap-2"><FileText className="w-4 h-4 text-red-500" /> PDF</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport("docx")} className="gap-2"><FileText className="w-4 h-4 text-blue-500" /> Word (.docx)</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport("pptx")} className="gap-2"><FileText className="w-4 h-4 text-orange-500" /> PowerPoint (.pptx)</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleExport("md")} className="gap-2"><FileText className="w-4 h-4 text-muted-foreground" /> Markdown (.md)</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          </motion.div>
+
+          <Card className="shadow-soft">
+            <CardContent className="p-6 sm:p-8">
+              <div className="flex flex-wrap gap-2 mb-6 pb-4 border-b border-border/40">
+                <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">{tone}</span>
+                <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-[10px] font-bold">{selectedSections.length} sections</span>
+                {language !== "English" && <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-[10px] font-bold">{language}</span>}
+                {focusAreas.length > 0 && <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-[10px] font-bold">{focusAreas.length} focus areas</span>}
+              </div>
+              <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-[1.85]
+                [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mt-6 [&>h1]:mb-3
+                [&>h2]:text-lg [&>h2]:font-bold [&>h2]:mt-5 [&>h2]:mb-2
+                [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mt-4 [&>h3]:mb-2
+                [&>p]:mb-3 [&>ul]:mb-3 [&>ol]:mb-3 [&>li]:mb-1
+                [&>blockquote]:border-l-2 [&>blockquote]:border-primary/40 [&>blockquote]:pl-4 [&>blockquote]:text-muted-foreground
+                [&_code]:bg-primary/5 [&_code]:text-primary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-sm [&_code]:font-mono [&_code]:border [&_code]:border-primary/10
+                [&>table]:w-full [&>table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:bg-muted [&_th]:text-left [&_th]:text-sm [&_th]:font-semibold
+                [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm">
+                <ReactMarkdown>{reportContent}</ReactMarkdown>
+                {generating && (
+                  <motion.span
+                    className="inline-block w-0.5 h-5 bg-primary ml-0.5 align-text-bottom rounded-full"
+                    animate={{ opacity: [1, 0] }}
+                    transition={{ duration: 0.6, repeat: Infinity, repeatType: "reverse" }}
+                  />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Wizard UI
   return (
     <div className="flex-1 overflow-y-auto relative z-10">
-      <div className="max-w-[800px] mx-auto py-8 px-6 space-y-6">
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Custom Report</h1>
-            <p className="text-sm text-muted-foreground mt-1">Configure and generate tailored AI reports</p>
+      <div className="max-w-[640px] mx-auto py-8 px-6">
+        {/* Wizard Header */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/70 mb-4"
+            style={{ boxShadow: "0 8px 24px hsl(var(--primary) / 0.25)" }}>
+            <FileText className="w-6 h-6 text-primary-foreground" />
           </div>
-          <div className="flex items-center gap-2">
-            {(generated || generating) && (
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => { setShowConfig(true); }}>
-                <Wand2 className="w-3.5 h-3.5" />
-                Reconfigure
-              </Button>
-            )}
-            {generated && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2" disabled={!!exporting}>
-                    {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                    {exporting ? `Exporting ${exporting.toUpperCase()}…` : "Export"}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleExport("pdf")} className="gap-2">
-                    <FileText className="w-4 h-4 text-red-500" /> PDF Document
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExport("docx")} className="gap-2">
-                    <FileText className="w-4 h-4 text-blue-500" /> Word Document (.docx)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExport("pptx")} className="gap-2">
-                    <FileText className="w-4 h-4 text-orange-500" /> PowerPoint (.pptx)
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleExport("md")} className="gap-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" /> Markdown (.md)
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
+          <h1 className="text-2xl font-bold text-foreground">Report Wizard</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {chatMessages.length > 0
+              ? `Powered by ${chatMessages.length} messages from your conversation`
+              : "Configure your custom AI-generated report"}
+          </p>
         </motion.div>
 
-        {/* Config Panel */}
+        {/* Step Indicator */}
+        <div className="flex items-center justify-center gap-1 mb-8">
+          {WIZARD_STEPS.map((step, i) => (
+            <div key={step.id} className="flex items-center">
+              <button
+                onClick={() => step.id < wizardStep && setWizardStep(step.id)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-300 ${
+                  wizardStep === step.id
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : wizardStep > step.id
+                      ? "bg-primary/10 text-primary cursor-pointer hover:bg-primary/20"
+                      : "bg-muted/50 text-muted-foreground/50"
+                }`}
+                disabled={step.id > wizardStep}
+              >
+                {wizardStep > step.id ? (
+                  <Check className="w-3.5 h-3.5" />
+                ) : (
+                  <step.icon className="w-3.5 h-3.5" />
+                )}
+                <span className="hidden sm:inline">{step.label}</span>
+                <span className="sm:hidden">{step.id}</span>
+              </button>
+              {i < WIZARD_STEPS.length - 1 && (
+                <div className={`w-6 h-px mx-1 transition-colors ${wizardStep > step.id ? "bg-primary/30" : "bg-border/40"}`} />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Step Content */}
         <AnimatePresence mode="wait">
-          {showConfig && !generating && (
+          {/* Step 1: Basics */}
+          {wizardStep === 1 && (
             <motion.div
-              key="config"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-6"
+              key="step1"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-5"
             >
-              {/* Report Title */}
               <Card className="shadow-soft">
-                <CardContent className="p-5">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Report Title (optional)</label>
+                <CardContent className="p-6">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">Report Title</label>
                   <Input
                     placeholder="e.g. Q1 2026 Financial Analysis"
                     value={reportTitle}
                     onChange={(e) => setReportTitle(e.target.value)}
-                    className="bg-muted/30 border-border/50"
+                    className="bg-muted/30 border-border/50 h-12 text-base"
                   />
+                  {suggestions.suggestedTitle && !reportTitle && (
+                    <button
+                      onClick={() => setReportTitle(suggestions.suggestedTitle)}
+                      className="mt-3 flex items-center gap-2 text-xs text-primary hover:underline"
+                    >
+                      <Brain className="w-3 h-3" />
+                      <span>Suggested: "{suggestions.suggestedTitle.slice(0, 50)}…"</span>
+                    </button>
+                  )}
                 </CardContent>
               </Card>
 
-              {/* Sections */}
               <Card className="shadow-soft">
-                <CardContent className="p-5">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">Report Sections</label>
-                  <p className="text-xs text-muted-foreground mb-4">Pick the sections you want included. Drag to reorder (coming soon).</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {REPORT_SECTIONS.map((section) => {
-                      const selected = selectedSections.includes(section.id);
-                      const SIcon = section.icon;
-                      return (
-                        <button
-                          key={section.id}
-                          onClick={() => toggleSection(section.id)}
-                          className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-200 ${
-                            selected
-                              ? "border-primary/30 bg-primary/[0.04]"
-                              : "border-border/50 bg-card hover:border-border"
-                          }`}
-                        >
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
-                            selected ? "bg-primary/10" : "bg-muted"
-                          }`}>
-                            <SIcon className={`w-4 h-4 ${selected ? "text-primary" : "text-muted-foreground"}`} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-semibold ${selected ? "text-foreground" : "text-muted-foreground"}`}>{section.label}</p>
-                            <p className="text-[10px] text-muted-foreground/60 truncate">{section.desc}</p>
-                          </div>
-                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                            selected ? "border-primary bg-primary" : "border-border"
-                          }`}>
-                            {selected && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground/50 mt-3 font-mono">{selectedSections.length} sections selected</p>
-                </CardContent>
-              </Card>
-
-              {/* Tone */}
-              <Card className="shadow-soft">
-                <CardContent className="p-5">
+                <CardContent className="p-6">
                   <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">Tone & Style</label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-1 gap-2">
                     {TONE_OPTIONS.map((t) => (
                       <button
                         key={t.id}
                         onClick={() => setTone(t.id)}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                        className={`flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all duration-200 ${
                           tone === t.id
-                            ? "border-primary/30 bg-primary/10 text-primary"
-                            : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
+                            ? "border-primary/30 bg-primary/[0.04]"
+                            : "border-border/50 bg-card hover:border-border"
                         }`}
                       >
-                        {t.label}
-                        <span className="text-[10px] font-normal ml-1 opacity-60">· {t.desc}</span>
+                        <span className="text-lg">{t.emoji}</span>
+                        <div className="flex-1">
+                          <p className={`text-sm font-semibold ${tone === t.id ? "text-foreground" : "text-muted-foreground"}`}>{t.label}</p>
+                          <p className="text-[11px] text-muted-foreground/60">{t.desc}</p>
+                        </div>
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                          tone === t.id ? "border-primary bg-primary" : "border-border"
+                        }`}>
+                          {tone === t.id && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
+                        </div>
                       </button>
                     ))}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Focus Areas */}
               <Card className="shadow-soft">
-                <CardContent className="p-5">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">Focus Areas (optional)</label>
-                  <p className="text-xs text-muted-foreground mb-3">Select areas you want the AI to emphasize in the report.</p>
-                  <div className="flex flex-wrap gap-2">
-                    {FOCUS_AREA_OPTIONS.map((area) => {
-                      const active = focusAreas.includes(area);
-                      return (
-                        <button
-                          key={area}
-                          onClick={() => toggleFocus(area)}
-                          className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-all ${
-                            active
-                              ? "border-primary/30 bg-primary/10 text-primary"
-                              : "border-border/50 text-muted-foreground hover:border-border"
-                          }`}
-                        >
-                          {area}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Language & Options */}
-              <Card className="shadow-soft">
-                <CardContent className="p-5 space-y-4">
+                <CardContent className="p-6 space-y-4">
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Language</label>
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">Language</label>
                     <div className="flex flex-wrap gap-2">
                       {LANGUAGE_OPTIONS.map((lang) => (
                         <button
@@ -1368,25 +1452,131 @@ function ReportView({ projectId }: { projectId: string }) {
                       ))}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 pt-2">
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Step 2: Sections */}
+          {wizardStep === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+            >
+              <Card className="shadow-soft">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Report Sections</label>
+                      <p className="text-[11px] text-muted-foreground mt-1">Select the sections to include in your report</p>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+                      {selectedSections.length} selected
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {REPORT_SECTIONS.map((section) => {
+                      const selected = selectedSections.includes(section.id);
+                      const SIcon = section.icon;
+                      return (
+                        <button
+                          key={section.id}
+                          onClick={() => toggleSection(section.id)}
+                          className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all duration-200 ${
+                            selected
+                              ? "border-primary/30 bg-primary/[0.04]"
+                              : "border-border/50 bg-card hover:border-border"
+                          }`}
+                        >
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                            selected ? "bg-primary/10" : "bg-muted"
+                          }`}>
+                            <SIcon className={`w-4 h-4 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-semibold ${selected ? "text-foreground" : "text-muted-foreground"}`}>{section.label}</p>
+                            <p className="text-[11px] text-muted-foreground/60">{section.desc}</p>
+                          </div>
+                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                            selected ? "border-primary bg-primary" : "border-border"
+                          }`}>
+                            {selected && <Check className="w-3 h-3 text-primary-foreground" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Step 3: Focus & Details */}
+          {wizardStep === 3 && (
+            <motion.div
+              key="step3"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-5"
+            >
+              <Card className="shadow-soft">
+                <CardContent className="p-6">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Focus Areas</label>
+                  <p className="text-[11px] text-muted-foreground mb-4">
+                    {suggestions.suggestedFocusAreas.length > 0
+                      ? "✨ We pre-selected areas based on your chat history. Adjust as needed."
+                      : "Select areas you want the AI to emphasize."}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {FOCUS_AREA_OPTIONS.map((area) => {
+                      const active = focusAreas.includes(area);
+                      const suggested = suggestions.suggestedFocusAreas.includes(area);
+                      return (
+                        <button
+                          key={area}
+                          onClick={() => toggleFocus(area)}
+                          className={`px-3 py-2 rounded-xl text-[11px] font-semibold border transition-all relative ${
+                            active
+                              ? "border-primary/30 bg-primary/10 text-primary"
+                              : "border-border/50 text-muted-foreground hover:border-border"
+                          }`}
+                        >
+                          {suggested && !active && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                          )}
+                          {area}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-soft">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
                     <button
                       onClick={() => setIncludeCharts(!includeCharts)}
-                      className={`w-10 h-6 rounded-full transition-colors relative ${includeCharts ? "bg-primary" : "bg-muted border border-border"}`}
+                      className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${includeCharts ? "bg-primary" : "bg-muted border border-border"}`}
                     >
-                      <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${includeCharts ? "left-[18px]" : "left-0.5"}`} />
+                      <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${includeCharts ? "left-[20px]" : "left-0.5"}`} />
                     </button>
                     <div>
-                      <p className="text-xs font-semibold text-foreground">Include chart suggestions</p>
-                      <p className="text-[10px] text-muted-foreground">AI will describe recommended visualizations</p>
+                      <p className="text-sm font-semibold text-foreground">Include chart suggestions</p>
+                      <p className="text-[11px] text-muted-foreground">AI will describe recommended visualizations</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Custom Instructions */}
               <Card className="shadow-soft">
-                <CardContent className="p-5">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Custom Instructions (optional)</label>
+                <CardContent className="p-6">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Custom Instructions</label>
                   <Textarea
                     placeholder="e.g. Focus on year-over-year growth, mention competitor analysis, keep it under 3 pages..."
                     value={customInstructions}
@@ -1394,10 +1584,106 @@ function ReportView({ projectId }: { projectId: string }) {
                     rows={3}
                     className="bg-muted/30 border-border/50 text-sm"
                   />
+                  {suggestions.suggestedInstructions && !customInstructions && (
+                    <button
+                      onClick={() => setCustomInstructions(suggestions.suggestedInstructions)}
+                      className="mt-3 flex items-center gap-2 text-xs text-primary hover:underline"
+                    >
+                      <Brain className="w-3 h-3" />
+                      <span>Use AI-suggested instructions based on your chat</span>
+                    </button>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Step 4: Review */}
+          {wizardStep === 4 && (
+            <motion.div
+              key="step4"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-5"
+            >
+              <Card className="shadow-soft">
+                <CardContent className="p-6 space-y-5">
+                  <h3 className="text-sm font-bold text-foreground">Review Your Report Configuration</h3>
+
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
+                      <FileText className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Title</p>
+                        <p className="text-sm text-foreground">{reportTitle || "Auto-generated from project name"}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
+                      <Wand2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Tone & Language</p>
+                        <p className="text-sm text-foreground capitalize">{tone} · {language}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
+                      <Layers className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Sections ({selectedSections.length})</p>
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {selectedSections.map(id => {
+                            const sec = REPORT_SECTIONS.find(s => s.id === id);
+                            return sec ? (
+                              <span key={id} className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold">
+                                {sec.label}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {focusAreas.length > 0 && (
+                      <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
+                        <TrendingUp className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Focus Areas</p>
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {focusAreas.map(area => (
+                              <span key={area} className="px-2 py-0.5 rounded-md bg-muted text-muted-foreground text-[10px] font-semibold">
+                                {area}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {customInstructions && (
+                      <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
+                        <MessageSquare className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Custom Instructions</p>
+                          <p className="text-xs text-muted-foreground mt-1">{customInstructions}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {chatMessages.length > 0 && (
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-primary/[0.04] border border-primary/10">
+                        <Brain className="w-4 h-4 text-primary flex-shrink-0" />
+                        <p className="text-xs text-primary font-medium">
+                          AI will use {chatMessages.length} chat messages as additional context for a smarter report
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
-              {/* Generate Button */}
               <div className="flex justify-center pt-2 pb-8">
                 <Button
                   size="lg"
@@ -1406,59 +1692,49 @@ function ReportView({ projectId }: { projectId: string }) {
                   className="gap-2 h-14 px-10 rounded-xl font-bold text-base bg-gradient-primary text-primary-foreground shadow-glow-strong hover:opacity-90 transition-all"
                 >
                   <Sparkles className="w-5 h-5" />
-                  Generate Custom Report
+                  Generate Report
                 </Button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Report Content */}
-        {(reportContent || generating) && !showConfig && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <Card className="shadow-soft">
-              <CardContent className="p-6 sm:p-8">
-                {/* Config summary badges */}
-                <div className="flex flex-wrap gap-2 mb-6 pb-4 border-b border-border/40">
-                  <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
-                    {tone}
-                  </span>
-                  <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-[10px] font-bold">
-                    {selectedSections.length} sections
-                  </span>
-                  {language !== "English" && (
-                    <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-[10px] font-bold">
-                      {language}
-                    </span>
-                  )}
-                  {focusAreas.length > 0 && (
-                    <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-[10px] font-bold">
-                      {focusAreas.length} focus areas
-                    </span>
-                  )}
-                </div>
-
-                <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-[1.85]
-                  [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mt-6 [&>h1]:mb-3
-                  [&>h2]:text-lg [&>h2]:font-bold [&>h2]:mt-5 [&>h2]:mb-2
-                  [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mt-4 [&>h3]:mb-2
-                  [&>p]:mb-3 [&>ul]:mb-3 [&>ol]:mb-3 [&>li]:mb-1
-                  [&>blockquote]:border-l-2 [&>blockquote]:border-primary/40 [&>blockquote]:pl-4 [&>blockquote]:text-muted-foreground
-                  [&_code]:bg-primary/5 [&_code]:text-primary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-sm [&_code]:font-mono [&_code]:border [&_code]:border-primary/10
-                  [&>table]:w-full [&>table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:bg-muted [&_th]:text-left [&_th]:text-sm [&_th]:font-semibold
-                  [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm">
-                  <ReactMarkdown>{reportContent}</ReactMarkdown>
-                  {generating && (
-                    <motion.span
-                      className="inline-block w-0.5 h-5 bg-primary ml-0.5 align-text-bottom rounded-full"
-                      animate={{ opacity: [1, 0] }}
-                      transition={{ duration: 0.6, repeat: Infinity, repeatType: "reverse" }}
-                    />
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+        {/* Navigation Buttons */}
+        {wizardStep < 4 && (
+          <div className="flex items-center justify-between mt-8 pb-8">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setWizardStep(s => Math.max(1, s - 1))}
+              disabled={wizardStep === 1}
+              className="gap-2"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              Back
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setWizardStep(s => Math.min(4, s + 1))}
+              disabled={!canProceed()}
+              className="gap-2"
+            >
+              Next
+              <ArrowUp className="w-3.5 h-3.5 rotate-90" />
+            </Button>
+          </div>
+        )}
+        {wizardStep === 4 && (
+          <div className="flex items-center justify-start pb-8">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setWizardStep(3)}
+              className="gap-2"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              Back
+            </Button>
+          </div>
         )}
       </div>
     </div>
