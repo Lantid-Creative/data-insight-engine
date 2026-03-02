@@ -235,15 +235,23 @@ const DashboardHome = () => {
                       <AreaChart data={sparklineData}>
                         <defs>
                           <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.55} />
+                            <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
                           </linearGradient>
                         </defs>
                         <XAxis dataKey="day" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                         <Tooltip
-                          contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                          labelStyle={{ color: "hsl(var(--foreground))" }}
-                          formatter={(value: number) => [`${value} msgs`, ""]}
+                          cursor={{ stroke: "hsl(var(--primary))", strokeWidth: 1, strokeDasharray: "4 4" }}
+                          content={({ active, payload, label }) => {
+                            if (!active || !payload?.length) return null;
+                            return (
+                              <div className="rounded-lg border bg-card px-3 py-1.5 shadow-md text-xs">
+                                <p className="font-medium text-card-foreground">{label}</p>
+                                <p className="text-muted-foreground">{payload[0].value} messages</p>
+                              </div>
+                            );
+                          }}
                         />
                         <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#sparkFill)" />
                       </AreaChart>
