@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FolderOpen, Plus, Trash2, MessageSquare, Files, Search, LayoutGrid, List, Sparkles, ArrowRight } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { FolderOpen, Plus, Trash2, MessageSquare, Files, Search, LayoutGrid, List, Sparkles, ArrowRight, MoreHorizontal, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,17 @@ const ProjectsPage = () => {
   const [description, setDescription] = useState("");
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  // Rename dialog state
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameName, setRenameName] = useState("");
+  const [renameDesc, setRenameDesc] = useState("");
+
+  // Delete confirm dialog state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteName, setDeleteName] = useState("");
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects"],
@@ -71,8 +83,63 @@ const ProjectsPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success("Project deleted");
+      setDeleteOpen(false);
+      setDeleteId(null);
     },
   });
+
+  const renameProject = useMutation({
+    mutationFn: async ({ id, name, description }: { id: string; name: string; description: string }) => {
+      const { error } = await supabase.from("projects").update({ name, description }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Project updated");
+      setRenameOpen(false);
+      setRenameId(null);
+    },
+    onError: () => toast.error("Failed to update project"),
+  });
+
+  const openRename = (p: any) => {
+    setRenameId(p.id);
+    setRenameName(p.name);
+    setRenameDesc(p.description || "");
+    setRenameOpen(true);
+  };
+
+  const openDelete = (p: any) => {
+    setDeleteId(p.id);
+    setDeleteName(p.name);
+    setDeleteOpen(true);
+  };
+
+  const ProjectContextMenu = ({ project }: { project: any }) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuItem onClick={() => openRename(project)}>
+          <Pencil className="w-3.5 h-3.5 mr-2" />
+          Rename
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDelete(project)}>
+          <Trash2 className="w-3.5 h-3.5 mr-2" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -172,17 +239,7 @@ const ProjectsPage = () => {
                     </div>
                     <CardTitle className="text-sm truncate">{p.name}</CardTitle>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm("Delete this project and all its data?")) deleteProject.mutate(p.id);
-                    }}
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                  </Button>
+                  <ProjectContextMenu project={p} />
                 </CardHeader>
                 <CardContent>
                   {p.description && <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{p.description}</p>}
@@ -217,23 +274,63 @@ const ProjectsPage = () => {
                     <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" /> {p.chat_messages?.[0]?.count ?? 0}</span>
                     <span>{new Date(p.updated_at).toLocaleDateString()}</span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 flex-shrink-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm("Delete this project?")) deleteProject.mutate(p.id);
-                    }}
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                  </Button>
+                  <ProjectContextMenu project={p} />
                 </CardContent>
               </Card>
             </motion.div>
           ))}
         </div>
       )}
+
+      {/* Rename Dialog */}
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Project</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Project Name</label>
+              <Input value={renameName} onChange={(e) => setRenameName(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Description (optional)</label>
+              <Textarea value={renameDesc} onChange={(e) => setRenameDesc(e.target.value)} rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameOpen(false)}>Cancel</Button>
+            <Button
+              disabled={!renameName.trim() || renameProject.isPending}
+              onClick={() => renameId && renameProject.mutate({ id: renameId, name: renameName, description: renameDesc })}
+            >
+              {renameProject.isPending ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Project</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete <span className="font-semibold text-foreground">"{deleteName}"</span>? This will permanently remove the project and all its files and chat history. This action cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={deleteProject.isPending}
+              onClick={() => deleteId && deleteProject.mutate(deleteId)}
+            >
+              {deleteProject.isPending ? "Deleting…" : "Delete Project"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
