@@ -16,8 +16,10 @@ import {
   MapPin, FileText, LayoutDashboard, ClipboardList, MessageSquare,
   Settings, Search, ChevronRight, Home, BarChart3, UserCheck, UserX,
   Mail, Globe, CreditCard, TrendingUp, DollarSign, Tag, Percent,
-  Trash2, ArrowUpDown, RefreshCw, Activity, ChevronDown
+  Trash2, ArrowUpDown, RefreshCw, Activity, ChevronDown, UserPlus, Send
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -236,16 +238,85 @@ const AdminDashboard = () => {
 
   // ─── USERS & ROLES ───
   const UsersPage = () => {
+    const [inviteOpen, setInviteOpen] = useState(false);
+    const [inviteEmail, setInviteEmail] = useState("");
+    const [inviteName, setInviteName] = useState("");
+    const [inviteRole, setInviteRole] = useState("user");
+
     const getUserRole = (userId: string) => {
       const role = userRoles.find((r) => r.user_id === userId);
       return role?.role || "user";
     };
 
+    const inviteMutation = useMutation({
+      mutationFn: async () => {
+        const { data, error } = await supabase.functions.invoke("admin-invite", {
+          body: { email: inviteEmail, full_name: inviteName, role: inviteRole, auto_approve: true },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        return data;
+      },
+      onSuccess: (data) => {
+        queryClient.invalidateQueries({ queryKey: ["admin-applications"] });
+        queryClient.invalidateQueries({ queryKey: ["admin-roles"] });
+        toast({
+          title: "User invited!",
+          description: `${inviteEmail} has been invited. Temporary password: ${data?.temp_password || "check email"}`,
+        });
+        setInviteOpen(false);
+        setInviteEmail("");
+        setInviteName("");
+        setInviteRole("user");
+      },
+      onError: (err: Error) => toast({ title: "Invite failed", description: err.message, variant: "destructive" }),
+    });
+
     return (
       <>
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div><h2 className="text-2xl font-extrabold mb-1">Users & Roles</h2><p className="text-muted-foreground">Manage user accounts and permissions</p></div>
-          <div className="relative w-64"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><Input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 rounded-lg" /></div>
+          <div className="flex items-center gap-2">
+            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gap-1.5 bg-gradient-primary text-primary-foreground hover:opacity-90 rounded-lg">
+                  <UserPlus className="w-4 h-4" /> Invite User
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><UserPlus className="w-5 h-5 text-primary" /> Invite New User</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={(e) => { e.preventDefault(); inviteMutation.mutate(); }} className="space-y-4 mt-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="invite-name" className="text-sm font-medium">Full Name</Label>
+                    <Input id="invite-name" placeholder="e.g. Jane Doe" value={inviteName} onChange={(e) => setInviteName(e.target.value)} required className="rounded-lg" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="invite-email" className="text-sm font-medium">Email Address</Label>
+                    <Input id="invite-email" type="email" placeholder="e.g. jane@company.com" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} required className="rounded-lg" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Role</Label>
+                    <Select value={inviteRole} onValueChange={setInviteRole}>
+                      <SelectTrigger className="rounded-lg"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                    <p>The user will be created with a temporary password. Share it with them or ask them to use <strong>"Forgot Password"</strong> to set their own.</p>
+                  </div>
+                  <Button type="submit" disabled={inviteMutation.isPending || !inviteEmail || !inviteName} className="w-full gap-2 bg-gradient-primary text-primary-foreground hover:opacity-90 rounded-lg">
+                    {inviteMutation.isPending ? "Inviting..." : <><Send className="w-4 h-4" /> Send Invite</>}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+            <div className="relative w-64"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><Input placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 rounded-lg" /></div>
+          </div>
         </div>
         {approvedApps.length === 0 ? (
           <Card className="border-dashed"><CardContent className="p-12 text-center text-muted-foreground">No approved users yet</CardContent></Card>
