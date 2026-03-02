@@ -1,11 +1,12 @@
-import { FolderOpen, Plus, Upload, MessageSquare, ArrowRight, Sparkles, TrendingUp, Files } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FolderOpen, MessageSquare, Files, Zap, Clock, CheckCircle2, Circle, ArrowUpRight, BarChart3, HardDrive } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
+import { formatDistanceToNow } from "date-fns";
 
 const DashboardHome = () => {
   const { user } = useAuth();
@@ -16,10 +17,25 @@ const DashboardHome = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projects")
-        .select("id, name, description, updated_at, project_files(count), chat_messages(count)")
+        .select("id, name, description, updated_at, created_at, project_files(count), chat_messages(count)")
         .eq("user_id", user!.id)
         .order("updated_at", { ascending: false })
-        .limit(5);
+        .limit(10);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: recentMessages = [] } = useQuery({
+    queryKey: ["recent-activity"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("chat_messages")
+        .select("id, content, created_at, role, project_id, projects(name)")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false })
+        .limit(6);
       if (error) throw error;
       return data;
     },
@@ -36,19 +52,32 @@ const DashboardHome = () => {
   const stats = [
     { label: "Projects", value: projects.length, icon: FolderOpen, color: "text-primary" },
     { label: "Files", value: totalFiles, icon: Files, color: "text-accent-foreground" },
-    { label: "AI Messages", value: totalMessages, icon: MessageSquare, color: "text-primary" },
+    { label: "AI Conversations", value: totalMessages, icon: MessageSquare, color: "text-primary" },
   ];
 
-  const quickActions = [
-    { label: "New Project", description: "Start analyzing data", icon: Plus, to: "/dashboard/projects", primary: true },
-    { label: "Upload Files", description: "Add data to a project", icon: Upload, to: "/dashboard/upload" },
-    { label: "View Reports", description: "See generated insights", icon: TrendingUp, to: "/dashboard/reports" },
+  // Getting started checklist
+  const hasProjects = projects.length > 0;
+  const hasFiles = totalFiles > 0;
+  const hasMessages = totalMessages > 0;
+  const completedSteps = [hasProjects, hasFiles, hasMessages].filter(Boolean).length;
+  const allComplete = completedSteps === 3;
+
+  const checklist = [
+    { label: "Create your first project", done: hasProjects, action: () => navigate("/dashboard/projects") },
+    { label: "Upload a file to analyze", done: hasFiles, action: () => navigate("/dashboard/projects") },
+    { label: "Chat with AI about your data", done: hasMessages, action: () => navigate("/dashboard/projects") },
   ];
+
+  const fadeUp = (delay: number) => ({
+    initial: { opacity: 0, y: 12 },
+    animate: { opacity: 1, y: 0 },
+    transition: { delay, duration: 0.4 },
+  });
 
   return (
     <div className="space-y-8 max-w-5xl">
       {/* Greeting */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      <motion.div {...fadeUp(0)}>
         <h1 className="text-2xl sm:text-3xl font-bold font-heading">
           {greeting}, <span className="text-gradient">{firstName}</span>
         </h1>
@@ -56,11 +85,11 @@ const DashboardHome = () => {
       </motion.div>
 
       {/* Stats */}
-      <motion.div className="grid grid-cols-3 gap-3 sm:gap-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }}>
+      <motion.div className="grid grid-cols-3 gap-3 sm:gap-4" {...fadeUp(0.1)}>
         {stats.map((s) => (
           <Card key={s.label} className="shadow-soft hover:shadow-card transition-shadow">
             <CardContent className="p-4 sm:p-5 flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0`}>
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <s.icon className={`w-5 h-5 ${s.color}`} />
               </div>
               <div>
@@ -72,84 +101,139 @@ const DashboardHome = () => {
         ))}
       </motion.div>
 
-      {/* Quick Actions */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.4 }}>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Quick Actions</h2>
-        <div className="grid sm:grid-cols-3 gap-3">
-          {quickActions.map((a) => (
-            <Card
-              key={a.label}
-              className={`cursor-pointer group transition-all hover:shadow-card ${a.primary ? "border-primary/30 bg-primary/5" : "hover:border-primary/20"}`}
-              onClick={() => navigate(a.to)}
-            >
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${a.primary ? "bg-gradient-primary" : "bg-muted"}`}>
-                  <a.icon className={`w-5 h-5 ${a.primary ? "text-primary-foreground" : "text-muted-foreground"}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">{a.label}</p>
-                  <p className="text-xs text-muted-foreground">{a.description}</p>
-                </div>
-                <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="grid lg:grid-cols-5 gap-6">
+        {/* Activity Feed — takes 3 cols */}
+        <motion.div className="lg:col-span-3 space-y-3" {...fadeUp(0.2)}>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Recent Activity</h2>
+
+          {recentMessages.length === 0 ? (
+            <Card className="shadow-soft">
+              <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+                <Clock className="w-8 h-8 text-muted-foreground/40 mb-3" />
+                <p className="text-sm text-muted-foreground">No activity yet. Start a conversation in a project to see your timeline here.</p>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Recent Projects */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Recent Projects</h2>
-          {projects.length > 0 && (
-            <Button variant="ghost" size="sm" asChild className="text-xs">
-              <Link to="/dashboard/projects">View all <ArrowRight className="w-3 h-3 ml-1" /></Link>
-            </Button>
+          ) : (
+            <div className="space-y-1.5">
+              {recentMessages.map((msg: any, i: number) => (
+                <Card
+                  key={msg.id}
+                  className="shadow-soft hover:shadow-card transition-all cursor-pointer group"
+                  onClick={() => navigate(`/dashboard/projects/${msg.project_id}`)}
+                >
+                  <CardContent className="p-3.5 flex items-start gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${msg.role === "assistant" ? "bg-primary/10" : "bg-muted"}`}>
+                      {msg.role === "assistant" ? (
+                        <Zap className="w-4 h-4 text-primary" />
+                      ) : (
+                        <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-primary/80">{(msg as any).projects?.name || "Project"}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground/80 truncate mt-0.5">
+                        {msg.role === "assistant" ? "AI: " : "You: "}
+                        {msg.content.slice(0, 120)}{msg.content.length > 120 ? "…" : ""}
+                      </p>
+                    </div>
+                    <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1 flex-shrink-0" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
-        </div>
+        </motion.div>
 
-        {projects.length === 0 ? (
-          <Card className="shadow-soft">
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                <Sparkles className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="font-semibold text-lg">Create your first project</h3>
-              <p className="text-muted-foreground mt-1 mb-5 max-w-sm">
-                Upload your data, chat with AI, and get insights in seconds.
-              </p>
-              <Button className="bg-gradient-primary text-primary-foreground hover:opacity-90" onClick={() => navigate("/dashboard/projects")}>
-                <Plus className="w-4 h-4 mr-2" /> New Project
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            {projects.map((p: any) => (
-              <Card
-                key={p.id}
-                className="shadow-soft hover:shadow-card transition-all cursor-pointer group"
-                onClick={() => navigate(`/dashboard/projects/${p.id}`)}
-              >
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <FolderOpen className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">{p.name}</p>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                      <span className="flex items-center gap-1"><Files className="w-3 h-3" /> {p.project_files?.[0]?.count ?? 0}</span>
-                      <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" /> {p.chat_messages?.[0]?.count ?? 0}</span>
-                      <span>{new Date(p.updated_at).toLocaleDateString()}</span>
+        {/* Right column — takes 2 cols */}
+        <motion.div className="lg:col-span-2 space-y-6" {...fadeUp(0.3)}>
+          {/* Getting Started / Progress */}
+          {!allComplete && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Getting Started</h2>
+              <Card className="shadow-soft">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">{completedSteps}/3 complete</span>
+                    <div className="flex gap-1">
+                      {[0, 1, 2].map((i) => (
+                        <div
+                          key={i}
+                          className={`h-1.5 w-8 rounded-full transition-colors ${i < completedSteps ? "bg-primary" : "bg-muted"}`}
+                        />
+                      ))}
                     </div>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  {checklist.map((item) => (
+                    <button
+                      key={item.label}
+                      onClick={item.action}
+                      className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors text-left group"
+                    >
+                      {item.done ? (
+                        <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-muted-foreground/40 flex-shrink-0" />
+                      )}
+                      <span className={`text-sm ${item.done ? "line-through text-muted-foreground" : "text-foreground font-medium"}`}>
+                        {item.label}
+                      </span>
+                    </button>
+                  ))}
                 </CardContent>
               </Card>
-            ))}
+            </div>
+          )}
+
+          {/* Workspace Overview */}
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Workspace Overview</h2>
+            <Card className="shadow-soft">
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <BarChart3 className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Analysis Sessions</p>
+                    <p className="text-xs text-muted-foreground">{totalMessages} total messages across {projects.length} projects</p>
+                  </div>
+                </div>
+                <div className="h-px bg-border" />
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <HardDrive className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Data Files</p>
+                    <p className="text-xs text-muted-foreground">{totalFiles} files uploaded</p>
+                  </div>
+                </div>
+                {projects.length > 0 && (
+                  <>
+                    <div className="h-px bg-border" />
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Clock className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">Last Active</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(projects[0].updated_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </div>
-        )}
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 };
