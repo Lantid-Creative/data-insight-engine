@@ -271,7 +271,7 @@ function ThinkingIndicator({ content }: { content: string }) {
               <motion.span
                 className="inline-block w-0.5 h-5 bg-primary ml-0.5 align-text-bottom rounded-full"
                 animate={{ opacity: [1, 0] }}
-                transition={{ duration: 0.6, repeat: Infinity, ease: "steps(2)" }}
+                transition={{ duration: 0.6, repeat: Infinity, repeatType: "reverse" }}
               />
             </div>
           </div>
@@ -1349,7 +1349,7 @@ function ReportView({ projectId }: { projectId: string }) {
                     <motion.span
                       className="inline-block w-0.5 h-5 bg-primary ml-0.5 align-text-bottom rounded-full"
                       animate={{ opacity: [1, 0] }}
-                      transition={{ duration: 0.6, repeat: Infinity, ease: "steps(2)" }}
+                      transition={{ duration: 0.6, repeat: Infinity, repeatType: "reverse" }}
                     />
                   )}
                 </div>
