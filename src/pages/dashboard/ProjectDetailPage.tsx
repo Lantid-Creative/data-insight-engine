@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 
-const ACCEPTED = ".csv,.xlsx,.xls,.json,.pdf,.docx,.txt,.png,.jpg,.jpeg";
+const ACCEPTED = "*"; // Accept all file types
 
 const QUICK_ACTIONS = [
   { icon: BarChart3, label: "Analyze Data", desc: "Find patterns & insights", prompt: "Analyze the key patterns and insights from my uploaded data" },
@@ -222,17 +222,23 @@ const ProjectDetailPage = () => {
     if (!user || !projectId) return;
     setUploading(true);
     const arr = Array.from(fileList);
+    let uploaded = 0;
     for (const file of arr) {
       const filePath = `${user.id}/${projectId}/${Date.now()}-${file.name}`;
-      const { error: uploadErr } = await supabase.storage.from("project-files").upload(filePath, file);
-      if (uploadErr) { toast.error(`Failed to upload ${file.name}`); continue; }
+      const { error: uploadErr } = await supabase.storage.from("project-files").upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (uploadErr) { toast.error(`Failed to upload ${file.name}: ${uploadErr.message}`); continue; }
       await supabase.from("project_files").insert({
         project_id: projectId, user_id: user.id, file_name: file.name,
-        file_path: filePath, file_size: file.size, mime_type: file.type,
+        file_path: filePath, file_size: file.size, mime_type: file.type || "application/octet-stream",
       });
+      uploaded++;
+      if (arr.length > 1) toast.info(`Uploaded ${uploaded}/${arr.length}: ${file.name}`);
     }
     queryClient.invalidateQueries({ queryKey: ["project-files", projectId] });
-    toast.success(`${arr.length} file(s) uploaded`);
+    toast.success(`${uploaded} file(s) uploaded successfully`);
     setUploading(false);
   }, [user, projectId, queryClient]);
 
@@ -525,7 +531,6 @@ const ProjectDetailPage = () => {
           id="file-input"
           type="file"
           multiple
-          accept={ACCEPTED}
           onChange={(e) => e.target.files && handleFiles(e.target.files)}
           className="hidden"
         />

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
 
-const ACCEPTED = ".csv,.xlsx,.xls,.json,.pdf,.docx,.txt,.png,.jpg,.jpeg";
+const ACCEPTED = "*"; // Accept all file types
 
 const UploadPage = () => {
   const [files, setFiles] = useState<File[]>([]);
@@ -49,9 +49,9 @@ const UploadPage = () => {
           <UploadIcon className="w-12 h-12 text-muted-foreground mb-4" />
           <p className="font-medium text-lg">Drag & drop files here</p>
           <p className="text-sm text-muted-foreground mt-1">
-            CSV, Excel, JSON, PDF, DOCX, TXT, Images
+            Any file type, any size — CSV, Excel, PDF, DOCX, images, and more
           </p>
-          <input id="file-input" type="file" multiple accept={ACCEPTED} onChange={handleFileInput} className="hidden" />
+          <input id="file-input" type="file" multiple onChange={handleFileInput} className="hidden" />
         </CardContent>
       </Card>
 
