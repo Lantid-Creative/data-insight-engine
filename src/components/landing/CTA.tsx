@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 
 const CTA = () => {
   return (
-    <section className="py-32 section-dark relative overflow-hidden">
+    <section className="py-32 bg-background relative overflow-hidden">
       <div className="absolute top-1/2 left-1/3 w-[500px] h-[500px] bg-primary/8 blur-[200px] rounded-full" />
       <div className="absolute bottom-0 right-1/3 w-[300px] h-[300px] bg-primary/5 blur-[150px] rounded-full" />
 
@@ -17,12 +17,12 @@ const CTA = () => {
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="max-w-3xl mx-auto text-center"
         >
-          <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight mb-6 text-white">
+          <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight mb-6 text-foreground">
             Ready to forge<br />
             <span className="text-gradient">your data?</span>
           </h2>
 
-          <p className="text-lg mb-10 max-w-xl mx-auto text-white/50">
+          <p className="text-lg mb-10 max-w-xl mx-auto text-muted-foreground">
             Join thousands of analysts, founders, and researchers who've already made the switch. Start free — no credit card required.
           </p>
 
@@ -33,7 +33,7 @@ const CTA = () => {
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="h-14 text-base font-medium rounded-xl text-white/70 border-white/15 hover:bg-white/5 hover:text-white">
+            <Button asChild variant="outline" size="lg" className="h-14 text-base font-medium rounded-xl text-muted-foreground border-border hover:bg-muted hover:text-foreground">
               <Link to="/consulting">
                 Talk to Sales
               </Link>
@@ -45,7 +45,7 @@ const CTA = () => {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ delay: 0.4, duration: 0.6 }}
-            className="mt-14 flex flex-wrap items-center justify-center gap-8 text-xs font-mono uppercase tracking-wider text-white/25"
+            className="mt-14 flex flex-wrap items-center justify-center gap-8 text-xs font-mono uppercase tracking-wider text-muted-foreground/40"
           >
             <span>🔒 SOC 2 Compliant</span>
             <span>⚡ 99.9% Uptime</span>
