@@ -239,6 +239,13 @@ const DashboardHome = () => {
                             <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
                             <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
                           </linearGradient>
+                          <filter id="sparkGlow">
+                            <feGaussianBlur stdDeviation="3" result="blur" />
+                            <feMerge>
+                              <feMergeNode in="blur" />
+                              <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                          </filter>
                         </defs>
                         <XAxis dataKey="day" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                         <Tooltip
@@ -253,7 +260,7 @@ const DashboardHome = () => {
                             );
                           }}
                         />
-                        <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#sparkFill)" />
+                        <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#sparkFill)" activeDot={{ r: 4, stroke: "hsl(var(--primary))", strokeWidth: 2, fill: "hsl(var(--card))", filter: "url(#sparkGlow)" }} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
