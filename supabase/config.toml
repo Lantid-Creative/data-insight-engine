@@ -2,3 +2,6 @@ project_id = "vaojkdhpttqpwzhycxhf"
 
 [functions.project-chat]
 verify_jwt = false
+
+[functions.generate-report]
+verify_jwt = false
