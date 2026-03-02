@@ -25,8 +25,6 @@ import { useState } from "react";
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Projects", url: "/dashboard/projects", icon: FolderOpen },
-  { title: "Upload Data", url: "/dashboard/upload", icon: Upload },
-  { title: "Reports", url: "/dashboard/reports", icon: FileText },
 ];
 
 
