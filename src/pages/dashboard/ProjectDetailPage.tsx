@@ -1265,15 +1265,35 @@ function ReportView({ projectId }: { projectId: string }) {
     }
   };
 
-  const handleDownload = () => {
-    const blob = new Blob([reportContent], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "project-report.md";
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Report downloaded");
+  const [exporting, setExporting] = useState<string | null>(null);
+
+  const handleExport = async (format: "md" | "pdf" | "docx" | "pptx") => {
+    setExporting(format);
+    try {
+      if (format === "md") {
+        const blob = new Blob([reportContent], { type: "text/markdown" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "project-report.md";
+        a.click();
+        URL.revokeObjectURL(url);
+      } else if (format === "pdf") {
+        const { exportToPdf } = await import("@/lib/document-export");
+        await exportToPdf(reportContent, "project-report");
+      } else if (format === "docx") {
+        const { exportToDocx } = await import("@/lib/document-export");
+        await exportToDocx(reportContent, "project-report");
+      } else if (format === "pptx") {
+        const { exportToPptx } = await import("@/lib/document-export");
+        await exportToPptx(reportContent, "project-report");
+      }
+      toast.success(`Report exported as ${format.toUpperCase()}`);
+    } catch (e: any) {
+      toast.error(`Export failed: ${e.message}`);
+    } finally {
+      setExporting(null);
+    }
   };
 
   return (
@@ -1286,10 +1306,29 @@ function ReportView({ projectId }: { projectId: string }) {
           </div>
           <div className="flex items-center gap-2">
             {generated && (
-              <Button variant="outline" size="sm" onClick={handleDownload} className="gap-2">
-                <Download className="w-3.5 h-3.5" />
-                Download
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2" disabled={!!exporting}>
+                    {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                    {exporting ? `Exporting ${exporting.toUpperCase()}…` : "Export"}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleExport("pdf")} className="gap-2">
+                    <FileText className="w-4 h-4 text-red-500" /> PDF Document
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport("docx")} className="gap-2">
+                    <FileText className="w-4 h-4 text-blue-500" /> Word Document (.docx)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport("pptx")} className="gap-2">
+                    <FileText className="w-4 h-4 text-orange-500" /> PowerPoint (.pptx)
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleExport("md")} className="gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground" /> Markdown (.md)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             <Button
               size="sm"
