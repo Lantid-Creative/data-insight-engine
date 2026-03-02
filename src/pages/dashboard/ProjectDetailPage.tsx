@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
   Upload, File, Loader2, Sparkles, Paperclip,
@@ -13,10 +14,13 @@ import {
   Trash2, Clock, HardDrive, Layers, PieChart, Table2,
   MessageSquare, ChevronLeft, Zap, Brain, Eye, Command,
   Workflow, TrendingUp, Search, Mic, Plus, Hash,
+  Download, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
+import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, AreaChart, Area } from "recharts";
+import { format, subDays, startOfDay } from "date-fns";
 
 /* ─── Helpers ─── */
 function getFileIcon(mime: string | null) {
@@ -668,130 +672,142 @@ const ProjectDetailPage = () => {
 
         {/* ═══ BODY ═══ */}
         <div className="flex flex-1 min-h-0">
-          {/* ─── Main Chat ─── */}
+          {/* ─── Main Content ─── */}
           <div className="flex-1 flex flex-col min-w-0 relative">
             <AmbientMesh />
 
-            {!hasMessages ? (
-              /* ===== EMPTY STATE ===== */
-              <div className="flex-1 flex flex-col items-center justify-center px-4 relative z-10">
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                  className="flex flex-col items-center max-w-[720px] w-full"
-                >
-                  <div className="mb-8">
-                    <LogoMark size="lg" />
-                  </div>
-
-                  <h1 className="text-3xl sm:text-4xl font-extrabold text-center mb-3 tracking-tight text-foreground leading-[1.15]">
-                    What should we build
-                    <br />
-                    <span className="text-gradient">from your data?</span>
-                  </h1>
-                  <p className="text-muted-foreground text-center mb-10 text-[15px] max-w-md leading-relaxed">
-                    Upload documents, ask questions, and let AI transform raw data into actionable insights.
-                  </p>
-
-                  {/* File pills */}
-                  {files.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="flex items-center flex-wrap gap-2 mb-8 justify-center"
-                    >
-                      {files.slice(0, 5).map((f: any) => {
-                        const FIcon = getFileIcon(f.mime_type);
-                        return (
-                          <div
-                            key={f.id}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border/60 text-xs font-medium text-foreground shadow-sm"
-                          >
-                            <FIcon className="w-3.5 h-3.5 text-muted-foreground" />
-                            <span className="truncate max-w-[120px]">{f.file_name}</span>
-                          </div>
-                        );
-                      })}
-                      {files.length > 5 && (
-                        <span className="px-2.5 py-1.5 rounded-full bg-muted text-[11px] font-bold text-muted-foreground">
-                          +{files.length - 5}
-                        </span>
-                      )}
-                    </motion.div>
-                  )}
-
-                  {/* Command Input */}
-                  <div className="w-full mb-10">
-                    <CommandInput
-                      textareaRef={textareaRef}
-                      chatInput={chatInput}
-                      setChatInput={setChatInput}
-                      inputFocused={inputFocused}
-                      setInputFocused={setInputFocused}
-                      sendMessage={sendMessage}
-                      streaming={streaming}
-                      uploading={uploading}
-                      large
-                    />
-                  </div>
-
-                  {/* Quick action CARDS (not chips) */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-[560px]">
-                    {QUICK_ACTIONS.map((action, i) => (
-                      <QuickActionCard
-                        key={action.label}
-                        action={action}
-                        index={i}
-                        onClick={() => sendMessage(action.prompt)}
-                      />
-                    ))}
-                  </div>
-
-                  <p className="text-[10px] text-muted-foreground/30 text-center mt-10 font-mono tracking-wider uppercase">
-                    DataAfro may produce inaccurate results · Always verify critical data
-                  </p>
-                </motion.div>
-              </div>
-            ) : (
-              /* ===== CHAT MESSAGES ===== */
+            {activeMode === "chat" && (
               <>
-                <div ref={scrollContainerRef} className="flex-1 overflow-y-auto relative z-10">
-                  <div className="max-w-[740px] mx-auto space-y-8 py-6 px-4">
-                    {messages.map((m: any, i: number) => (
-                      <ChatMessage
-                        key={m.id}
-                        message={m}
-                        onCopy={handleCopy}
-                        onRetry={m.role === "assistant" ? () => {
-                          const lastUserMsg = [...messages].reverse().find((msg: any) => msg.role === "user");
-                          if (lastUserMsg) sendMessage(lastUserMsg.content);
-                        } : undefined}
-                        isLast={i === messages.length - 1}
-                      />
-                    ))}
-                    {streaming && <ThinkingIndicator content={streamingContent} />}
-                    <div ref={chatEndRef} />
-                  </div>
-                </div>
+                {!hasMessages ? (
+                  /* ===== EMPTY STATE ===== */
+                  <div className="flex-1 flex flex-col items-center justify-center px-4 relative z-10">
+                    <motion.div
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                      className="flex flex-col items-center max-w-[720px] w-full"
+                    >
+                      <div className="mb-8">
+                        <LogoMark size="lg" />
+                      </div>
 
-                {/* Bottom input */}
-                <div className="flex-shrink-0 border-t border-border/30 bg-background/60 backdrop-blur-xl relative z-10">
-                  <div className="max-w-[740px] mx-auto px-4 py-3">
-                    <CommandInput
-                      textareaRef={textareaRef}
-                      chatInput={chatInput}
-                      setChatInput={setChatInput}
-                      inputFocused={inputFocused}
-                      setInputFocused={setInputFocused}
-                      sendMessage={sendMessage}
-                      streaming={streaming}
-                      uploading={uploading}
-                    />
+                      <h1 className="text-3xl sm:text-4xl font-extrabold text-center mb-3 tracking-tight text-foreground leading-[1.15]">
+                        What should we build
+                        <br />
+                        <span className="text-gradient">from your data?</span>
+                      </h1>
+                      <p className="text-muted-foreground text-center mb-10 text-[15px] max-w-md leading-relaxed">
+                        Upload documents, ask questions, and let AI transform raw data into actionable insights.
+                      </p>
+
+                      {/* File pills */}
+                      {files.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.2 }}
+                          className="flex items-center flex-wrap gap-2 mb-8 justify-center"
+                        >
+                          {files.slice(0, 5).map((f: any) => {
+                            const FIcon = getFileIcon(f.mime_type);
+                            return (
+                              <div
+                                key={f.id}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border/60 text-xs font-medium text-foreground shadow-sm"
+                              >
+                                <FIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                                <span className="truncate max-w-[120px]">{f.file_name}</span>
+                              </div>
+                            );
+                          })}
+                          {files.length > 5 && (
+                            <span className="px-2.5 py-1.5 rounded-full bg-muted text-[11px] font-bold text-muted-foreground">
+                              +{files.length - 5}
+                            </span>
+                          )}
+                        </motion.div>
+                      )}
+
+                      {/* Command Input */}
+                      <div className="w-full mb-10">
+                        <CommandInput
+                          textareaRef={textareaRef}
+                          chatInput={chatInput}
+                          setChatInput={setChatInput}
+                          inputFocused={inputFocused}
+                          setInputFocused={setInputFocused}
+                          sendMessage={sendMessage}
+                          streaming={streaming}
+                          uploading={uploading}
+                          large
+                        />
+                      </div>
+
+                      {/* Quick action CARDS (not chips) */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-[560px]">
+                        {QUICK_ACTIONS.map((action, i) => (
+                          <QuickActionCard
+                            key={action.label}
+                            action={action}
+                            index={i}
+                            onClick={() => sendMessage(action.prompt)}
+                          />
+                        ))}
+                      </div>
+
+                      <p className="text-[10px] text-muted-foreground/30 text-center mt-10 font-mono tracking-wider uppercase">
+                        DataAfro may produce inaccurate results · Always verify critical data
+                      </p>
+                    </motion.div>
                   </div>
-                </div>
+                ) : (
+                  /* ===== CHAT MESSAGES ===== */
+                  <>
+                    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto relative z-10">
+                      <div className="max-w-[740px] mx-auto space-y-8 py-6 px-4">
+                        {messages.map((m: any, i: number) => (
+                          <ChatMessage
+                            key={m.id}
+                            message={m}
+                            onCopy={handleCopy}
+                            onRetry={m.role === "assistant" ? () => {
+                              const lastUserMsg = [...messages].reverse().find((msg: any) => msg.role === "user");
+                              if (lastUserMsg) sendMessage(lastUserMsg.content);
+                            } : undefined}
+                            isLast={i === messages.length - 1}
+                          />
+                        ))}
+                        {streaming && <ThinkingIndicator content={streamingContent} />}
+                        <div ref={chatEndRef} />
+                      </div>
+                    </div>
+
+                    {/* Bottom input */}
+                    <div className="flex-shrink-0 border-t border-border/30 bg-background/60 backdrop-blur-xl relative z-10">
+                      <div className="max-w-[740px] mx-auto px-4 py-3">
+                        <CommandInput
+                          textareaRef={textareaRef}
+                          chatInput={chatInput}
+                          setChatInput={setChatInput}
+                          inputFocused={inputFocused}
+                          setInputFocused={setInputFocused}
+                          sendMessage={sendMessage}
+                          streaming={streaming}
+                          uploading={uploading}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
               </>
+            )}
+
+            {activeMode === "analyze" && (
+              <AnalyzeView files={files} messages={messages} projectName={project.name} />
+            )}
+
+            {activeMode === "report" && (
+              <ReportView projectId={projectId!} />
             )}
           </div>
 
@@ -900,6 +916,349 @@ const ProjectDetailPage = () => {
     </TooltipProvider>
   );
 };
+
+/* ─── Analyze View ─── */
+const CHART_COLORS = [
+  "hsl(var(--primary))",
+  "hsl(var(--primary) / 0.7)",
+  "hsl(var(--primary) / 0.5)",
+  "hsl(var(--primary) / 0.35)",
+  "hsl(var(--primary) / 0.2)",
+];
+
+function AnalyzeView({ files, messages, projectName }: { files: any[]; messages: any[]; projectName: string }) {
+  // File type breakdown
+  const typeMap: Record<string, number> = {};
+  files.forEach((f: any) => {
+    const ext = f.file_name.split(".").pop()?.toUpperCase() || "OTHER";
+    typeMap[ext] = (typeMap[ext] || 0) + 1;
+  });
+  const fileTypeData = Object.entries(typeMap).map(([name, value]) => ({ name, value }));
+
+  // Message activity over last 7 days
+  const activityData = Array.from({ length: 7 }, (_, i) => {
+    const day = startOfDay(subDays(new Date(), 6 - i));
+    const nextDay = startOfDay(subDays(new Date(), 5 - i));
+    const count = messages.filter((m: any) => {
+      const d = new Date(m.created_at);
+      return i < 6 ? d >= day && d < nextDay : d >= day;
+    }).length;
+    return { day: format(day, "EEE"), count };
+  });
+
+  // File sizes for bar chart
+  const fileSizeData = files.slice(0, 8).map((f: any) => ({
+    name: f.file_name.length > 12 ? f.file_name.slice(0, 12) + "…" : f.file_name,
+    size: +(f.file_size / 1024).toFixed(1),
+  }));
+
+  const totalSize = files.reduce((a: number, f: any) => a + (f.file_size || 0), 0);
+  const userMsgs = messages.filter((m: any) => m.role === "user").length;
+  const aiMsgs = messages.filter((m: any) => m.role === "assistant").length;
+
+  const stats = [
+    { label: "Total Files", value: files.length, icon: File },
+    { label: "Total Size", value: totalSize < 1024 * 1024 ? `${(totalSize / 1024).toFixed(1)} KB` : `${(totalSize / (1024 * 1024)).toFixed(1)} MB`, icon: HardDrive },
+    { label: "Your Messages", value: userMsgs, icon: MessageSquare },
+    { label: "AI Responses", value: aiMsgs, icon: Sparkles },
+  ];
+
+  return (
+    <div className="flex-1 overflow-y-auto relative z-10">
+      <div className="max-w-[900px] mx-auto py-8 px-6 space-y-8">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="text-2xl font-bold text-foreground">Analyze: {projectName}</h1>
+          <p className="text-sm text-muted-foreground mt-1">Data visualizations and project insights</p>
+        </motion.div>
+
+        {/* Stats row */}
+        <motion.div
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          {stats.map((s) => (
+            <Card key={s.label} className="shadow-soft">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <s.icon className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold leading-none">{s.value}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{s.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </motion.div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* File Type Distribution */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <Card className="shadow-soft">
+              <CardContent className="p-5">
+                <h3 className="text-sm font-semibold text-foreground mb-4">File Type Distribution</h3>
+                {fileTypeData.length > 0 ? (
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPie>
+                        <Pie data={fileTypeData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={3} dataKey="value" label={({ name, value }) => `${name} (${value})`}>
+                          {fileTypeData.map((_, i) => (
+                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip
+                          content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null;
+                            return (
+                              <div className="rounded-lg border bg-card px-3 py-1.5 shadow-md text-xs">
+                                <p className="font-medium text-card-foreground">{payload[0].name}</p>
+                                <p className="text-muted-foreground">{payload[0].value} files</p>
+                              </div>
+                            );
+                          }}
+                        />
+                      </RechartsPie>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">No files uploaded yet</div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Chat Activity */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <Card className="shadow-soft">
+              <CardContent className="p-5">
+                <h3 className="text-sm font-semibold text-foreground mb-4">Chat Activity (7 days)</h3>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={activityData}>
+                      <defs>
+                        <linearGradient id="analyzeGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <RechartsTooltip
+                        content={({ active, payload, label }) => {
+                          if (!active || !payload?.length) return null;
+                          return (
+                            <div className="rounded-lg border bg-card px-3 py-1.5 shadow-md text-xs">
+                              <p className="font-medium text-card-foreground">{label}</p>
+                              <p className="text-muted-foreground">{payload[0].value} messages</p>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#analyzeGrad)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* File Sizes */}
+          {fileSizeData.length > 0 && (
+            <motion.div className="md:col-span-2" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+              <Card className="shadow-soft">
+                <CardContent className="p-5">
+                  <h3 className="text-sm font-semibold text-foreground mb-4">File Sizes (KB)</h3>
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={fileSizeData}>
+                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                        <RechartsTooltip
+                          content={({ active, payload, label }) => {
+                            if (!active || !payload?.length) return null;
+                            return (
+                              <div className="rounded-lg border bg-card px-3 py-1.5 shadow-md text-xs">
+                                <p className="font-medium text-card-foreground">{label}</p>
+                                <p className="text-muted-foreground">{payload[0].value} KB</p>
+                              </div>
+                            );
+                          }}
+                        />
+                        <Bar dataKey="size" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Report View ─── */
+function ReportView({ projectId }: { projectId: string }) {
+  const [reportContent, setReportContent] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [generated, setGenerated] = useState(false);
+
+  const generateReport = async () => {
+    setGenerating(true);
+    setReportContent("");
+    setGenerated(false);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ projectId }),
+      });
+
+      if (resp.status === 429) {
+        toast.error("Rate limit exceeded. Please try again in a moment.");
+        setGenerating(false);
+        return;
+      }
+      if (resp.status === 402) {
+        toast.error("AI credits exhausted. Please add credits to continue.");
+        setGenerating(false);
+        return;
+      }
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "Failed to generate report" }));
+        throw new Error(err.error || "Failed to generate report");
+      }
+
+      const reader = resp.body!.getReader();
+      const decoder = new TextDecoder();
+      let full = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        for (const line of chunk.split("\n")) {
+          if (!line.startsWith("data: ") || line.includes("[DONE]")) continue;
+          try {
+            const parsed = JSON.parse(line.slice(6));
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) { full += delta; setReportContent(full); }
+          } catch { /* partial */ }
+        }
+      }
+      setGenerated(true);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to generate report");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleDownload = () => {
+    const blob = new Blob([reportContent], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "project-report.md";
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Report downloaded");
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto relative z-10">
+      <div className="max-w-[800px] mx-auto py-8 px-6 space-y-6">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Project Report</h1>
+            <p className="text-sm text-muted-foreground mt-1">AI-generated summary of your project</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {generated && (
+              <Button variant="outline" size="sm" onClick={handleDownload} className="gap-2">
+                <Download className="w-3.5 h-3.5" />
+                Download
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={generateReport}
+              disabled={generating}
+              className="gap-2"
+            >
+              {generating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : generated ? (
+                <RefreshCw className="w-3.5 h-3.5" />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5" />
+              )}
+              {generating ? "Generating…" : generated ? "Regenerate" : "Generate Report"}
+            </Button>
+          </div>
+        </motion.div>
+
+        {!reportContent && !generating ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex flex-col items-center justify-center py-24 text-center"
+          >
+            <div
+              className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center mb-6"
+              style={{ boxShadow: "0 12px 40px hsl(var(--primary) / 0.2)" }}
+            >
+              <FileText className="w-8 h-8 text-primary-foreground" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground mb-2">No report yet</h2>
+            <p className="text-sm text-muted-foreground max-w-md mb-6">
+              Click "Generate Report" to create a comprehensive AI-powered summary of your project, including data overview, key insights, and recommendations.
+            </p>
+            <Button onClick={generateReport} className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              Generate Report
+            </Button>
+          </motion.div>
+        ) : (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <Card className="shadow-soft">
+              <CardContent className="p-6 sm:p-8">
+                <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-[1.85]
+                  [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mt-6 [&>h1]:mb-3
+                  [&>h2]:text-lg [&>h2]:font-bold [&>h2]:mt-5 [&>h2]:mb-2
+                  [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mt-4 [&>h3]:mb-2
+                  [&>p]:mb-3 [&>ul]:mb-3 [&>ol]:mb-3 [&>li]:mb-1
+                  [&>blockquote]:border-l-2 [&>blockquote]:border-primary/40 [&>blockquote]:pl-4 [&>blockquote]:text-muted-foreground
+                  [&_code]:bg-primary/5 [&_code]:text-primary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-sm [&_code]:font-mono [&_code]:border [&_code]:border-primary/10
+                  [&>table]:w-full [&>table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:bg-muted [&_th]:text-left [&_th]:text-sm [&_th]:font-semibold
+                  [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm">
+                  <ReactMarkdown>{reportContent}</ReactMarkdown>
+                  {generating && (
+                    <motion.span
+                      className="inline-block w-0.5 h-5 bg-primary ml-0.5 align-text-bottom rounded-full"
+                      animate={{ opacity: [1, 0] }}
+                      transition={{ duration: 0.6, repeat: Infinity, ease: "steps(2)" }}
+                    />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /* ─── Command Input ─── */
 function CommandInput({
