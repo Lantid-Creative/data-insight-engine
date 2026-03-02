@@ -12,10 +12,10 @@ const features = [
 
 const Features = () => {
   return (
-    <section className="py-28 section-dark relative" id="features">
+    <section className="py-28 bg-background relative" id="features">
       {/* Subtle grid pattern */}
       <div className="absolute inset-0 opacity-[0.02]" style={{
-        backgroundImage: "linear-gradient(hsl(0 0% 100%) 1px, transparent 1px), linear-gradient(90deg, hsl(0 0% 100%) 1px, transparent 1px)",
+        backgroundImage: "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
         backgroundSize: "60px 60px",
       }} />
 
@@ -28,10 +28,10 @@ const Features = () => {
           className="text-center mb-20"
         >
           <span className="text-xs font-mono uppercase tracking-[0.2em] text-primary font-bold">Features</span>
-          <h2 className="text-3xl md:text-5xl font-extrabold mt-4 tracking-tight text-white">
+          <h2 className="text-3xl md:text-5xl font-extrabold mt-4 tracking-tight text-foreground">
             Built different. Built bold.
           </h2>
-          <p className="text-lg mt-4 max-w-2xl mx-auto text-white/50">
+          <p className="text-lg mt-4 max-w-2xl mx-auto text-muted-foreground">
             Everything you need to turn chaos into clarity.
           </p>
         </motion.div>
@@ -45,15 +45,15 @@ const Features = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1, duration: 0.5 }}
-              className="group p-8 rounded-2xl border transition-all duration-300 hover:border-primary/30 bg-white/[0.04] border-white/[0.08] relative overflow-hidden"
+              className="group p-8 rounded-2xl border transition-all duration-300 hover:border-primary/30 bg-card border-border relative overflow-hidden"
             >
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-primary/5 to-transparent" />
               <div className="relative">
                 <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
                   <feature.icon className="w-7 h-7 text-primary" />
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-white/90">{feature.title}</h3>
-                <p className="text-sm leading-relaxed text-white/50">{feature.description}</p>
+                <h3 className="text-xl font-bold mb-3 text-foreground">{feature.title}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
               </div>
             </motion.div>
           ))}
@@ -68,13 +68,13 @@ const Features = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 + i * 0.08, duration: 0.5 }}
-              className="group p-6 rounded-2xl border transition-all duration-300 hover:border-primary/30 bg-white/[0.03] border-white/[0.08]"
+              className="group p-6 rounded-2xl border transition-all duration-300 hover:border-primary/30 bg-card border-border"
             >
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
                 <feature.icon className="w-5 h-5 text-primary" />
               </div>
-              <h3 className="text-base font-bold mb-2 text-white/90">{feature.title}</h3>
-              <p className="text-xs leading-relaxed text-white/50">{feature.description}</p>
+              <h3 className="text-base font-bold mb-2 text-foreground">{feature.title}</h3>
+              <p className="text-xs leading-relaxed text-muted-foreground">{feature.description}</p>
             </motion.div>
           ))}
         </div>
