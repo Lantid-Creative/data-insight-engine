@@ -1018,16 +1018,82 @@ const ProjectDetailPage = () => {
   );
 };
 
+/* ─── Report Config Types ─── */
+const REPORT_SECTIONS = [
+  { id: "executive_summary", label: "Executive Summary", desc: "High-level overview & key takeaways", icon: Sparkles, default: true },
+  { id: "data_overview", label: "Data Overview", desc: "File types, sizes, structure summary", icon: Database, default: true },
+  { id: "key_insights", label: "Key Insights", desc: "Patterns, trends & anomalies", icon: TrendingUp, default: true },
+  { id: "statistical_analysis", label: "Statistical Analysis", desc: "Quantitative metrics & correlations", icon: BarChart3, default: false },
+  { id: "recommendations", label: "Recommendations", desc: "Actionable next steps", icon: Zap, default: true },
+  { id: "risk_assessment", label: "Risk Assessment", desc: "Risks, gaps & data quality issues", icon: Eye, default: false },
+  { id: "methodology", label: "Methodology", desc: "How the analysis was done", icon: Workflow, default: false },
+  { id: "data_quality", label: "Data Quality", desc: "Completeness, accuracy, consistency", icon: Search, default: false },
+  { id: "comparative_analysis", label: "Comparative Analysis", desc: "Segment & period comparisons", icon: Layers, default: false },
+  { id: "conclusion", label: "Conclusion", desc: "Final summary & closing", icon: FileText, default: true },
+  { id: "appendix", label: "Appendix", desc: "Raw data & supplementary info", icon: Table2, default: false },
+] as const;
+
+const TONE_OPTIONS = [
+  { id: "professional", label: "Professional", desc: "Formal business language" },
+  { id: "executive", label: "Executive", desc: "Concise, impact-focused" },
+  { id: "technical", label: "Technical", desc: "Detailed & precise" },
+  { id: "academic", label: "Academic", desc: "Scholarly & methodical" },
+  { id: "casual", label: "Casual", desc: "Friendly & accessible" },
+] as const;
+
+const FOCUS_AREA_OPTIONS = [
+  "Revenue & Financial Metrics",
+  "Customer Behavior",
+  "Operational Efficiency",
+  "Market Trends",
+  "Risk & Compliance",
+  "Product Performance",
+  "User Engagement",
+  "Cost Optimization",
+  "Growth Opportunities",
+  "Data Quality & Integrity",
+];
+
+const LANGUAGE_OPTIONS = [
+  "English", "Spanish", "French", "German", "Portuguese",
+  "Chinese", "Japanese", "Korean", "Arabic", "Hindi",
+];
+
 /* ─── Report View ─── */
 function ReportView({ projectId }: { projectId: string }) {
   const [reportContent, setReportContent] = useState("");
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [showConfig, setShowConfig] = useState(true);
+
+  // Config state
+  const [selectedSections, setSelectedSections] = useState<string[]>(
+    REPORT_SECTIONS.filter(s => s.default).map(s => s.id)
+  );
+  const [tone, setTone] = useState("professional");
+  const [focusAreas, setFocusAreas] = useState<string[]>([]);
+  const [customInstructions, setCustomInstructions] = useState("");
+  const [reportTitle, setReportTitle] = useState("");
+  const [includeCharts, setIncludeCharts] = useState(false);
+  const [language, setLanguage] = useState("English");
+
+  const toggleSection = (id: string) => {
+    setSelectedSections(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    );
+  };
+
+  const toggleFocus = (area: string) => {
+    setFocusAreas(prev =>
+      prev.includes(area) ? prev.filter(f => f !== area) : [...prev, area]
+    );
+  };
 
   const generateReport = async () => {
     setGenerating(true);
     setReportContent("");
     setGenerated(false);
+    setShowConfig(false);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -1038,7 +1104,18 @@ function ReportView({ projectId }: { projectId: string }) {
           Authorization: `Bearer ${session?.access_token}`,
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({ projectId }),
+        body: JSON.stringify({
+          projectId,
+          config: {
+            sections: selectedSections,
+            tone,
+            focusAreas,
+            customInstructions,
+            reportTitle,
+            includeCharts,
+            language,
+          },
+        }),
       });
 
       if (resp.status === 429) {
@@ -1115,12 +1192,19 @@ function ReportView({ projectId }: { projectId: string }) {
   return (
     <div className="flex-1 overflow-y-auto relative z-10">
       <div className="max-w-[800px] mx-auto py-8 px-6 space-y-6">
+        {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Project Report</h1>
-            <p className="text-sm text-muted-foreground mt-1">AI-generated summary of your project</p>
+            <h1 className="text-2xl font-bold text-foreground">Custom Report</h1>
+            <p className="text-sm text-muted-foreground mt-1">Configure and generate tailored AI reports</p>
           </div>
           <div className="flex items-center gap-2">
+            {(generated || generating) && (
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => { setShowConfig(true); }}>
+                <Wand2 className="w-3.5 h-3.5" />
+                Reconfigure
+              </Button>
+            )}
             {generated && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -1146,50 +1230,214 @@ function ReportView({ projectId }: { projectId: string }) {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            <Button
-              size="sm"
-              onClick={generateReport}
-              disabled={generating}
-              className="gap-2"
-            >
-              {generating ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : generated ? (
-                <RefreshCw className="w-3.5 h-3.5" />
-              ) : (
-                <Sparkles className="w-3.5 h-3.5" />
-              )}
-              {generating ? "Generating…" : generated ? "Regenerate" : "Generate Report"}
-            </Button>
           </div>
         </motion.div>
 
-        {!reportContent && !generating ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="flex flex-col items-center justify-center py-24 text-center"
-          >
-            <div
-              className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center mb-6"
-              style={{ boxShadow: "0 12px 40px hsl(var(--primary) / 0.2)" }}
+        {/* Config Panel */}
+        <AnimatePresence mode="wait">
+          {showConfig && !generating && (
+            <motion.div
+              key="config"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
             >
-              <FileText className="w-8 h-8 text-primary-foreground" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">No report yet</h2>
-            <p className="text-sm text-muted-foreground max-w-md mb-6">
-              Click "Generate Report" to create a comprehensive AI-powered summary of your project, including data overview, key insights, and recommendations.
-            </p>
-            <Button onClick={generateReport} className="gap-2">
-              <Sparkles className="w-4 h-4" />
-              Generate Report
-            </Button>
-          </motion.div>
-        ) : (
+              {/* Report Title */}
+              <Card className="shadow-soft">
+                <CardContent className="p-5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Report Title (optional)</label>
+                  <Input
+                    placeholder="e.g. Q1 2026 Financial Analysis"
+                    value={reportTitle}
+                    onChange={(e) => setReportTitle(e.target.value)}
+                    className="bg-muted/30 border-border/50"
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Sections */}
+              <Card className="shadow-soft">
+                <CardContent className="p-5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">Report Sections</label>
+                  <p className="text-xs text-muted-foreground mb-4">Pick the sections you want included. Drag to reorder (coming soon).</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {REPORT_SECTIONS.map((section) => {
+                      const selected = selectedSections.includes(section.id);
+                      const SIcon = section.icon;
+                      return (
+                        <button
+                          key={section.id}
+                          onClick={() => toggleSection(section.id)}
+                          className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-200 ${
+                            selected
+                              ? "border-primary/30 bg-primary/[0.04]"
+                              : "border-border/50 bg-card hover:border-border"
+                          }`}
+                        >
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                            selected ? "bg-primary/10" : "bg-muted"
+                          }`}>
+                            <SIcon className={`w-4 h-4 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-xs font-semibold ${selected ? "text-foreground" : "text-muted-foreground"}`}>{section.label}</p>
+                            <p className="text-[10px] text-muted-foreground/60 truncate">{section.desc}</p>
+                          </div>
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                            selected ? "border-primary bg-primary" : "border-border"
+                          }`}>
+                            {selected && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/50 mt-3 font-mono">{selectedSections.length} sections selected</p>
+                </CardContent>
+              </Card>
+
+              {/* Tone */}
+              <Card className="shadow-soft">
+                <CardContent className="p-5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">Tone & Style</label>
+                  <div className="flex flex-wrap gap-2">
+                    {TONE_OPTIONS.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => setTone(t.id)}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                          tone === t.id
+                            ? "border-primary/30 bg-primary/10 text-primary"
+                            : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
+                        }`}
+                      >
+                        {t.label}
+                        <span className="text-[10px] font-normal ml-1 opacity-60">· {t.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Focus Areas */}
+              <Card className="shadow-soft">
+                <CardContent className="p-5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">Focus Areas (optional)</label>
+                  <p className="text-xs text-muted-foreground mb-3">Select areas you want the AI to emphasize in the report.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {FOCUS_AREA_OPTIONS.map((area) => {
+                      const active = focusAreas.includes(area);
+                      return (
+                        <button
+                          key={area}
+                          onClick={() => toggleFocus(area)}
+                          className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-all ${
+                            active
+                              ? "border-primary/30 bg-primary/10 text-primary"
+                              : "border-border/50 text-muted-foreground hover:border-border"
+                          }`}
+                        >
+                          {area}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Language & Options */}
+              <Card className="shadow-soft">
+                <CardContent className="p-5 space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Language</label>
+                    <div className="flex flex-wrap gap-2">
+                      {LANGUAGE_OPTIONS.map((lang) => (
+                        <button
+                          key={lang}
+                          onClick={() => setLanguage(lang)}
+                          className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
+                            language === lang
+                              ? "border-primary/30 bg-primary/10 text-primary"
+                              : "border-border/50 text-muted-foreground hover:border-border"
+                          }`}
+                        >
+                          {lang}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      onClick={() => setIncludeCharts(!includeCharts)}
+                      className={`w-10 h-6 rounded-full transition-colors relative ${includeCharts ? "bg-primary" : "bg-muted border border-border"}`}
+                    >
+                      <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${includeCharts ? "left-[18px]" : "left-0.5"}`} />
+                    </button>
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">Include chart suggestions</p>
+                      <p className="text-[10px] text-muted-foreground">AI will describe recommended visualizations</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Custom Instructions */}
+              <Card className="shadow-soft">
+                <CardContent className="p-5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Custom Instructions (optional)</label>
+                  <Textarea
+                    placeholder="e.g. Focus on year-over-year growth, mention competitor analysis, keep it under 3 pages..."
+                    value={customInstructions}
+                    onChange={(e) => setCustomInstructions(e.target.value)}
+                    rows={3}
+                    className="bg-muted/30 border-border/50 text-sm"
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Generate Button */}
+              <div className="flex justify-center pt-2 pb-8">
+                <Button
+                  size="lg"
+                  onClick={generateReport}
+                  disabled={selectedSections.length === 0}
+                  className="gap-2 h-14 px-10 rounded-xl font-bold text-base bg-gradient-primary text-primary-foreground shadow-glow-strong hover:opacity-90 transition-all"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  Generate Custom Report
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Report Content */}
+        {(reportContent || generating) && !showConfig && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <Card className="shadow-soft">
               <CardContent className="p-6 sm:p-8">
+                {/* Config summary badges */}
+                <div className="flex flex-wrap gap-2 mb-6 pb-4 border-b border-border/40">
+                  <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
+                    {tone}
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-[10px] font-bold">
+                    {selectedSections.length} sections
+                  </span>
+                  {language !== "English" && (
+                    <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-[10px] font-bold">
+                      {language}
+                    </span>
+                  )}
+                  {focusAreas.length > 0 && (
+                    <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-[10px] font-bold">
+                      {focusAreas.length} focus areas
+                    </span>
+                  )}
+                </div>
+
                 <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-[1.85]
                   [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mt-6 [&>h1]:mb-3
                   [&>h2]:text-lg [&>h2]:font-bold [&>h2]:mt-5 [&>h2]:mb-2
