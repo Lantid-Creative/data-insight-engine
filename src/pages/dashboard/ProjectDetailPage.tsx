@@ -14,8 +14,12 @@ import {
   Trash2, Clock, HardDrive, Layers, PieChart, Table2,
   MessageSquare, ChevronLeft, Zap, Brain, Eye, Command,
   Workflow, TrendingUp, Search, Mic, Plus, Hash,
-  Download, RefreshCw,
+  Download, RefreshCw, MoreHorizontal, Pencil,
 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
@@ -377,6 +381,12 @@ const ProjectDetailPage = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [inputFocused, setInputFocused] = useState(false);
 
+  // Rename/delete dialog state
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameName, setRenameName] = useState("");
+  const [renameDesc, setRenameDesc] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
   const { data: project, isLoading: projLoading } = useQuery({
     queryKey: ["project", projectId],
     queryFn: async () => {
@@ -467,6 +477,34 @@ const ProjectDetailPage = () => {
       toast.success("File removed");
     },
   });
+
+  const renameProject = useMutation({
+    mutationFn: async ({ name, description }: { name: string; description: string }) => {
+      const { error } = await supabase.from("projects").update({ name, description }).eq("id", projectId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Project updated");
+      setRenameOpen(false);
+    },
+    onError: () => toast.error("Failed to update project"),
+  });
+
+  const deleteProject = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("projects").delete().eq("id", projectId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Project deleted");
+      navigate("/dashboard/projects");
+    },
+    onError: () => toast.error("Failed to delete project"),
+  });
+
 
   const sendMessage = async (content?: string) => {
     const msg = (content || chatInput).trim();
@@ -574,6 +612,24 @@ const ProjectDetailPage = () => {
                 <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
               </div>
               <span className="text-sm font-bold text-foreground truncate max-w-[200px]">{project.name}</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={() => { setRenameName(project.name); setRenameDesc(project.description || ""); setRenameOpen(true); }}>
+                    <Pencil className="w-3.5 h-3.5 mr-2" />
+                    Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteOpen(true)}>
+                    <Trash2 className="w-3.5 h-3.5 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -912,6 +968,52 @@ const ProjectDetailPage = () => {
           onChange={(e) => e.target.files && handleFiles(e.target.files)}
           className="hidden"
         />
+
+        {/* Rename Dialog */}
+        <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Rename Project</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Project Name</label>
+                <Input value={renameName} onChange={(e) => setRenameName(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Description (optional)</label>
+                <Textarea value={renameDesc} onChange={(e) => setRenameDesc(e.target.value)} rows={3} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRenameOpen(false)}>Cancel</Button>
+              <Button
+                disabled={!renameName.trim() || renameProject.isPending}
+                onClick={() => renameProject.mutate({ name: renameName, description: renameDesc })}
+              >
+                {renameProject.isPending ? "Saving…" : "Save"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirm Dialog */}
+        <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Project</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete <span className="font-semibold text-foreground">"{project.name}"</span>? This will permanently remove the project and all its files and chat history.
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+              <Button variant="destructive" disabled={deleteProject.isPending} onClick={() => deleteProject.mutate()}>
+                {deleteProject.isPending ? "Deleting…" : "Delete Project"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );
