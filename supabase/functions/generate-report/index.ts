@@ -23,8 +23,19 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Unauthorized");
 
-    const { projectId } = await req.json();
+    const { projectId, config } = await req.json();
     if (!projectId) throw new Error("projectId is required");
+
+    // Destructure custom config with defaults
+    const {
+      sections = ["executive_summary", "data_overview", "key_insights", "recommendations", "conclusion"],
+      tone = "professional",
+      focusAreas = [],
+      customInstructions = "",
+      reportTitle = "",
+      includeCharts = false,
+      language = "English",
+    } = config || {};
 
     // Verify project ownership
     const { data: project, error: projErr } = await supabase
@@ -58,19 +69,69 @@ serve(async (req) => {
       ? history.map((m: any) => `[${m.role}]: ${m.content.slice(0, 500)}`).join("\n\n")
       : "No conversations yet.";
 
-    const systemPrompt = `You are DataAfro AI, generating a comprehensive project report. Create a well-structured, professional report in markdown format.
+    // Build section instructions
+    const sectionMap: Record<string, string> = {
+      executive_summary: "**Executive Summary** - A concise overview of the project, its purpose, and the most critical findings. Highlight the main takeaway.",
+      data_overview: "**Data Overview** - Summary of all uploaded files including types, sizes, structure, and data quality observations.",
+      key_insights: "**Key Insights** - The most important patterns, trends, anomalies, and findings discovered from the data and conversations.",
+      statistical_analysis: "**Statistical Analysis** - Quantitative analysis including means, medians, distributions, correlations, and any significant statistical findings.",
+      recommendations: "**Recommendations** - Actionable next steps based on the findings. Prioritize by impact and feasibility.",
+      risk_assessment: "**Risk Assessment** - Potential risks, data quality issues, gaps, and areas that need attention.",
+      methodology: "**Methodology** - How the analysis was conducted, what tools and approaches were used.",
+      data_quality: "**Data Quality Report** - Assessment of data completeness, accuracy, consistency, and any cleaning steps needed.",
+      comparative_analysis: "**Comparative Analysis** - Compare different data segments, time periods, or categories to identify differences.",
+      conclusion: "**Conclusion** - Final summary tying together all sections with a clear closing statement.",
+      appendix: "**Appendix** - Additional data tables, raw numbers, or supplementary information referenced in the report.",
+    };
 
-The report should include:
-1. **Executive Summary** - A brief overview of the project and key findings
-2. **Data Overview** - Summary of uploaded files, their types, and sizes
-3. **Key Insights** - Main findings and patterns from the conversations
-4. **Recommendations** - Actionable next steps
-5. **Conclusion** - Final summary
+    const selectedSections = sections
+      .map((s: string) => sectionMap[s])
+      .filter(Boolean)
+      .map((s: string, i: number) => `${i + 1}. ${s}`)
+      .join("\n");
+
+    // Build tone instruction
+    const toneMap: Record<string, string> = {
+      professional: "Use formal, professional language suitable for business stakeholders and executives.",
+      technical: "Use technical language with precise terminology. Include technical details, methodologies, and specifications.",
+      executive: "Write for C-level executives. Be extremely concise, lead with impact, and focus on business outcomes and ROI.",
+      academic: "Use academic writing style with proper citations format, methodology discussion, and scholarly tone.",
+      casual: "Use a friendly, conversational tone that's easy to understand for non-technical readers.",
+    };
+
+    const toneInstruction = toneMap[tone] || toneMap.professional;
+
+    // Build focus areas instruction
+    const focusInstruction = focusAreas.length > 0
+      ? `\n\nPay special attention to these focus areas and dedicate extra depth to them:\n${focusAreas.map((f: string) => `- ${f}`).join("\n")}`
+      : "";
+
+    // Build custom instructions
+    const customInstr = customInstructions.trim()
+      ? `\n\nAdditional instructions from the user:\n${customInstructions}`
+      : "";
+
+    const chartInstruction = includeCharts
+      ? "\n\nWhere appropriate, suggest data visualizations by describing them in text (e.g., 'A bar chart showing X by Y would reveal...'). Use markdown tables to present data when possible."
+      : "";
+
+    const langInstruction = language !== "English"
+      ? `\n\nIMPORTANT: Write the entire report in ${language}.`
+      : "";
+
+    const systemPrompt = `You are DataAfro AI, generating a custom project report. Create a well-structured, professional report in markdown format.
+
+${toneInstruction}
+
+The report MUST include these sections in this order:
+${selectedSections}
 
 Be thorough but concise. Use headers, bullet points, and tables where appropriate.
-Format dates nicely. Use professional language.`;
+Format dates nicely.${focusInstruction}${customInstr}${chartInstruction}${langInstruction}`;
 
-    const userPrompt = `Generate a comprehensive report for the project "${project.name}".
+    const title = reportTitle.trim() || project.name;
+
+    const userPrompt = `Generate a comprehensive report titled "${title}" for the project "${project.name}".
 
 Project description: ${project.description || "No description provided"}
 
