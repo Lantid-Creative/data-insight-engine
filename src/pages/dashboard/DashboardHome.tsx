@@ -5,9 +5,29 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { formatDistanceToNow, subDays, format, startOfDay } from "date-fns";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+import { useEffect, useRef } from "react";
+
+function AnimatedCounter({ value }: { value: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const motionVal = useMotionValue(0);
+  const rounded = useTransform(motionVal, (v) => Math.round(v));
+
+  useEffect(() => {
+    const controls = animate(motionVal, value, { duration: 1, ease: "easeOut" });
+    return controls.stop;
+  }, [value, motionVal]);
+
+  useEffect(() => {
+    return rounded.on("change", (v) => {
+      if (ref.current) ref.current.textContent = String(v);
+    });
+  }, [rounded]);
+
+  return <span ref={ref}>0</span>;
+}
 
 const DashboardHome = () => {
   const { user } = useAuth();
@@ -123,7 +143,7 @@ const DashboardHome = () => {
                 <s.icon className={`w-5 h-5 ${s.color}`} />
               </div>
               <div>
-                <p className="text-2xl font-bold leading-none">{s.value}</p>
+                <p className="text-2xl font-bold leading-none"><AnimatedCounter value={s.value} /></p>
                 <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
               </div>
             </CardContent>
