@@ -1,16 +1,19 @@
 import {
   Upload, FolderOpen, FileText, Key, CreditCard, Settings,
   LayoutDashboard, Sparkles, ChevronUp, Plus, MessageSquare, Search,
+  MoreHorizontal, Pencil, Trash2,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -21,20 +24,30 @@ import {
   SidebarMenuButton, SidebarMenuItem, useSidebar,
 } from "@/components/ui/sidebar";
 import { useState } from "react";
+import { toast } from "sonner";
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Projects", url: "/dashboard/projects", icon: FolderOpen },
 ];
 
-
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, signOut } = useAuth();
   const [chatSearch, setChatSearch] = useState("");
+
+  // Rename/delete dialog state
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameName, setRenameName] = useState("");
+  const [renameDesc, setRenameDesc] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteName, setDeleteName] = useState("");
 
   const isInProject = location.pathname.startsWith("/dashboard/projects/");
   const projectId = isInProject ? location.pathname.split("/")[3] : null;
@@ -44,12 +57,11 @@ export function AppSidebar() {
 
   const initials = user?.email?.slice(0, 2).toUpperCase() || "U";
 
-  // Fetch recent projects for sidebar
   const { data: recentProjects = [] } = useQuery({
     queryKey: ["sidebar-projects", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("projects").select("id, name, updated_at")
+        .from("projects").select("id, name, description, updated_at")
         .eq("user_id", user!.id)
         .order("updated_at", { ascending: false })
         .limit(10);
@@ -57,6 +69,40 @@ export function AppSidebar() {
       return data;
     },
     enabled: !!user?.id,
+  });
+
+  const renameProject = useMutation({
+    mutationFn: async ({ id, name, description }: { id: string; name: string; description: string }) => {
+      const { error } = await supabase.from("projects").update({ name, description }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sidebar-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["project"] });
+      toast.success("Project updated");
+      setRenameOpen(false);
+    },
+    onError: () => toast.error("Failed to update project"),
+  });
+
+  const deleteProject = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("projects").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sidebar-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Project deleted");
+      setDeleteOpen(false);
+      // If we're viewing the deleted project, navigate away
+      if (deleteId === projectId) {
+        navigate("/dashboard/projects");
+      }
+      setDeleteId(null);
+    },
+    onError: () => toast.error("Failed to delete project"),
   });
 
   const filteredProjects = recentProjects.filter((p) =>
@@ -84,6 +130,7 @@ export function AppSidebar() {
   );
 
   return (
+    <>
     <Sidebar collapsible="icon">
       <SidebarContent>
         {/* Brand */}
@@ -135,20 +182,56 @@ export function AppSidebar() {
               <ScrollArea className="max-h-[200px]">
                 <SidebarMenu>
                   {filteredProjects.map((p) => (
-                    <SidebarMenuItem key={p.id}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={projectId === p.id}
-                      >
-                        <NavLink
-                          to={`/dashboard/projects/${p.id}`}
-                          className="hover:bg-sidebar-accent/50 transition-colors"
-                          activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    <SidebarMenuItem key={p.id} className="group/project">
+                      <div className="flex items-center w-full">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={projectId === p.id}
+                          className="flex-1 min-w-0"
                         >
-                          <MessageSquare className="mr-2 h-3.5 w-3.5 flex-shrink-0" />
-                          <span className="truncate text-xs">{p.name}</span>
-                        </NavLink>
-                      </SidebarMenuButton>
+                          <NavLink
+                            to={`/dashboard/projects/${p.id}`}
+                            className="hover:bg-sidebar-accent/50 transition-colors"
+                            activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                          >
+                            <MessageSquare className="mr-2 h-3.5 w-3.5 flex-shrink-0" />
+                            <span className="truncate text-xs">{p.name}</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              className="opacity-0 group-hover/project:opacity-100 p-1 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all flex-shrink-0 mr-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreHorizontal className="w-3.5 h-3.5" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" side="right" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuItem onClick={() => {
+                              setRenameId(p.id);
+                              setRenameName(p.name);
+                              setRenameDesc(p.description || "");
+                              setRenameOpen(true);
+                            }}>
+                              <Pencil className="w-3.5 h-3.5 mr-2" />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => {
+                                setDeleteId(p.id);
+                                setDeleteName(p.name);
+                                setDeleteOpen(true);
+                              }}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>
@@ -199,5 +282,56 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
+
+    {/* Rename Dialog */}
+    <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Rename Project</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">Project Name</label>
+            <Input value={renameName} onChange={(e) => setRenameName(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">Description (optional)</label>
+            <Textarea value={renameDesc} onChange={(e) => setRenameDesc(e.target.value)} rows={3} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setRenameOpen(false)}>Cancel</Button>
+          <Button
+            disabled={!renameName.trim() || renameProject.isPending}
+            onClick={() => renameId && renameProject.mutate({ id: renameId, name: renameName, description: renameDesc })}
+          >
+            {renameProject.isPending ? "Saving…" : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Delete Confirm Dialog */}
+    <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Project</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Are you sure you want to delete <span className="font-semibold text-foreground">"{deleteName}"</span>? This will permanently remove the project and all its data.
+        </p>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+          <Button
+            variant="destructive"
+            disabled={deleteProject.isPending}
+            onClick={() => deleteId && deleteProject.mutate(deleteId)}
+          >
+            {deleteProject.isPending ? "Deleting…" : "Delete Project"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
