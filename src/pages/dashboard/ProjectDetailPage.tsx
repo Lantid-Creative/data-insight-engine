@@ -23,8 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
-import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, AreaChart, Area } from "recharts";
-import { format, subDays, startOfDay } from "date-fns";
+import { AnalyzeView } from "@/components/dashboard/AnalyzeView";
 
 /* ─── Helpers ─── */
 function getFileIcon(mime: string | null) {
@@ -859,7 +858,7 @@ const ProjectDetailPage = () => {
             )}
 
             {activeMode === "analyze" && (
-              <AnalyzeView files={files} messages={messages} projectName={project.name} />
+              <AnalyzeView files={files} messages={messages} projectName={project.name} projectId={projectId!} />
             )}
 
             {activeMode === "report" && (
@@ -1018,189 +1017,6 @@ const ProjectDetailPage = () => {
     </TooltipProvider>
   );
 };
-
-/* ─── Analyze View ─── */
-const CHART_COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--primary) / 0.7)",
-  "hsl(var(--primary) / 0.5)",
-  "hsl(var(--primary) / 0.35)",
-  "hsl(var(--primary) / 0.2)",
-];
-
-function AnalyzeView({ files, messages, projectName }: { files: any[]; messages: any[]; projectName: string }) {
-  // File type breakdown
-  const typeMap: Record<string, number> = {};
-  files.forEach((f: any) => {
-    const ext = f.file_name.split(".").pop()?.toUpperCase() || "OTHER";
-    typeMap[ext] = (typeMap[ext] || 0) + 1;
-  });
-  const fileTypeData = Object.entries(typeMap).map(([name, value]) => ({ name, value }));
-
-  // Message activity over last 7 days
-  const activityData = Array.from({ length: 7 }, (_, i) => {
-    const day = startOfDay(subDays(new Date(), 6 - i));
-    const nextDay = startOfDay(subDays(new Date(), 5 - i));
-    const count = messages.filter((m: any) => {
-      const d = new Date(m.created_at);
-      return i < 6 ? d >= day && d < nextDay : d >= day;
-    }).length;
-    return { day: format(day, "EEE"), count };
-  });
-
-  // File sizes for bar chart
-  const fileSizeData = files.slice(0, 8).map((f: any) => ({
-    name: f.file_name.length > 12 ? f.file_name.slice(0, 12) + "…" : f.file_name,
-    size: +(f.file_size / 1024).toFixed(1),
-  }));
-
-  const totalSize = files.reduce((a: number, f: any) => a + (f.file_size || 0), 0);
-  const userMsgs = messages.filter((m: any) => m.role === "user").length;
-  const aiMsgs = messages.filter((m: any) => m.role === "assistant").length;
-
-  const stats = [
-    { label: "Total Files", value: files.length, icon: File },
-    { label: "Total Size", value: totalSize < 1024 * 1024 ? `${(totalSize / 1024).toFixed(1)} KB` : `${(totalSize / (1024 * 1024)).toFixed(1)} MB`, icon: HardDrive },
-    { label: "Your Messages", value: userMsgs, icon: MessageSquare },
-    { label: "AI Responses", value: aiMsgs, icon: Sparkles },
-  ];
-
-  return (
-    <div className="flex-1 overflow-y-auto relative z-10">
-      <div className="max-w-[900px] mx-auto py-8 px-6 space-y-8">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl font-bold text-foreground">Analyze: {projectName}</h1>
-          <p className="text-sm text-muted-foreground mt-1">Data visualizations and project insights</p>
-        </motion.div>
-
-        {/* Stats row */}
-        <motion.div
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          {stats.map((s) => (
-            <Card key={s.label} className="shadow-soft">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <s.icon className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-lg font-bold leading-none">{s.value}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{s.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </motion.div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* File Type Distribution */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <Card className="shadow-soft">
-              <CardContent className="p-5">
-                <h3 className="text-sm font-semibold text-foreground mb-4">File Type Distribution</h3>
-                {fileTypeData.length > 0 ? (
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RechartsPie>
-                        <Pie data={fileTypeData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={3} dataKey="value" label={({ name, value }) => `${name} (${value})`}>
-                          {fileTypeData.map((_, i) => (
-                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <RechartsTooltip
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null;
-                            return (
-                              <div className="rounded-lg border bg-card px-3 py-1.5 shadow-md text-xs">
-                                <p className="font-medium text-card-foreground">{payload[0].name}</p>
-                                <p className="text-muted-foreground">{payload[0].value} files</p>
-                              </div>
-                            );
-                          }}
-                        />
-                      </RechartsPie>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">No files uploaded yet</div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Chat Activity */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <Card className="shadow-soft">
-              <CardContent className="p-5">
-                <h3 className="text-sm font-semibold text-foreground mb-4">Chat Activity (7 days)</h3>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={activityData}>
-                      <defs>
-                        <linearGradient id="analyzeGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                      <RechartsTooltip
-                        content={({ active, payload, label }) => {
-                          if (!active || !payload?.length) return null;
-                          return (
-                            <div className="rounded-lg border bg-card px-3 py-1.5 shadow-md text-xs">
-                              <p className="font-medium text-card-foreground">{label}</p>
-                              <p className="text-muted-foreground">{payload[0].value} messages</p>
-                            </div>
-                          );
-                        }}
-                      />
-                      <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#analyzeGrad)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* File Sizes */}
-          {fileSizeData.length > 0 && (
-            <motion.div className="md:col-span-2" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-              <Card className="shadow-soft">
-                <CardContent className="p-5">
-                  <h3 className="text-sm font-semibold text-foreground mb-4">File Sizes (KB)</h3>
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={fileSizeData}>
-                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                        <RechartsTooltip
-                          content={({ active, payload, label }) => {
-                            if (!active || !payload?.length) return null;
-                            return (
-                              <div className="rounded-lg border bg-card px-3 py-1.5 shadow-md text-xs">
-                                <p className="font-medium text-card-foreground">{label}</p>
-                                <p className="text-muted-foreground">{payload[0].value} KB</p>
-                              </div>
-                            );
-                          }}
-                        />
-                        <Bar dataKey="size" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ─── Report View ─── */
 function ReportView({ projectId }: { projectId: string }) {

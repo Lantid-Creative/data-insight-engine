@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.generate-report]
 verify_jwt = false
+
+[functions.analyze-project]
+verify_jwt = false
