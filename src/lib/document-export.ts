@@ -255,7 +255,7 @@ export async function exportToDocx(markdown: string, filename = "report") {
         children.push(new Paragraph({
           children: [new TextRun({ text: block.content, italics: true, color: "666666" })],
           indent: { left: 720 },
-          border: { left: { style: BorderStyle.SINGLE, size: 12, color: "1E40AF" } },
+          border: { left: { style: BorderStyle.SINGLE, size: 12, color: "EA7915" } },
           spacing: { before: 100, after: 100 },
         }));
         break;
