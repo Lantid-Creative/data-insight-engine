@@ -146,7 +146,7 @@ export async function exportToPdf(markdown: string, filename = "report") {
       case "blockquote":
         doc.setFontSize(10);
         doc.setFont("helvetica", "italic");
-        doc.setDrawColor(30, 64, 175);
+        doc.setDrawColor(234, 121, 21);
         doc.setLineWidth(0.8);
         doc.line(margin, y - 3, margin, y + 4);
         const bqLines = doc.splitTextToSize(block.content, maxW - 8);
