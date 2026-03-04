@@ -1,7 +1,7 @@
 import {
   Upload, FolderOpen, FileText, Key, CreditCard, Settings,
   LayoutDashboard, Sparkles, ChevronUp, Plus, MessageSquare, Search,
-  MoreHorizontal, Pencil, Trash2, Users,
+  MoreHorizontal, Pencil, Trash2, Users, Shield,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
