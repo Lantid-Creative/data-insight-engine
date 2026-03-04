@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { Outlet, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/dashboard/NotificationBell";
+import { GlobalSearch } from "@/components/dashboard/GlobalSearch";
 
 const breadcrumbMap: Record<string, string> = {
   "/dashboard": "Dashboard",
