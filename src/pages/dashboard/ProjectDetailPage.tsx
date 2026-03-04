@@ -941,9 +941,9 @@ const ProjectDetailPage = () => {
                         />
                       </div>
 
-                      {/* Quick action CARDS (not chips) */}
+                      {/* Smart action CARDS based on file types */}
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-[560px]">
-                        {QUICK_ACTIONS.map((action, i) => (
+                        {getSmartPrompts(files).map((action, i) => (
                           <QuickActionCard
                             key={action.label}
                             action={action}
