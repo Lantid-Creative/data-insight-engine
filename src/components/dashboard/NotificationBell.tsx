@@ -1,4 +1,4 @@
-import { Bell, Check, CheckCheck, Trash2, ExternalLink } from "lucide-react";
+import { Bell, Check, CheckCheck, Trash2, Settings } from "lucide-react";
 import { useNotifications, type Notification } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
