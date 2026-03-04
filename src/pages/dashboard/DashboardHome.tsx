@@ -143,6 +143,10 @@ const DashboardHome = () => {
   });
 
   return (
+    <>
+    <AnimatePresence>
+      {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
+    </AnimatePresence>
     <div className="space-y-8 max-w-5xl">
       {/* Greeting */}
       <motion.div {...fadeUp(0)}>
