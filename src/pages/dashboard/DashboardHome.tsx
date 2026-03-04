@@ -1,4 +1,4 @@
-import { FolderOpen, MessageSquare, Files, Zap, Clock, CheckCircle2, Circle, ArrowUpRight, BarChart3, HardDrive } from "lucide-react";
+import { FolderOpen, MessageSquare, Files, Zap, Clock, CheckCircle2, Circle, ArrowUpRight, BarChart3, HardDrive, MapPin } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +10,7 @@ import { formatDistanceToNow, subDays, format, startOfDay } from "date-fns";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { useEffect, useRef, useState } from "react";
 import { OnboardingWizard } from "@/components/dashboard/OnboardingWizard";
+import { GuidedTour } from "@/components/dashboard/GuidedTour";
 
 function AnimatedCounter({ value }: { value: number }) {
   const ref = useRef<HTMLSpanElement>(null);
