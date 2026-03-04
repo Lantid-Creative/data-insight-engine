@@ -530,7 +530,7 @@ const ProjectDetailPage = () => {
   const [renameName, setRenameName] = useState("");
   const [renameDesc, setRenameDesc] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
-
+  const [shareOpen, setShareOpen] = useState(false);
   const { data: project, isLoading: projLoading } = useQuery({
     queryKey: ["project", projectId],
     queryFn: async () => {
