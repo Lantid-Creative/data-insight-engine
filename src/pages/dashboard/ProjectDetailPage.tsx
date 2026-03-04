@@ -14,7 +14,7 @@ import {
   Trash2, Clock, HardDrive, Layers, PieChart, Table2,
   MessageSquare, ChevronLeft, Zap, Brain, Eye, Command,
   Workflow, TrendingUp, Search, Mic, Plus, Hash,
-  Download, RefreshCw, MoreHorizontal, Pencil,
+  Download, RefreshCw, MoreHorizontal, Pencil, UserPlus, Activity,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
