@@ -82,14 +82,18 @@ export async function exportToPdf(markdown: string, filename = "report") {
     }
   };
 
-  // Title bar
-  doc.setFillColor(30, 64, 175);
-  doc.rect(0, 0, pageW, 12, "F");
+  // Title bar - DataAfro orange branding
+  doc.setFillColor(234, 121, 21); // ~hsl(24 95% 53%)
+  doc.rect(0, 0, pageW, 14, "F");
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(8);
-  doc.text("DataAfro Report", margin, 8);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("DataAfro", margin, 8);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.text(new Date().toLocaleDateString(), pageW - margin, 8, { align: "right" });
   doc.setTextColor(0, 0, 0);
-  y = 20;
+  y = 22;
 
   for (const block of blocks) {
     switch (block.type) {
