@@ -2,6 +2,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { Outlet, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBell } from "@/components/dashboard/NotificationBell";
 
 const breadcrumbMap: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -31,6 +32,7 @@ const DashboardLayout = () => {
               <span className="text-sm font-medium text-foreground hidden sm:block">{pageTitle}</span>
             </div>
             <div className="flex items-center gap-2">
+              <NotificationBell />
               <ThemeToggle />
             </div>
           </header>
