@@ -24,6 +24,11 @@ import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { AnalyzeView } from "@/components/dashboard/AnalyzeView";
+import {
+  PieChart as RechartsPie, Pie, Cell, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip,
+  AreaChart, Area, LineChart, Line, CartesianGrid,
+} from "recharts";
 
 /* ─── Helpers ─── */
 function getFileIcon(mime: string | null) {
@@ -60,14 +65,56 @@ const WORKSPACE_MODES = [
   { id: "report", label: "Report", icon: FileText },
 ] as const;
 
-const QUICK_ACTIONS = [
-  { icon: BarChart3, label: "Analyze Data", desc: "Find patterns & insights", prompt: "Analyze the key patterns and insights from my uploaded data" },
-  { icon: FileText, label: "Generate Report", desc: "Comprehensive PDF report", prompt: "Generate a comprehensive report based on my files" },
-  { icon: Wand2, label: "Clean Dataset", desc: "Prepare for analysis", prompt: "Help me clean and prepare this dataset for analysis" },
-  { icon: PieChart, label: "Visualize", desc: "Charts & dashboards", prompt: "Create visualizations and charts from my data" },
-  { icon: Database, label: "Summarize", desc: "Quick data overview", prompt: "Summarize the structure and content of my uploaded files" },
-  { icon: Table2, label: "Extract Tables", desc: "Structured extraction", prompt: "Extract all tables and structured data from my documents" },
+const BASE_QUICK_ACTIONS = [
+  { icon: BarChart3, label: "Analyze Data", desc: "Find patterns & insights", prompt: "Analyze the key patterns and insights from my uploaded data", fileTypes: ["spreadsheet", "csv", "excel", "json"] },
+  { icon: FileText, label: "Summarize Docs", desc: "Extract key takeaways", prompt: "Summarize the key points and takeaways from my documents", fileTypes: ["pdf", "word", "text"] },
+  { icon: Wand2, label: "Clean Dataset", desc: "Prepare for analysis", prompt: "Help me clean and prepare this dataset for analysis", fileTypes: ["spreadsheet", "csv", "excel"] },
+  { icon: PieChart, label: "Visualize", desc: "Charts & dashboards", prompt: "Create visualizations and charts from my data. Include a ```chart block with JSON data.", fileTypes: ["spreadsheet", "csv", "excel", "json"] },
+  { icon: Database, label: "Overview", desc: "Quick data summary", prompt: "Summarize the structure and content of my uploaded files", fileTypes: [] },
+  { icon: Table2, label: "Extract Tables", desc: "Structured extraction", prompt: "Extract all tables and structured data from my documents", fileTypes: ["pdf", "image"] },
 ];
+
+function getSmartPrompts(files: any[]) {
+  if (!files.length) return BASE_QUICK_ACTIONS;
+
+  const mimeTypes = files.map((f: any) => f.mime_type || "").join(" ").toLowerCase();
+  const hasSpreadsheets = /spreadsheet|csv|excel|xlsx/.test(mimeTypes);
+  const hasPDFs = /pdf/.test(mimeTypes);
+  const hasImages = /image/.test(mimeTypes);
+  const hasJSON = /json/.test(mimeTypes);
+  const hasAudio = /audio/.test(mimeTypes);
+  const hasVideo = /video/.test(mimeTypes);
+
+  const contextActions: typeof BASE_QUICK_ACTIONS = [];
+
+  if (hasSpreadsheets || hasJSON) {
+    contextActions.push(
+      { icon: BarChart3, label: "Analyze Trends", desc: "Find patterns in your data", prompt: "Analyze trends and patterns in my spreadsheet data. Show key metrics and include a ```chart block with the most important visualization.", fileTypes: [] },
+      { icon: PieChart, label: "Visualize Data", desc: "Auto-generate charts", prompt: "Create the most insightful visualizations from my data. Include ```chart blocks with chart data in JSON format.", fileTypes: [] },
+    );
+  }
+  if (hasPDFs) {
+    contextActions.push(
+      { icon: FileText, label: "Summarize PDFs", desc: "Key points & insights", prompt: "Extract and summarize the most important information from my PDF documents", fileTypes: [] },
+      { icon: Search, label: "Deep Analysis", desc: "Cross-reference documents", prompt: "Cross-reference my PDF documents and identify common themes, contradictions, or key relationships", fileTypes: [] },
+    );
+  }
+  if (hasImages) {
+    contextActions.push(
+      { icon: Eye, label: "Describe Images", desc: "Visual content analysis", prompt: "Analyze and describe the content of my uploaded images in detail", fileTypes: [] },
+    );
+  }
+  if (hasAudio || hasVideo) {
+    contextActions.push(
+      { icon: Mic, label: "Transcribe Media", desc: "Audio/video to text", prompt: "Help me understand and summarize the content of my media files", fileTypes: [] },
+    );
+  }
+
+  // Fill remaining slots with generic actions
+  const remaining = BASE_QUICK_ACTIONS.filter(a => !contextActions.some(c => c.label === a.label));
+  const result = [...contextActions, ...remaining].slice(0, 6);
+  return result;
+}
 
 /* ─── Ambient Mesh Background ─── */
 function AmbientMesh() {
@@ -126,6 +173,91 @@ function LogoMark({ size = "lg" }: { size?: "sm" | "lg" }) {
   );
 }
 
+/* ─── Inline Chart Parser ─── */
+function parseInlineCharts(content: string): { text: string; charts: Array<{ type: string; title: string; data: any[]; dataKeys: string[]; xKey: string }> } {
+  const chartRegex = /```chart\n([\s\S]*?)```/g;
+  const charts: Array<{ type: string; title: string; data: any[]; dataKeys: string[]; xKey: string }> = [];
+  const text = content.replace(chartRegex, (_, jsonBlock) => {
+    try {
+      const parsed = JSON.parse(jsonBlock.trim());
+      charts.push({
+        type: parsed.type || "bar",
+        title: parsed.title || "Chart",
+        data: parsed.data || [],
+        dataKeys: parsed.dataKeys || ["value"],
+        xKey: parsed.xKey || "name",
+      });
+      return `\n[📊 Chart: ${parsed.title || "Visualization"}]\n`;
+    } catch {
+      return jsonBlock;
+    }
+  });
+  return { text, charts };
+}
+
+/* ─── Mini Inline Chart ─── */
+function InlineChatChart({ chart }: { chart: { type: string; title: string; data: any[]; dataKeys: string[]; xKey: string } }) {
+  const { type, data, dataKeys, xKey, title } = chart;
+  const mainKey = dataKeys[0] || "value";
+
+  const COLORS = [
+    "hsl(var(--primary))",
+    "hsl(var(--primary) / 0.7)",
+    "hsl(var(--primary) / 0.5)",
+    "hsl(var(--primary) / 0.35)",
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="my-4 rounded-xl border border-border/50 bg-muted/20 overflow-hidden"
+    >
+      <div className="px-4 py-3 border-b border-border/30 flex items-center gap-2">
+        <BarChart3 className="w-3.5 h-3.5 text-primary" />
+        <span className="text-xs font-semibold text-foreground">{title}</span>
+      </div>
+      <div className="h-48 p-3">
+        <ResponsiveContainer width="100%" height="100%">
+          {type === "pie" ? (
+            <RechartsPie>
+              <Pie data={data} cx="50%" cy="50%" innerRadius={35} outerRadius={65} paddingAngle={3} dataKey={mainKey}
+                label={({ name, value }: any) => `${name} (${value})`}>
+                {data.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              </Pie>
+              <RechartsTooltip />
+            </RechartsPie>
+          ) : type === "line" ? (
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.3)" />
+              <XAxis dataKey={xKey} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <RechartsTooltip />
+              {dataKeys.map((key, i) => <Line key={key} type="monotone" dataKey={key} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 3 }} />)}
+            </LineChart>
+          ) : type === "area" ? (
+            <AreaChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.3)" />
+              <XAxis dataKey={xKey} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <RechartsTooltip />
+              {dataKeys.map((key, i) => <Area key={key} type="monotone" dataKey={key} stroke={COLORS[i % COLORS.length]} fill={COLORS[i % COLORS.length]} fillOpacity={0.2} />)}
+            </AreaChart>
+          ) : (
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.3)" />
+              <XAxis dataKey={xKey} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <RechartsTooltip />
+              {dataKeys.map((key, i) => <Bar key={key} dataKey={key} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} />)}
+            </BarChart>
+          )}
+        </ResponsiveContainer>
+      </div>
+    </motion.div>
+  );
+}
+
 /* ─── Message Component ─── */
 function ChatMessage({ message, onCopy, onRetry, isLast }: {
   message: any; onCopy: (t: string) => void; onRetry?: () => void; isLast?: boolean;
@@ -138,6 +270,8 @@ function ChatMessage({ message, onCopy, onRetry, isLast }: {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const { text: parsedText, charts } = isUser ? { text: message.content, charts: [] } : parseInlineCharts(message.content);
 
   return (
     <motion.div
@@ -191,8 +325,17 @@ function ChatMessage({ message, onCopy, onRetry, isLast }: {
                 [&>blockquote]:border-l-2 [&>blockquote]:border-primary/40 [&>blockquote]:pl-4 [&>blockquote]:text-muted-foreground [&>blockquote]:italic
                 [&_code]:bg-primary/5 [&_code]:text-primary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-sm [&_code]:font-mono [&_code]:border [&_code]:border-primary/10
                 [&>pre_code]:bg-transparent [&>pre_code]:p-0 [&>pre_code]:border-0 [&>pre_code]:text-foreground">
-                <ReactMarkdown>{message.content}</ReactMarkdown>
+                <ReactMarkdown>{parsedText}</ReactMarkdown>
               </div>
+
+              {/* Inline Charts */}
+              {charts.length > 0 && (
+                <div className="mt-2 space-y-3">
+                  {charts.map((chart, i) => (
+                    <InlineChatChart key={i} chart={chart} />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Hover action bar */}
@@ -332,7 +475,7 @@ function FileCard({ file, onDelete }: { file: any; onDelete: () => void }) {
 }
 
 /* ─── Quick Action Card ─── */
-function QuickActionCard({ action, index, onClick }: { action: typeof QUICK_ACTIONS[0]; index: number; onClick: () => void }) {
+function QuickActionCard({ action, index, onClick }: { action: typeof BASE_QUICK_ACTIONS[0]; index: number; onClick: () => void }) {
   return (
     <motion.button
       initial={{ opacity: 0, y: 16 }}
@@ -798,9 +941,9 @@ const ProjectDetailPage = () => {
                         />
                       </div>
 
-                      {/* Quick action CARDS (not chips) */}
+                      {/* Smart action CARDS based on file types */}
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-[560px]">
-                        {QUICK_ACTIONS.map((action, i) => (
+                        {getSmartPrompts(files).map((action, i) => (
                           <QuickActionCard
                             key={action.label}
                             action={action}

@@ -73,7 +73,22 @@ Guidelines:
 - When analyzing data, provide structured insights
 - Suggest next steps and further analysis when appropriate
 - Format responses with markdown for readability
-- If files are uploaded, reference them by name when relevant`;
+- If files are uploaded, reference them by name when relevant
+
+INLINE VISUALIZATIONS:
+When the user asks for charts, visualizations, or data analysis that would benefit from a visual, include a chart block using this exact format:
+
+\`\`\`chart
+{
+  "type": "bar",
+  "title": "Chart Title",
+  "data": [{"name": "Label1", "value": 42}, {"name": "Label2", "value": 58}],
+  "dataKeys": ["value"],
+  "xKey": "name"
+}
+\`\`\`
+
+Supported chart types: "bar", "line", "area", "pie". Always use realistic, relevant data. Include a brief text explanation before or after the chart. You can include multiple charts in one response.`;
 
     const messages = [
       { role: "system", content: systemPrompt },
