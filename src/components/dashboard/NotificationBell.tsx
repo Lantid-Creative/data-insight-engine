@@ -59,6 +59,7 @@ export function NotificationBell() {
 
   return (
     <Popover>
+      <div data-tour="notification-bell">
       <PopoverTrigger asChild>
         <Button
           variant="ghost"

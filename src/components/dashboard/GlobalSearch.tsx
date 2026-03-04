@@ -186,6 +186,7 @@ export function GlobalSearch() {
   return (
     <>
       <button
+        data-tour="global-search"
         onClick={() => setOpen(true)}
         className="flex items-center gap-2 h-8 px-3 rounded-md border border-input bg-background text-muted-foreground text-sm hover:bg-accent transition-colors"
       >
