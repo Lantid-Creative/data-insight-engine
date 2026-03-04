@@ -24,6 +24,8 @@ import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { AnalyzeView } from "@/components/dashboard/AnalyzeView";
+import { ProjectShareDialog } from "@/components/dashboard/ProjectShareDialog";
+import { ActivityLog } from "@/components/dashboard/ActivityLog";
 import {
   PieChart as RechartsPie, Pie, Cell, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip,
