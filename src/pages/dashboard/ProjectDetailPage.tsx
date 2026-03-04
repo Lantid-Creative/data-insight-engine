@@ -24,6 +24,11 @@ import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { AnalyzeView } from "@/components/dashboard/AnalyzeView";
+import {
+  PieChart as RechartsPie, Pie, Cell, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip,
+  AreaChart, Area, LineChart, Line, CartesianGrid,
+} from "recharts";
 
 /* ─── Helpers ─── */
 function getFileIcon(mime: string | null) {
