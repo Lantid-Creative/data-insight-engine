@@ -1302,6 +1302,7 @@ function ReportView({ projectId }: { projectId: string }) {
   const [generated, setGenerated] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [showReport, setShowReport] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
 
   // Config state
   const [selectedSections, setSelectedSections] = useState<string[]>(
@@ -1313,6 +1314,36 @@ function ReportView({ projectId }: { projectId: string }) {
   const [reportTitle, setReportTitle] = useState("");
   const [includeCharts, setIncludeCharts] = useState(false);
   const [language, setLanguage] = useState("English");
+
+  const applyTemplate = (templateId: string) => {
+    const template = REPORT_TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+    setSelectedTemplate(templateId);
+    setSelectedSections([...template.sections]);
+    setTone(template.tone);
+    setIncludeCharts(template.includeCharts);
+    if (templateId !== "custom") {
+      setWizardStep(2);
+    }
+  };
+
+  const moveSectionUp = (index: number) => {
+    if (index === 0) return;
+    setSelectedSections(prev => {
+      const next = [...prev];
+      [next[index - 1], next[index]] = [next[index], next[index - 1]];
+      return next;
+    });
+  };
+
+  const moveSectionDown = (index: number) => {
+    setSelectedSections(prev => {
+      if (index >= prev.length - 1) return prev;
+      const next = [...prev];
+      [next[index], next[index + 1]] = [next[index + 1], next[index]];
+      return next;
+    });
+  };
 
   // Load chat messages for smart suggestions
   const { data: chatMessages = [] } = useQuery({
