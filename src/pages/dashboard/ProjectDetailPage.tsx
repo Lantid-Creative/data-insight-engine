@@ -1108,6 +1108,14 @@ const ProjectDetailPage = () => {
                         </div>
                       )}
                     </div>
+
+                    {/* Activity Log */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Activity</span>
+                      </div>
+                      <ActivityLog projectId={projectId!} />
+                    </div>
                   </div>
                 </div>
               </motion.aside>
