@@ -103,7 +103,7 @@ export async function exportToPdf(markdown: string, filename = "report") {
         doc.setFont("helvetica", "bold");
         doc.text(block.content, margin, y);
         y += 10;
-        doc.setDrawColor(30, 64, 175);
+        doc.setDrawColor(234, 121, 21);
         doc.setLineWidth(0.5);
         doc.line(margin, y, margin + 40, y);
         y += 6;
