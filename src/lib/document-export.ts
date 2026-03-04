@@ -211,7 +211,7 @@ export async function exportToDocx(markdown: string, filename = "report") {
           text: block.content,
           heading: HeadingLevel.HEADING_1,
           spacing: { before: 400, after: 200 },
-          border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "1E40AF" } },
+          border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "EA7915" } },
         }));
         break;
       case "h2":
