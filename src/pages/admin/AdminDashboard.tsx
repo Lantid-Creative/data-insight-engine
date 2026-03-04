@@ -172,19 +172,39 @@ const AdminDashboard = () => {
 
   // ─── OVERVIEW ───
   const OverviewPage = () => {
+    const { data: projectCount = 0 } = useQuery({
+      queryKey: ["admin-project-count"],
+      queryFn: async () => {
+        const { data, error } = await supabase.from("projects").select("id");
+        if (error) throw error;
+        return data?.length || 0;
+      },
+    });
+
+    const { data: teamCount = 0 } = useQuery({
+      queryKey: ["admin-team-count"],
+      queryFn: async () => {
+        const { data, error } = await supabase.from("teams").select("id");
+        if (error) throw error;
+        return data?.length || 0;
+      },
+    });
+
     const stats = [
       { label: "Pending Review", value: pendingApps.length, icon: Clock, color: "text-primary", bg: "bg-primary/10" },
       { label: "Approved Users", value: approvedApps.length, icon: UserCheck, color: "text-green-500", bg: "bg-green-500/10" },
+      { label: "Total Projects", value: projectCount, icon: FolderOpen, color: "text-blue-500", bg: "bg-blue-500/10" },
+      { label: "Teams", value: teamCount, icon: Users, color: "text-purple-500", bg: "bg-purple-500/10" },
       { label: "Rejected", value: rejectedApps.length, icon: UserX, color: "text-destructive", bg: "bg-destructive/10" },
-      { label: "Consulting Leads", value: consultingSubmissions.length, icon: MessageSquare, color: "text-blue-500", bg: "bg-blue-500/10" },
+      { label: "Consulting Leads", value: consultingSubmissions.length, icon: MessageSquare, color: "text-amber-500", bg: "bg-amber-500/10" },
     ];
     return (
       <>
         <h2 className="text-2xl font-extrabold mb-1">Overview</h2>
         <p className="text-muted-foreground mb-6">Platform health at a glance</p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {stats.map((s) => (
-            <Card key={s.label} className="border-border hover:border-primary/20 transition-colors cursor-pointer" onClick={() => s.label.includes("Consulting") ? setCurrentPage("consulting") : setCurrentPage("applications")}>
+            <Card key={s.label} className="border-border hover:border-primary/20 transition-colors cursor-pointer" onClick={() => s.label.includes("Consulting") ? setCurrentPage("consulting") : s.label.includes("Projects") ? setCurrentPage("moderation") : s.label.includes("Teams") ? setCurrentPage("moderation") : setCurrentPage("applications")}>
               <CardContent className="p-4 flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-lg ${s.bg} flex items-center justify-center`}><s.icon className={`w-5 h-5 ${s.color}`} /></div>
                 <div><p className="text-2xl font-extrabold">{s.value}</p><p className="text-xs text-muted-foreground">{s.label}</p></div>
