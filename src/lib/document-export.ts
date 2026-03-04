@@ -360,8 +360,8 @@ export async function exportToPptx(markdown: string, filename = "report") {
       currentSlide = pres.addSlide({ masterName: "DATAAFRO" });
       yPos = 0.8;
       if (block.type === "h2") {
-        currentSlide.addText(block.content, { x: 0.5, y: yPos, w: 12, h: 0.6, fontSize: 24, bold: true, color: "1E40AF", fontFace: "Arial" });
-        currentSlide.addShape(pres.ShapeType.line, { x: 0.5, y: yPos + 0.65, w: 3, h: 0, line: { color: "1E40AF", width: 2 } });
+        currentSlide.addText(block.content, { x: 0.5, y: yPos, w: 12, h: 0.6, fontSize: 24, bold: true, color: "EA7915", fontFace: "Arial" });
+        currentSlide.addShape(pres.ShapeType.line, { x: 0.5, y: yPos + 0.65, w: 3, h: 0, line: { color: "EA7915", width: 2 } });
         yPos += 1.0;
         continue;
       }
