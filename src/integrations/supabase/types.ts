@@ -441,11 +441,31 @@ export type Database = {
     }
     Functions: {
       get_application_status: { Args: { _user_id: string }; Returns: string }
+      has_project_share: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_project_owner: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_team_admin: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_team_member: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_team_owner: {
+        Args: { _team_id: string; _user_id: string }
         Returns: boolean
       }
     }
