@@ -475,7 +475,7 @@ function FileCard({ file, onDelete }: { file: any; onDelete: () => void }) {
 }
 
 /* ─── Quick Action Card ─── */
-function QuickActionCard({ action, index, onClick }: { action: typeof QUICK_ACTIONS[0]; index: number; onClick: () => void }) {
+function QuickActionCard({ action, index, onClick }: { action: typeof BASE_QUICK_ACTIONS[0]; index: number; onClick: () => void }) {
   return (
     <motion.button
       initial={{ opacity: 0, y: 16 }}
