@@ -85,6 +85,36 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string
@@ -418,6 +448,39 @@ export type Database = {
         }
         Relationships: []
       }
+      security_settings: {
+        Row: {
+          created_at: string
+          id: string
+          ip_allowlist: string[] | null
+          login_alerts_enabled: boolean
+          session_timeout_minutes: number
+          two_factor_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_allowlist?: string[] | null
+          login_alerts_enabled?: boolean
+          session_timeout_minutes?: number
+          two_factor_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_allowlist?: string[] | null
+          login_alerts_enabled?: boolean
+          session_timeout_minutes?: number
+          two_factor_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       team_members: {
         Row: {
           accepted: boolean
@@ -480,6 +543,42 @@ export type Database = {
           name?: string
           owner_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      trusted_devices: {
+        Row: {
+          browser: string | null
+          created_at: string
+          device_name: string
+          id: string
+          ip_address: string | null
+          is_current: boolean
+          last_active_at: string
+          os: string | null
+          user_id: string
+        }
+        Insert: {
+          browser?: string | null
+          created_at?: string
+          device_name?: string
+          id?: string
+          ip_address?: string | null
+          is_current?: boolean
+          last_active_at?: string
+          os?: string | null
+          user_id: string
+        }
+        Update: {
+          browser?: string | null
+          created_at?: string
+          device_name?: string
+          id?: string
+          ip_address?: string | null
+          is_current?: boolean
+          last_active_at?: string
+          os?: string | null
+          user_id?: string
         }
         Relationships: []
       }
