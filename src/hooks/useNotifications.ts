@@ -46,6 +46,26 @@ export function useNotifications() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const prefsRef = useRef<any>(null);
+
+  // Fetch preferences
+  const { data: preferences } = useQuery({
+    queryKey: ["notification-preferences", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("notification_preferences")
+        .select("*")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  useEffect(() => {
+    prefsRef.current = preferences;
+  }, [preferences]);
+
   // Real-time subscription
   useEffect(() => {
     if (!user?.id) return;
