@@ -34,6 +34,7 @@ import ProjectDetailPage from "./pages/dashboard/ProjectDetailPage";
 import BillingPage from "./pages/dashboard/BillingPage";
 import SettingsPage from "./pages/dashboard/SettingsPage";
 import ApiAccessPage from "./pages/dashboard/ApiAccessPage";
+import TeamsPage from "./pages/dashboard/TeamsPage";
 import UseCaseDetailPage from "./pages/use-cases/UseCaseDetailPage";
 
 const queryClient = new QueryClient();
@@ -75,6 +76,7 @@ const App = () => (
                 <Route path="billing" element={<BillingPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="api" element={<ApiAccessPage />} />
+                <Route path="teams" element={<TeamsPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

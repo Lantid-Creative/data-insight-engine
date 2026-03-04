@@ -14,7 +14,7 @@ import {
   Trash2, Clock, HardDrive, Layers, PieChart, Table2,
   MessageSquare, ChevronLeft, Zap, Brain, Eye, Command,
   Workflow, TrendingUp, Search, Mic, Plus, Hash,
-  Download, RefreshCw, MoreHorizontal, Pencil,
+  Download, RefreshCw, MoreHorizontal, Pencil, UserPlus, Activity,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -24,6 +24,8 @@ import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { AnalyzeView } from "@/components/dashboard/AnalyzeView";
+import { ProjectShareDialog } from "@/components/dashboard/ProjectShareDialog";
+import { ActivityLog } from "@/components/dashboard/ActivityLog";
 import {
   PieChart as RechartsPie, Pie, Cell, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip,
@@ -528,7 +530,7 @@ const ProjectDetailPage = () => {
   const [renameName, setRenameName] = useState("");
   const [renameDesc, setRenameDesc] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
-
+  const [shareOpen, setShareOpen] = useState(false);
   const { data: project, isLoading: projLoading } = useQuery({
     queryKey: ["project", projectId],
     queryFn: async () => {
@@ -805,6 +807,17 @@ const ProjectDetailPage = () => {
 
           {/* Right controls */}
           <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setShareOpen(true)}
+                  className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200"
+                >
+                  <UserPlus className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">Share project</TooltipContent>
+            </Tooltip>
             {files.length > 0 && (
               <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-muted/30 border border-border/30">
                 <div className="flex items-center gap-1.5">
@@ -1095,6 +1108,14 @@ const ProjectDetailPage = () => {
                         </div>
                       )}
                     </div>
+
+                    {/* Activity Log */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Activity</span>
+                      </div>
+                      <ActivityLog projectId={projectId!} />
+                    </div>
                   </div>
                 </div>
               </motion.aside>
@@ -1156,6 +1177,13 @@ const ProjectDetailPage = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* Share Dialog */}
+        <ProjectShareDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          projectId={projectId!}
+          projectName={project.name}
+        />
       </div>
     </TooltipProvider>
   );
