@@ -16,7 +16,8 @@ import {
   MapPin, FileText, LayoutDashboard, ClipboardList, MessageSquare,
   Settings, Search, ChevronRight, Home, BarChart3, UserCheck, UserX,
   Mail, Globe, CreditCard, TrendingUp, DollarSign, Tag, Percent,
-  Trash2, ArrowUpDown, RefreshCw, Activity, ChevronDown, UserPlus, Send
+  Trash2, ArrowUpDown, RefreshCw, Activity, ChevronDown, UserPlus, Send,
+  FolderOpen, Eye, AlertTriangle, Database, HardDrive
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
