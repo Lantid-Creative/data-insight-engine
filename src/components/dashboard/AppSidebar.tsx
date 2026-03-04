@@ -29,6 +29,7 @@ import { toast } from "sonner";
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Projects", url: "/dashboard/projects", icon: FolderOpen },
+  { title: "Teams", url: "/dashboard/teams", icon: Users },
 ];
 
 export function AppSidebar() {

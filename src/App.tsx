@@ -76,6 +76,7 @@ const App = () => (
                 <Route path="billing" element={<BillingPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="api" element={<ApiAccessPage />} />
+                <Route path="teams" element={<TeamsPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
