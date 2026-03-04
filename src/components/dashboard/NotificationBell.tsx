@@ -194,6 +194,19 @@ export function NotificationBell() {
             </div>
           )}
         </ScrollArea>
+
+        {/* Footer */}
+        <div className="border-t border-border px-4 py-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full h-7 text-xs gap-1.5 text-muted-foreground"
+            onClick={() => navigate("/dashboard/notifications")}
+          >
+            <Settings className="h-3 w-3" />
+            Notification Settings
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );
