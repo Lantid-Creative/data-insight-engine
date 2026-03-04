@@ -150,6 +150,90 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          activity_email: boolean
+          activity_inapp: boolean
+          activity_toast: boolean
+          billing_email: boolean
+          billing_inapp: boolean
+          billing_toast: boolean
+          created_at: string
+          id: string
+          project_share_email: boolean
+          project_share_inapp: boolean
+          project_share_toast: boolean
+          quiet_hours_enabled: boolean
+          quiet_hours_end: string
+          quiet_hours_start: string
+          security_email: boolean
+          security_inapp: boolean
+          security_toast: boolean
+          system_email: boolean
+          system_inapp: boolean
+          system_toast: boolean
+          team_invite_email: boolean
+          team_invite_inapp: boolean
+          team_invite_toast: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_email?: boolean
+          activity_inapp?: boolean
+          activity_toast?: boolean
+          billing_email?: boolean
+          billing_inapp?: boolean
+          billing_toast?: boolean
+          created_at?: string
+          id?: string
+          project_share_email?: boolean
+          project_share_inapp?: boolean
+          project_share_toast?: boolean
+          quiet_hours_enabled?: boolean
+          quiet_hours_end?: string
+          quiet_hours_start?: string
+          security_email?: boolean
+          security_inapp?: boolean
+          security_toast?: boolean
+          system_email?: boolean
+          system_inapp?: boolean
+          system_toast?: boolean
+          team_invite_email?: boolean
+          team_invite_inapp?: boolean
+          team_invite_toast?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_email?: boolean
+          activity_inapp?: boolean
+          activity_toast?: boolean
+          billing_email?: boolean
+          billing_inapp?: boolean
+          billing_toast?: boolean
+          created_at?: string
+          id?: string
+          project_share_email?: boolean
+          project_share_inapp?: boolean
+          project_share_toast?: boolean
+          quiet_hours_enabled?: boolean
+          quiet_hours_end?: string
+          quiet_hours_start?: string
+          security_email?: boolean
+          security_inapp?: boolean
+          security_toast?: boolean
+          system_email?: boolean
+          system_inapp?: boolean
+          system_toast?: boolean
+          team_invite_email?: boolean
+          team_invite_inapp?: boolean
+          team_invite_toast?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string

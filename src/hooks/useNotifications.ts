@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,6 +46,26 @@ export function useNotifications() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const prefsRef = useRef<any>(null);
+
+  // Fetch preferences
+  const { data: preferences } = useQuery({
+    queryKey: ["notification-preferences", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("notification_preferences")
+        .select("*")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  useEffect(() => {
+    prefsRef.current = preferences;
+  }, [preferences]);
+
   // Real-time subscription
   useEffect(() => {
     if (!user?.id) return;
@@ -66,20 +86,39 @@ export function useNotifications() {
             ["notifications", user.id],
             (old = []) => [newNotif, ...old]
           );
-          // Show toast
-          const icon = NOTIFICATION_ICONS[newNotif.type] || "🔔";
-          toast(newNotif.title, {
-            description: newNotif.message,
-            icon,
-            action: newNotif.link
-              ? {
-                  label: "View",
-                  onClick: () => {
-                    window.location.href = newNotif.link!;
-                  },
-                }
-              : undefined,
-          });
+
+          // Check preferences before showing toast
+          const p = prefsRef.current;
+          const toastKey = `${newNotif.type}_toast`;
+          const shouldToast = !p || p[toastKey] !== false;
+
+          // Check quiet hours
+          let inQuietHours = false;
+          if (p?.quiet_hours_enabled) {
+            const now = new Date();
+            const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+            const start = p.quiet_hours_start || "22:00";
+            const end = p.quiet_hours_end || "08:00";
+            inQuietHours = start > end
+              ? hhmm >= start || hhmm < end
+              : hhmm >= start && hhmm < end;
+          }
+
+          if (shouldToast && !inQuietHours) {
+            const icon = NOTIFICATION_ICONS[newNotif.type] || "🔔";
+            toast(newNotif.title, {
+              description: newNotif.message,
+              icon,
+              action: newNotif.link
+                ? {
+                    label: "View",
+                    onClick: () => {
+                      window.location.href = newNotif.link!;
+                    },
+                  }
+                : undefined,
+            });
+          }
         }
       )
       .subscribe();
