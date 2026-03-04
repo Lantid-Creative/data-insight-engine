@@ -36,6 +36,7 @@ import SettingsPage from "./pages/dashboard/SettingsPage";
 import ApiAccessPage from "./pages/dashboard/ApiAccessPage";
 import TeamsPage from "./pages/dashboard/TeamsPage";
 import NotificationPreferencesPage from "./pages/dashboard/NotificationPreferencesPage";
+import SecuritySettingsPage from "./pages/dashboard/SecuritySettingsPage";
 import UseCaseDetailPage from "./pages/use-cases/UseCaseDetailPage";
 
 const queryClient = new QueryClient();
@@ -79,6 +80,7 @@ const App = () => (
                 <Route path="api" element={<ApiAccessPage />} />
                 <Route path="teams" element={<TeamsPage />} />
                 <Route path="notifications" element={<NotificationPreferencesPage />} />
+                <Route path="security" element={<SecuritySettingsPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

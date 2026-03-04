@@ -1,7 +1,7 @@
 import {
   Upload, FolderOpen, FileText, Key, CreditCard, Settings,
   LayoutDashboard, Sparkles, ChevronUp, Plus, MessageSquare, Search,
-  MoreHorizontal, Pencil, Trash2, Users,
+  MoreHorizontal, Pencil, Trash2, Users, Shield,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -272,6 +272,9 @@ export function AppSidebar() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
                   <Settings className="mr-2 h-4 w-4" /> Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/dashboard/security")}>
+                  <Shield className="mr-2 h-4 w-4" /> Security
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
