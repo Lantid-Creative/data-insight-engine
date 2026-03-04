@@ -1594,7 +1594,7 @@ function ReportView({ projectId }: { projectId: string }) {
 
         {/* Step Content */}
         <AnimatePresence mode="wait">
-          {/* Step 1: Basics */}
+          {/* Step 1: Template Selection */}
           {wizardStep === 1 && (
             <motion.div
               key="step1"
@@ -1604,6 +1604,41 @@ function ReportView({ projectId }: { projectId: string }) {
               transition={{ duration: 0.25 }}
               className="space-y-5"
             >
+              <Card className="shadow-soft">
+                <CardContent className="p-6">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4 block">Choose a Template</label>
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {REPORT_TEMPLATES.map((template) => (
+                      <button
+                        key={template.id}
+                        onClick={() => applyTemplate(template.id)}
+                        className={`flex items-center gap-4 p-4 rounded-xl border text-left transition-all duration-200 ${
+                          selectedTemplate === template.id
+                            ? "border-primary/30 bg-primary/[0.04] ring-1 ring-primary/20"
+                            : "border-border/50 bg-card hover:border-border hover:bg-muted/20"
+                        }`}
+                      >
+                        <span className="text-2xl">{template.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-bold ${selectedTemplate === template.id ? "text-foreground" : "text-foreground/80"}`}>{template.label}</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">{template.desc}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="px-2 py-0.5 rounded-md bg-muted text-[9px] font-bold text-muted-foreground uppercase">{template.sections.length} sections</span>
+                            <span className="px-2 py-0.5 rounded-md bg-muted text-[9px] font-bold text-muted-foreground uppercase">{template.tone}</span>
+                            {template.includeCharts && <span className="px-2 py-0.5 rounded-md bg-primary/10 text-[9px] font-bold text-primary uppercase">Charts</span>}
+                          </div>
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                          selectedTemplate === template.id ? "border-primary bg-primary" : "border-border"
+                        }`}>
+                          {selectedTemplate === template.id && <Check className="w-3 h-3 text-primary-foreground" />}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card className="shadow-soft">
                 <CardContent className="p-6">
                   <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">Report Title</label>
@@ -1622,36 +1657,6 @@ function ReportView({ projectId }: { projectId: string }) {
                       <span>Suggested: "{suggestions.suggestedTitle.slice(0, 50)}…"</span>
                     </button>
                   )}
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-soft">
-                <CardContent className="p-6">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">Tone & Style</label>
-                  <div className="grid grid-cols-1 gap-2">
-                    {TONE_OPTIONS.map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => setTone(t.id)}
-                        className={`flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all duration-200 ${
-                          tone === t.id
-                            ? "border-primary/30 bg-primary/[0.04]"
-                            : "border-border/50 bg-card hover:border-border"
-                        }`}
-                      >
-                        <span className="text-lg">{t.emoji}</span>
-                        <div className="flex-1">
-                          <p className={`text-sm font-semibold ${tone === t.id ? "text-foreground" : "text-muted-foreground"}`}>{t.label}</p>
-                          <p className="text-[11px] text-muted-foreground/60">{t.desc}</p>
-                        </div>
-                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                          tone === t.id ? "border-primary bg-primary" : "border-border"
-                        }`}>
-                          {tone === t.id && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
                 </CardContent>
               </Card>
 
