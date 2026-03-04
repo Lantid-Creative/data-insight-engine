@@ -158,11 +158,24 @@ const DashboardHome = () => {
     </AnimatePresence>
     <div className="space-y-8 max-w-5xl">
       {/* Greeting */}
-      <motion.div {...fadeUp(0)}>
-        <h1 className="text-2xl sm:text-3xl font-bold font-heading">
-          {greeting}, <span className="text-gradient">{firstName}</span>
-        </h1>
-        <p className="text-muted-foreground mt-1">Here's what's happening in your workspace.</p>
+      <motion.div {...fadeUp(0)} className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold font-heading">
+            {greeting}, <span className="text-gradient">{firstName}</span>
+          </h1>
+          <p className="text-muted-foreground mt-1">Here's what's happening in your workspace.</p>
+        </div>
+        {!tourDismissed && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowTour(true)}
+            className="gap-1.5 text-xs"
+          >
+            <MapPin className="h-3.5 w-3.5" />
+            Take a Tour
+          </Button>
+        )}
       </motion.div>
 
       {/* Stats */}
