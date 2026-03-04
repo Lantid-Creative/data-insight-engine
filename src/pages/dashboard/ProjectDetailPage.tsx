@@ -1203,10 +1203,59 @@ const LANGUAGE_OPTIONS = [
 ];
 
 const WIZARD_STEPS = [
-  { id: 1, label: "Basics", icon: FileText },
+  { id: 1, label: "Template", icon: Sparkles },
   { id: 2, label: "Sections", icon: Layers },
   { id: 3, label: "Style", icon: Wand2 },
   { id: 4, label: "Review", icon: Eye },
+] as const;
+
+/* ─── Report Templates ─── */
+const REPORT_TEMPLATES = [
+  {
+    id: "executive_brief",
+    label: "Executive Brief",
+    desc: "Concise 1-2 page overview for leadership",
+    emoji: "🎯",
+    sections: ["executive_summary", "key_insights", "recommendations", "conclusion"],
+    tone: "executive",
+    includeCharts: false,
+  },
+  {
+    id: "deep_dive",
+    label: "Deep Dive Analysis",
+    desc: "Comprehensive analysis with all sections",
+    emoji: "🔬",
+    sections: ["executive_summary", "data_overview", "key_insights", "statistical_analysis", "comparative_analysis", "recommendations", "risk_assessment", "conclusion", "appendix"],
+    tone: "professional",
+    includeCharts: true,
+  },
+  {
+    id: "quick_overview",
+    label: "Quick Overview",
+    desc: "Fast summary with key takeaways",
+    emoji: "⚡",
+    sections: ["executive_summary", "key_insights", "conclusion"],
+    tone: "casual",
+    includeCharts: false,
+  },
+  {
+    id: "technical",
+    label: "Technical Report",
+    desc: "Detailed methodology and data quality focus",
+    emoji: "⚙️",
+    sections: ["executive_summary", "data_overview", "methodology", "data_quality", "statistical_analysis", "key_insights", "recommendations", "conclusion"],
+    tone: "technical",
+    includeCharts: true,
+  },
+  {
+    id: "custom",
+    label: "Custom Report",
+    desc: "Build your own report from scratch",
+    emoji: "✏️",
+    sections: ["executive_summary", "data_overview", "key_insights", "recommendations", "conclusion"],
+    tone: "professional",
+    includeCharts: false,
+  },
 ] as const;
 
 /* ─── Smart suggestion helper ─── */
