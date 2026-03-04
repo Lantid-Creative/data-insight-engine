@@ -33,6 +33,7 @@ const DashboardLayout = () => {
               <span className="text-sm font-medium text-foreground hidden sm:block">{pageTitle}</span>
             </div>
             <div className="flex items-center gap-2">
+              <GlobalSearch />
               <NotificationBell />
               <ThemeToggle />
             </div>
