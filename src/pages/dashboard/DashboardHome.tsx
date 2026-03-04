@@ -350,6 +350,7 @@ const DashboardHome = () => {
         </motion.div>
       </div>
     </div>
+    </>
   );
 };
 
