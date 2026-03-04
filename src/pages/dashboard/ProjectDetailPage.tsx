@@ -60,14 +60,56 @@ const WORKSPACE_MODES = [
   { id: "report", label: "Report", icon: FileText },
 ] as const;
 
-const QUICK_ACTIONS = [
-  { icon: BarChart3, label: "Analyze Data", desc: "Find patterns & insights", prompt: "Analyze the key patterns and insights from my uploaded data" },
-  { icon: FileText, label: "Generate Report", desc: "Comprehensive PDF report", prompt: "Generate a comprehensive report based on my files" },
-  { icon: Wand2, label: "Clean Dataset", desc: "Prepare for analysis", prompt: "Help me clean and prepare this dataset for analysis" },
-  { icon: PieChart, label: "Visualize", desc: "Charts & dashboards", prompt: "Create visualizations and charts from my data" },
-  { icon: Database, label: "Summarize", desc: "Quick data overview", prompt: "Summarize the structure and content of my uploaded files" },
-  { icon: Table2, label: "Extract Tables", desc: "Structured extraction", prompt: "Extract all tables and structured data from my documents" },
+const BASE_QUICK_ACTIONS = [
+  { icon: BarChart3, label: "Analyze Data", desc: "Find patterns & insights", prompt: "Analyze the key patterns and insights from my uploaded data", fileTypes: ["spreadsheet", "csv", "excel", "json"] },
+  { icon: FileText, label: "Summarize Docs", desc: "Extract key takeaways", prompt: "Summarize the key points and takeaways from my documents", fileTypes: ["pdf", "word", "text"] },
+  { icon: Wand2, label: "Clean Dataset", desc: "Prepare for analysis", prompt: "Help me clean and prepare this dataset for analysis", fileTypes: ["spreadsheet", "csv", "excel"] },
+  { icon: PieChart, label: "Visualize", desc: "Charts & dashboards", prompt: "Create visualizations and charts from my data. Include a ```chart block with JSON data.", fileTypes: ["spreadsheet", "csv", "excel", "json"] },
+  { icon: Database, label: "Overview", desc: "Quick data summary", prompt: "Summarize the structure and content of my uploaded files", fileTypes: [] },
+  { icon: Table2, label: "Extract Tables", desc: "Structured extraction", prompt: "Extract all tables and structured data from my documents", fileTypes: ["pdf", "image"] },
 ];
+
+function getSmartPrompts(files: any[]) {
+  if (!files.length) return BASE_QUICK_ACTIONS;
+
+  const mimeTypes = files.map((f: any) => f.mime_type || "").join(" ").toLowerCase();
+  const hasSpreadsheets = /spreadsheet|csv|excel|xlsx/.test(mimeTypes);
+  const hasPDFs = /pdf/.test(mimeTypes);
+  const hasImages = /image/.test(mimeTypes);
+  const hasJSON = /json/.test(mimeTypes);
+  const hasAudio = /audio/.test(mimeTypes);
+  const hasVideo = /video/.test(mimeTypes);
+
+  const contextActions: typeof BASE_QUICK_ACTIONS = [];
+
+  if (hasSpreadsheets || hasJSON) {
+    contextActions.push(
+      { icon: BarChart3, label: "Analyze Trends", desc: "Find patterns in your data", prompt: "Analyze trends and patterns in my spreadsheet data. Show key metrics and include a ```chart block with the most important visualization.", fileTypes: [] },
+      { icon: PieChart, label: "Visualize Data", desc: "Auto-generate charts", prompt: "Create the most insightful visualizations from my data. Include ```chart blocks with chart data in JSON format.", fileTypes: [] },
+    );
+  }
+  if (hasPDFs) {
+    contextActions.push(
+      { icon: FileText, label: "Summarize PDFs", desc: "Key points & insights", prompt: "Extract and summarize the most important information from my PDF documents", fileTypes: [] },
+      { icon: Search, label: "Deep Analysis", desc: "Cross-reference documents", prompt: "Cross-reference my PDF documents and identify common themes, contradictions, or key relationships", fileTypes: [] },
+    );
+  }
+  if (hasImages) {
+    contextActions.push(
+      { icon: Eye, label: "Describe Images", desc: "Visual content analysis", prompt: "Analyze and describe the content of my uploaded images in detail", fileTypes: [] },
+    );
+  }
+  if (hasAudio || hasVideo) {
+    contextActions.push(
+      { icon: Mic, label: "Transcribe Media", desc: "Audio/video to text", prompt: "Help me understand and summarize the content of my media files", fileTypes: [] },
+    );
+  }
+
+  // Fill remaining slots with generic actions
+  const remaining = BASE_QUICK_ACTIONS.filter(a => !contextActions.some(c => c.label === a.label));
+  const result = [...contextActions, ...remaining].slice(0, 6);
+  return result;
+}
 
 /* ─── Ambient Mesh Background ─── */
 function AmbientMesh() {
