@@ -1169,6 +1169,13 @@ const ProjectDetailPage = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* Share Dialog */}
+        <ProjectShareDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          projectId={projectId!}
+          projectName={project.name}
+        />
       </div>
     </TooltipProvider>
   );
