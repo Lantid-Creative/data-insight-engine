@@ -1,4 +1,4 @@
-import { FolderOpen, MessageSquare, Files, Zap, Clock, CheckCircle2, Circle, ArrowUpRight, BarChart3, HardDrive } from "lucide-react";
+import { FolderOpen, MessageSquare, Files, Zap, Clock, CheckCircle2, Circle, ArrowUpRight, BarChart3, HardDrive, MapPin } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +10,7 @@ import { formatDistanceToNow, subDays, format, startOfDay } from "date-fns";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { useEffect, useRef, useState } from "react";
 import { OnboardingWizard } from "@/components/dashboard/OnboardingWizard";
+import { GuidedTour } from "@/components/dashboard/GuidedTour";
 
 function AnimatedCounter({ value }: { value: number }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -34,9 +35,11 @@ const DashboardHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showTour, setShowTour] = useState(false);
   const [onboardingDismissed, setOnboardingDismissed] = useState(() => {
     return localStorage.getItem("dataafro_onboarding_done") === "true";
   });
+  const tourDismissed = localStorage.getItem("dataafro_tour_done") === "true";
 
   const { data: projects = [] } = useQuery({
     queryKey: ["projects"],
@@ -146,14 +149,33 @@ const DashboardHome = () => {
     <>
     <AnimatePresence>
       {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
+      {showTour && (
+        <GuidedTour onComplete={() => {
+          setShowTour(false);
+          localStorage.setItem("dataafro_tour_done", "true");
+        }} />
+      )}
     </AnimatePresence>
     <div className="space-y-8 max-w-5xl">
       {/* Greeting */}
-      <motion.div {...fadeUp(0)}>
-        <h1 className="text-2xl sm:text-3xl font-bold font-heading">
-          {greeting}, <span className="text-gradient">{firstName}</span>
-        </h1>
-        <p className="text-muted-foreground mt-1">Here's what's happening in your workspace.</p>
+      <motion.div {...fadeUp(0)} className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold font-heading">
+            {greeting}, <span className="text-gradient">{firstName}</span>
+          </h1>
+          <p className="text-muted-foreground mt-1">Here's what's happening in your workspace.</p>
+        </div>
+        {!tourDismissed && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowTour(true)}
+            className="gap-1.5 text-xs"
+          >
+            <MapPin className="h-3.5 w-3.5" />
+            Take a Tour
+          </Button>
+        )}
       </motion.div>
 
       {/* Stats */}
