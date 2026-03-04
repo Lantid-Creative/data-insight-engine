@@ -268,7 +268,7 @@ export async function exportToDocx(markdown: string, filename = "report") {
                   children: [new TextRun({ text: cell, bold: rIdx === 0, size: 20 })],
                 })],
                 width: { size: Math.floor(9000 / row.length), type: WidthType.DXA },
-                shading: rIdx === 0 ? { fill: "E8EAF6" } : undefined,
+                shading: rIdx === 0 ? { fill: "FFF3E0" } : undefined,
               })),
             })),
           });
