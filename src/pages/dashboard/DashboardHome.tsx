@@ -53,6 +53,19 @@ const DashboardHome = () => {
     enabled: !!user,
   });
 
+  // Show onboarding for new users with 0 projects
+  useEffect(() => {
+    if (!onboardingDismissed && projects.length === 0 && user) {
+      setShowOnboarding(true);
+    }
+  }, [projects, user, onboardingDismissed]);
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    setOnboardingDismissed(true);
+    localStorage.setItem("dataafro_onboarding_done", "true");
+  };
+
   const { data: recentMessages = [] } = useQuery({
     queryKey: ["recent-activity"],
     queryFn: async () => {
