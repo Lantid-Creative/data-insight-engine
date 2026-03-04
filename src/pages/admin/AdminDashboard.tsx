@@ -834,10 +834,253 @@ const AdminDashboard = () => {
     </>
   );
 
+  // ─── MODERATION ───
+  const ModerationPage = () => {
+    const [modSearch, setModSearch] = useState("");
+
+    const { data: allProjects = [], isLoading: projLoading, refetch: refetchProjects } = useQuery({
+      queryKey: ["admin-all-projects"],
+      queryFn: async () => {
+        const { data, error } = await supabase.from("projects").select("*").order("created_at", { ascending: false }).limit(100);
+        if (error) throw error;
+        return data;
+      },
+    });
+
+    const { data: allTeams = [] } = useQuery({
+      queryKey: ["admin-all-teams"],
+      queryFn: async () => {
+        const { data, error } = await supabase.from("teams").select("*").order("created_at", { ascending: false });
+        if (error) throw error;
+        return data;
+      },
+    });
+
+    const { data: fileStats } = useQuery({
+      queryKey: ["admin-file-stats"],
+      queryFn: async () => {
+        const { data, error } = await supabase.from("project_files").select("id, file_size");
+        if (error) throw error;
+        const totalFiles = data?.length || 0;
+        const totalSize = data?.reduce((acc, f) => acc + (f.file_size || 0), 0) || 0;
+        return { totalFiles, totalSize };
+      },
+    });
+
+    const deleteProjectMutation = useMutation({
+      mutationFn: async (id: string) => {
+        const { error } = await supabase.from("projects").delete().eq("id", id);
+        if (error) throw error;
+      },
+      onSuccess: () => {
+        refetchProjects();
+        toast({ title: "Project deleted" });
+      },
+      onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    });
+
+    const filteredProjects = allProjects.filter((p) =>
+      !modSearch || p.name.toLowerCase().includes(modSearch.toLowerCase()) || p.description?.toLowerCase().includes(modSearch.toLowerCase())
+    );
+
+    const formatBytes = (bytes: number) => {
+      if (bytes === 0) return "0 B";
+      const k = 1024;
+      const sizes = ["B", "KB", "MB", "GB", "TB"];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+    };
+
+    return (
+      <>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div><h2 className="text-2xl font-extrabold mb-1">Content Moderation</h2><p className="text-muted-foreground">Monitor and manage all projects, teams, and storage</p></div>
+          <div className="flex items-center gap-2">
+            <div className="relative w-64"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><Input placeholder="Search projects..." value={modSearch} onChange={(e) => setModSearch(e.target.value)} className="pl-9 rounded-lg" /></div>
+            <Button size="sm" variant="outline" onClick={() => refetchProjects()} className="gap-1"><RefreshCw className="w-3.5 h-3.5" /></Button>
+          </div>
+        </div>
+
+        {/* Platform stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Card className="border-border">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><FolderOpen className="w-5 h-5 text-primary" /></div>
+              <div><p className="text-2xl font-extrabold">{allProjects.length}</p><p className="text-xs text-muted-foreground">Total Projects</p></div>
+            </CardContent>
+          </Card>
+          <Card className="border-border">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center"><Users className="w-5 h-5 text-blue-500" /></div>
+              <div><p className="text-2xl font-extrabold">{allTeams.length}</p><p className="text-xs text-muted-foreground">Teams</p></div>
+            </CardContent>
+          </Card>
+          <Card className="border-border">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center"><FileText className="w-5 h-5 text-amber-500" /></div>
+              <div><p className="text-2xl font-extrabold">{fileStats?.totalFiles || 0}</p><p className="text-xs text-muted-foreground">Total Files</p></div>
+            </CardContent>
+          </Card>
+          <Card className="border-border">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center"><HardDrive className="w-5 h-5 text-emerald-500" /></div>
+              <div><p className="text-2xl font-extrabold">{formatBytes(fileStats?.totalSize || 0)}</p><p className="text-xs text-muted-foreground">Storage Used</p></div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Projects table */}
+        <h3 className="font-bold mb-3">All Projects</h3>
+        {projLoading ? (
+          <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+        ) : filteredProjects.length === 0 ? (
+          <Card className="border-dashed"><CardContent className="p-12 text-center text-muted-foreground">No projects found</CardContent></Card>
+        ) : (
+          <div className="rounded-lg border border-border overflow-x-auto">
+            <table className="w-full min-w-[700px]">
+              <thead className="bg-muted/50">
+                <tr className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="p-3">Project</th>
+                  <th className="p-3">Owner</th>
+                  <th className="p-3">Created</th>
+                  <th className="p-3">Updated</th>
+                  <th className="p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredProjects.map((p) => (
+                  <tr key={p.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="p-3">
+                      <p className="font-medium text-sm">{p.name}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-1">{p.description || "No description"}</p>
+                    </td>
+                    <td className="p-3 text-xs text-muted-foreground font-mono">{p.user_id.slice(0, 8)}…</td>
+                    <td className="p-3 text-sm text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}</td>
+                    <td className="p-3 text-sm text-muted-foreground">{new Date(p.updated_at).toLocaleDateString()}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" asChild>
+                          <Link to={`/dashboard/projects/${p.id}`}><Eye className="w-3 h-3" /> View</Link>
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-destructive hover:text-destructive" onClick={() => {
+                          if (confirm(`Delete project "${p.name}"? This cannot be undone.`)) deleteProjectMutation.mutate(p.id);
+                        }}><Trash2 className="w-3 h-3" /> Delete</Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Teams list */}
+        {allTeams.length > 0 && (
+          <>
+            <h3 className="font-bold mb-3 mt-8">All Teams</h3>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {allTeams.map((t) => (
+                <Card key={t.id} className="border-border">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">{t.name}</p>
+                        <p className="text-xs text-muted-foreground font-mono">Owner: {t.owner_id.slice(0, 8)}…</p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </>
+        )}
+      </>
+    );
+  };
+
+  // ─── ACTIVITY FEED ───
+  const ActivityFeedPage = () => {
+    const [actSearch, setActSearch] = useState("");
+
+    const { data: allActivity = [], isLoading: actLoading, refetch: refetchActivity } = useQuery({
+      queryKey: ["admin-all-activity"],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("activity_log")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(200);
+        if (error) throw error;
+        return data;
+      },
+    });
+
+    const filteredActivity = allActivity.filter((a) =>
+      !actSearch || a.action.toLowerCase().includes(actSearch.toLowerCase()) || JSON.stringify(a.details || {}).toLowerCase().includes(actSearch.toLowerCase())
+    );
+
+    const actionColors: Record<string, string> = {
+      file_upload: "bg-blue-500/10 text-blue-500",
+      chat_message: "bg-purple-500/10 text-purple-500",
+      report_generated: "bg-emerald-500/10 text-emerald-500",
+      analysis_run: "bg-amber-500/10 text-amber-500",
+      project_shared: "bg-primary/10 text-primary",
+      file_deleted: "bg-destructive/10 text-destructive",
+      settings_changed: "bg-muted text-muted-foreground",
+    };
+
+    return (
+      <>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div><h2 className="text-2xl font-extrabold mb-1">Platform Activity</h2><p className="text-muted-foreground">System-wide activity feed across all users</p></div>
+          <div className="flex items-center gap-2">
+            <div className="relative w-64"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><Input placeholder="Search activity..." value={actSearch} onChange={(e) => setActSearch(e.target.value)} className="pl-9 rounded-lg" /></div>
+            <Button size="sm" variant="outline" onClick={() => refetchActivity()} className="gap-1"><RefreshCw className="w-3.5 h-3.5" /></Button>
+          </div>
+        </div>
+
+        {actLoading ? (
+          <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+        ) : filteredActivity.length === 0 ? (
+          <Card className="border-dashed"><CardContent className="p-12 text-center text-muted-foreground">No activity recorded yet</CardContent></Card>
+        ) : (
+          <div className="space-y-2">
+            {filteredActivity.map((a) => {
+              const details = (a.details || {}) as Record<string, any>;
+              return (
+                <Card key={a.id} className="border-border hover:border-primary/10 transition-colors">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${actionColors[a.action] || "bg-muted text-muted-foreground"}`}>
+                      <Activity className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium capitalize">{a.action.replace(/_/g, " ")}</span>
+                        {details.name && <span className="text-xs text-muted-foreground">— {details.name}</span>}
+                      </div>
+                      <div className="flex items-center gap-3 text-[10px] text-muted-foreground font-mono mt-0.5">
+                        <span>User: {a.user_id.slice(0, 8)}…</span>
+                        {a.project_id && <span>Project: {a.project_id.slice(0, 8)}…</span>}
+                        <span>{new Date(a.created_at).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </>
+    );
+  };
+
   const pages: Record<AdminPage, JSX.Element> = {
     overview: <OverviewPage />,
     applications: <ApplicationsPage />,
     users: <UsersPage />,
+    moderation: <ModerationPage />,
+    activity: <ActivityFeedPage />,
     subscriptions: <SubscriptionsPage />,
     analytics: <AnalyticsPage />,
     promotions: <PromotionsPage />,
