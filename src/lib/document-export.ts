@@ -406,7 +406,7 @@ export async function exportToPptx(markdown: string, filename = "report") {
                 fontSize: 11,
                 bold: rIdx === 0,
                 color: rIdx === 0 ? "FFFFFF" : "333333",
-                fill: { color: rIdx === 0 ? "1E40AF" : rIdx % 2 === 0 ? "F5F5F5" : "FFFFFF" },
+                fill: { color: rIdx === 0 ? "EA7915" : rIdx % 2 === 0 ? "FFF8F0" : "FFFFFF" },
                 border: [{ type: "solid" as const, pt: 0.5, color: "CCCCCC" }, { type: "solid" as const, pt: 0.5, color: "CCCCCC" }, { type: "solid" as const, pt: 0.5, color: "CCCCCC" }, { type: "solid" as const, pt: 0.5, color: "CCCCCC" }],
                 fontFace: "Arial",
               },
