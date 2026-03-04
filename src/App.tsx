@@ -80,6 +80,7 @@ const App = () => (
                 <Route path="api" element={<ApiAccessPage />} />
                 <Route path="teams" element={<TeamsPage />} />
                 <Route path="notifications" element={<NotificationPreferencesPage />} />
+                <Route path="security" element={<SecuritySettingsPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

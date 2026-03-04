@@ -273,6 +273,9 @@ export function AppSidebar() {
                 <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
                   <Settings className="mr-2 h-4 w-4" /> Settings
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/dashboard/security")}>
+                  <Shield className="mr-2 h-4 w-4" /> Security
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
                   Log out
