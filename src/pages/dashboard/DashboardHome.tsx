@@ -35,9 +35,11 @@ const DashboardHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showTour, setShowTour] = useState(false);
   const [onboardingDismissed, setOnboardingDismissed] = useState(() => {
     return localStorage.getItem("dataafro_onboarding_done") === "true";
   });
+  const tourDismissed = localStorage.getItem("dataafro_tour_done") === "true";
 
   const { data: projects = [] } = useQuery({
     queryKey: ["projects"],
