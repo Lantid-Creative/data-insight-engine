@@ -807,6 +807,17 @@ const ProjectDetailPage = () => {
 
           {/* Right controls */}
           <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setShareOpen(true)}
+                  className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200"
+                >
+                  <UserPlus className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">Share project</TooltipContent>
+            </Tooltip>
             {files.length > 0 && (
               <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-muted/30 border border-border/30">
                 <div className="flex items-center gap-1.5">
