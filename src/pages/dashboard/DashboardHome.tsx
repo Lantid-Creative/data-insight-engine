@@ -149,6 +149,12 @@ const DashboardHome = () => {
     <>
     <AnimatePresence>
       {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
+      {showTour && (
+        <GuidedTour onComplete={() => {
+          setShowTour(false);
+          localStorage.setItem("dataafro_tour_done", "true");
+        }} />
+      )}
     </AnimatePresence>
     <div className="space-y-8 max-w-5xl">
       {/* Greeting */}
