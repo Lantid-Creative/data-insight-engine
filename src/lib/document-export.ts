@@ -392,8 +392,8 @@ export async function exportToPptx(markdown: string, filename = "report") {
         break;
       case "blockquote":
         if (yPos + 0.6 > slideMaxY) { currentSlide = pres.addSlide({ masterName: "DATAAFRO" }); yPos = 0.8; }
-        currentSlide.addShape(pres.ShapeType.rect, { x: 0.5, y: yPos, w: 12, h: 0.5, fill: { color: "E8EAF6" }, rectRadius: 0.05 });
-        currentSlide.addText(block.content, { x: 0.8, y: yPos + 0.05, w: 11.5, h: 0.4, fontSize: 12, italic: true, color: "555555", fontFace: "Arial" });
+        currentSlide.addShape(pres.ShapeType.rect, { x: 0.5, y: yPos, w: 12, h: 0.5, fill: { color: "FFF3E0" }, rectRadius: 0.05 });
+        currentSlide.addText(block.content, { x: 0.8, y: yPos + 0.05, w: 11.5, h: 0.4, fontSize: 12, italic: true, color: "EA7915", fontFace: "Arial" });
         yPos += 0.65;
         break;
       case "table":
