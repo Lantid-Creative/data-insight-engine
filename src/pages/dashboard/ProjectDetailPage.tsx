@@ -168,6 +168,91 @@ function LogoMark({ size = "lg" }: { size?: "sm" | "lg" }) {
   );
 }
 
+/* ─── Inline Chart Parser ─── */
+function parseInlineCharts(content: string): { text: string; charts: Array<{ type: string; title: string; data: any[]; dataKeys: string[]; xKey: string }> } {
+  const chartRegex = /```chart\n([\s\S]*?)```/g;
+  const charts: Array<{ type: string; title: string; data: any[]; dataKeys: string[]; xKey: string }> = [];
+  const text = content.replace(chartRegex, (_, jsonBlock) => {
+    try {
+      const parsed = JSON.parse(jsonBlock.trim());
+      charts.push({
+        type: parsed.type || "bar",
+        title: parsed.title || "Chart",
+        data: parsed.data || [],
+        dataKeys: parsed.dataKeys || ["value"],
+        xKey: parsed.xKey || "name",
+      });
+      return `\n[📊 Chart: ${parsed.title || "Visualization"}]\n`;
+    } catch {
+      return jsonBlock;
+    }
+  });
+  return { text, charts };
+}
+
+/* ─── Mini Inline Chart ─── */
+function InlineChatChart({ chart }: { chart: { type: string; title: string; data: any[]; dataKeys: string[]; xKey: string } }) {
+  const { type, data, dataKeys, xKey, title } = chart;
+  const mainKey = dataKeys[0] || "value";
+
+  const COLORS = [
+    "hsl(var(--primary))",
+    "hsl(var(--primary) / 0.7)",
+    "hsl(var(--primary) / 0.5)",
+    "hsl(var(--primary) / 0.35)",
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="my-4 rounded-xl border border-border/50 bg-muted/20 overflow-hidden"
+    >
+      <div className="px-4 py-3 border-b border-border/30 flex items-center gap-2">
+        <BarChart3 className="w-3.5 h-3.5 text-primary" />
+        <span className="text-xs font-semibold text-foreground">{title}</span>
+      </div>
+      <div className="h-48 p-3">
+        <ResponsiveContainer width="100%" height="100%">
+          {type === "pie" ? (
+            <RechartsPie>
+              <Pie data={data} cx="50%" cy="50%" innerRadius={35} outerRadius={65} paddingAngle={3} dataKey={mainKey}
+                label={({ name, value }: any) => `${name} (${value})`}>
+                {data.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              </Pie>
+              <RechartsTooltip />
+            </RechartsPie>
+          ) : type === "line" ? (
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.3)" />
+              <XAxis dataKey={xKey} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <RechartsTooltip />
+              {dataKeys.map((key, i) => <Line key={key} type="monotone" dataKey={key} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 3 }} />)}
+            </LineChart>
+          ) : type === "area" ? (
+            <AreaChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.3)" />
+              <XAxis dataKey={xKey} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <RechartsTooltip />
+              {dataKeys.map((key, i) => <Area key={key} type="monotone" dataKey={key} stroke={COLORS[i % COLORS.length]} fill={COLORS[i % COLORS.length]} fillOpacity={0.2} />)}
+            </AreaChart>
+          ) : (
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.3)" />
+              <XAxis dataKey={xKey} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <RechartsTooltip />
+              {dataKeys.map((key, i) => <Bar key={key} dataKey={key} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} />)}
+            </BarChart>
+          )}
+        </ResponsiveContainer>
+      </div>
+    </motion.div>
+  );
+}
+
 /* ─── Message Component ─── */
 function ChatMessage({ message, onCopy, onRetry, isLast }: {
   message: any; onCopy: (t: string) => void; onRetry?: () => void; isLast?: boolean;
@@ -180,6 +265,8 @@ function ChatMessage({ message, onCopy, onRetry, isLast }: {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const { text: parsedText, charts } = isUser ? { text: message.content, charts: [] } : parseInlineCharts(message.content);
 
   return (
     <motion.div
@@ -233,8 +320,17 @@ function ChatMessage({ message, onCopy, onRetry, isLast }: {
                 [&>blockquote]:border-l-2 [&>blockquote]:border-primary/40 [&>blockquote]:pl-4 [&>blockquote]:text-muted-foreground [&>blockquote]:italic
                 [&_code]:bg-primary/5 [&_code]:text-primary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-sm [&_code]:font-mono [&_code]:border [&_code]:border-primary/10
                 [&>pre_code]:bg-transparent [&>pre_code]:p-0 [&>pre_code]:border-0 [&>pre_code]:text-foreground">
-                <ReactMarkdown>{message.content}</ReactMarkdown>
+                <ReactMarkdown>{parsedText}</ReactMarkdown>
               </div>
+
+              {/* Inline Charts */}
+              {charts.length > 0 && (
+                <div className="mt-2 space-y-3">
+                  {charts.map((chart, i) => (
+                    <InlineChatChart key={i} chart={chart} />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Hover action bar */}
