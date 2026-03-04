@@ -333,9 +333,9 @@ export async function exportToPptx(markdown: string, filename = "report") {
     title: "DATAAFRO",
     background: { color: "FFFFFF" },
     objects: [
-      { rect: { x: 0, y: 0, w: "100%", h: 0.5, fill: { color: "1E40AF" } } },
-      { text: { text: "DataAfro", options: { x: 0.5, y: 0.05, w: 3, h: 0.4, color: "FFFFFF", fontSize: 12, fontFace: "Arial" } } },
-      { text: { text: `${new Date().toLocaleDateString()}`, options: { x: 10, y: 0.05, w: 3, h: 0.4, color: "CCCCFF", fontSize: 9, align: "right", fontFace: "Arial" } } },
+      { rect: { x: 0, y: 0, w: "100%", h: 0.5, fill: { color: "EA7915" } } },
+      { text: { text: "DataAfro", options: { x: 0.5, y: 0.05, w: 3, h: 0.4, color: "FFFFFF", fontSize: 12, fontFace: "Arial", bold: true } } },
+      { text: { text: `${new Date().toLocaleDateString()}`, options: { x: 10, y: 0.05, w: 3, h: 0.4, color: "FFF3E0", fontSize: 9, align: "right", fontFace: "Arial" } } },
     ],
   });
 
