@@ -2,6 +2,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { Outlet, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBell } from "@/components/dashboard/NotificationBell";
 
 const breadcrumbMap: Record<string, string> = {
   "/dashboard": "Dashboard",
