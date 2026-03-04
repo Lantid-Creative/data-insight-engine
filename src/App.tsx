@@ -35,6 +35,7 @@ import BillingPage from "./pages/dashboard/BillingPage";
 import SettingsPage from "./pages/dashboard/SettingsPage";
 import ApiAccessPage from "./pages/dashboard/ApiAccessPage";
 import TeamsPage from "./pages/dashboard/TeamsPage";
+import NotificationPreferencesPage from "./pages/dashboard/NotificationPreferencesPage";
 import UseCaseDetailPage from "./pages/use-cases/UseCaseDetailPage";
 
 const queryClient = new QueryClient();
