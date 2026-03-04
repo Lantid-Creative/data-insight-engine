@@ -24,7 +24,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-type AdminPage = "overview" | "applications" | "users" | "subscriptions" | "analytics" | "promotions" | "consulting" | "settings";
+type AdminPage = "overview" | "applications" | "users" | "subscriptions" | "analytics" | "promotions" | "consulting" | "moderation" | "activity" | "settings";
 
 const AdminDashboard = () => {
   const { signOut, user } = useAuth();
