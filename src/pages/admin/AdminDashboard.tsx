@@ -114,6 +114,8 @@ const AdminDashboard = () => {
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "applications", label: "Applications", icon: ClipboardList, count: pendingApps.length },
     { id: "users", label: "Users & Roles", icon: Users, count: approvedApps.length },
+    { id: "moderation", label: "Moderation", icon: Eye },
+    { id: "activity", label: "Activity Feed", icon: Activity },
     { id: "subscriptions", label: "Subscriptions", icon: CreditCard },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "promotions", label: "Promotions", icon: Tag },
