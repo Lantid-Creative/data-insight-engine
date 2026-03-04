@@ -5,10 +5,11 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion, useMotionValue, useTransform, animate, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow, subDays, format, startOfDay } from "date-fns";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis } from "recharts";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { OnboardingWizard } from "@/components/dashboard/OnboardingWizard";
 
 function AnimatedCounter({ value }: { value: number }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -32,6 +33,10 @@ function AnimatedCounter({ value }: { value: number }) {
 const DashboardHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(() => {
+    return localStorage.getItem("dataafro_onboarding_done") === "true";
+  });
 
   const { data: projects = [] } = useQuery({
     queryKey: ["projects"],
@@ -47,6 +52,19 @@ const DashboardHome = () => {
     },
     enabled: !!user,
   });
+
+  // Show onboarding for new users with 0 projects
+  useEffect(() => {
+    if (!onboardingDismissed && projects.length === 0 && user) {
+      setShowOnboarding(true);
+    }
+  }, [projects, user, onboardingDismissed]);
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    setOnboardingDismissed(true);
+    localStorage.setItem("dataafro_onboarding_done", "true");
+  };
 
   const { data: recentMessages = [] } = useQuery({
     queryKey: ["recent-activity"],
@@ -125,6 +143,10 @@ const DashboardHome = () => {
   });
 
   return (
+    <>
+    <AnimatePresence>
+      {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
+    </AnimatePresence>
     <div className="space-y-8 max-w-5xl">
       {/* Greeting */}
       <motion.div {...fadeUp(0)}>
@@ -328,6 +350,7 @@ const DashboardHome = () => {
         </motion.div>
       </div>
     </div>
+    </>
   );
 };
 
