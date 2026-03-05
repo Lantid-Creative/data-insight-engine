@@ -6,68 +6,65 @@ import { useState } from "react";
 
 const tiers = [
   {
-    name: "Free",
+    name: "Starter",
     price: "$0",
     period: "forever",
-    description: "Try it out, no card needed",
+    description: "For digital health teams exploring",
     credits: "10 daily credits",
     creditsDetail: "30 credits / month max",
     features: [
       "10 credits per day",
       "30 monthly credit cap",
-      "All file formats",
-      "Basic AI extraction",
+      "All health file formats",
+      "Basic clinical data extraction",
       "CSV & JSON export",
     ],
     cta: "Start Free",
     highlighted: false,
   },
   {
-    name: "Pro",
-    price: "$23",
+    name: "Clinical",
+    price: "$49",
     period: "mo",
-    description: "For professionals & teams",
-    credits: "150 credits / month",
-    creditsDetail: "5 daily credits + monthly pool",
+    description: "For CROs & digital health startups",
+    credits: "300 credits / month",
+    creditsDetail: "10 daily credits + monthly pool",
     tiers: [
-      { credits: 150, price: 23 },
-      { credits: 400, price: 50 },
-      { credits: 1000, price: 100 },
+      { credits: 300, price: 49 },
+      { credits: 800, price: 99 },
+      { credits: 2000, price: 199 },
     ],
     features: [
-      "150–1,000 monthly credits",
-      "5 daily bonus credits",
-      "All file formats",
-      "Advanced AI reports",
+      "300–2,000 monthly credits",
+      "10 daily bonus credits",
+      "All health data formats (HL7, FHIR, DICOM)",
+      "Advanced AI clinical reports",
+      "ICD/CPT auto-coding",
       "API access",
+      "HIPAA compliance tools",
       "Priority support",
-      "Credit rollover (1 month)",
     ],
-    cta: "Go Pro",
+    cta: "Go Clinical",
     highlighted: true,
   },
   {
-    name: "Business",
-    price: "$50",
-    period: "mo",
-    description: "For orgs that need control",
-    credits: "200 credits / month",
-    creditsDetail: "Team-wide credit management",
-    tiers: [
-      { credits: 200, price: 50 },
-      { credits: 500, price: 100 },
-      { credits: 1500, price: 250 },
-    ],
+    name: "Enterprise",
+    price: "Custom",
+    period: "",
+    description: "For hospitals, pharma & health systems",
+    credits: "Unlimited credits",
+    creditsDetail: "Org-wide credit management",
     features: [
-      "200–1,500 monthly credits",
-      "Per-user credit limits",
-      "White-label exports",
-      "Custom AI prompts",
+      "Unlimited processing volume",
+      "Dedicated infrastructure",
+      "Custom de-identification pipelines",
+      "White-label clinical reports",
+      "EHR/LIMS integration support",
       "SSO & SAML",
-      "Dedicated support",
-      "SLA guarantee",
+      "BAA (Business Associate Agreement)",
+      "Dedicated CSM & SLA guarantee",
     ],
-    cta: "Talk to Us",
+    cta: "Talk to Sales",
     highlighted: false,
   },
 ];
@@ -81,10 +78,10 @@ const Pricing = () => {
         <div className="text-center mb-12">
           <span className="text-xs font-mono uppercase tracking-[0.2em] text-primary font-bold">Pricing</span>
           <h2 className="text-3xl md:text-5xl font-extrabold mt-4 tracking-tight text-foreground">
-            Credits that flex with you
+            Plans built for health data scale
           </h2>
           <p className="text-muted-foreground mt-4 max-w-xl mx-auto text-sm">
-            Every action costs credits based on complexity. Simple tasks may cost less than one credit. Buy more only when you need them.
+            Every extraction costs credits based on document complexity. Simple lab reports cost less than multi-page clinical trials. Scale as you grow.
           </p>
         </div>
 
@@ -106,11 +103,13 @@ const Pricing = () => {
 
         <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
           {tiers.map((tier, i) => {
-            const displayPrice = tier.name === "Free"
-              ? "$0"
-              : billingCycle === "annual"
-                ? `$${Math.round(parseInt(tier.price.replace("$", "")) * 0.8)}`
-                : tier.price;
+            const displayPrice = tier.name === "Enterprise"
+              ? "Custom"
+              : tier.name === "Starter"
+                ? "$0"
+                : billingCycle === "annual"
+                  ? `$${Math.round(parseInt(tier.price.replace("$", "")) * 0.8)}`
+                  : tier.price;
 
             return (
               <motion.div
@@ -141,7 +140,6 @@ const Pricing = () => {
                   <span className="text-xs font-mono text-primary font-bold">{tier.credits}</span>
                 </div>
 
-                {/* Credit tiers for paid plans */}
                 {tier.tiers && (
                   <div className="mb-6 rounded-lg bg-muted/50 border border-border p-3">
                     <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1">
@@ -169,7 +167,7 @@ const Pricing = () => {
                   }`}
                   variant={tier.highlighted ? "default" : "outline"}
                 >
-                  <Link to={tier.name === "Business" ? "/consulting" : "/register"}>{tier.cta}</Link>
+                  <Link to={tier.name === "Enterprise" ? "/consulting" : "/register"}>{tier.cta}</Link>
                 </Button>
                 <ul className="mt-8 space-y-3">
                   {tier.features.map((f) => (
@@ -184,10 +182,9 @@ const Pricing = () => {
           })}
         </div>
 
-        {/* Credit top-up note */}
         <div className="text-center mt-12">
           <p className="text-muted-foreground/60 text-xs font-mono">
-            Need more? Pro & Business users can buy top-ups in 50-credit packs. Credits roll over for active subscribers.
+            All plans include HIPAA-ready infrastructure. Enterprise plans include a signed BAA. Credits roll over for active subscribers.
           </p>
         </div>
       </div>

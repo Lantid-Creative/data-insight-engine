@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -18,12 +18,12 @@ const CTA = () => {
           className="max-w-3xl mx-auto text-center"
         >
           <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight mb-6 text-foreground">
-            Ready to forge<br />
-            <span className="text-gradient">your data?</span>
+            Ready to transform<br />
+            <span className="text-gradient">your health data?</span>
           </h2>
 
           <p className="text-lg mb-10 max-w-xl mx-auto text-muted-foreground">
-            Join thousands of analysts, founders, and researchers who've already made the switch. Start free — no credit card required.
+            Join leading CROs, digital health startups, and hospital systems already using DataAfro. Start free — no credit card required.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -47,10 +47,10 @@ const CTA = () => {
             transition={{ delay: 0.4, duration: 0.6 }}
             className="mt-14 flex flex-wrap items-center justify-center gap-8 text-xs font-mono uppercase tracking-wider text-muted-foreground/40"
           >
+            <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> HIPAA Ready</span>
             <span>🔒 SOC 2 Compliant</span>
             <span>⚡ 99.9% Uptime</span>
             <span>🌍 GDPR Ready</span>
-            <span>🚀 Free tier forever</span>
           </motion.div>
         </motion.div>
       </div>
