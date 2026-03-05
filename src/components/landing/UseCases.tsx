@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { USE_CASES_DATA } from "@/lib/use-cases-data";
 
-// Reorder to prioritize healthcare
-const priorityOrder = ["healthcare", "research-academia", "finance-banking", "business-intelligence", "legal-compliance", "government-ngos"];
+// All use cases are health-focused, display in defined order
+const priorityOrder = ["healthcare", "pharma-biotech", "clinical-research", "health-research", "public-health", "digital-health"];
 
 const UseCases = () => {
   const sortedCases = [...USE_CASES_DATA].sort((a, b) => {
