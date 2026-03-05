@@ -139,7 +139,7 @@ const UploadPage = () => {
           </motion.div>
           <p className="font-semibold text-lg">Drag & drop files here</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Any file type — CSV, Excel, PDF, DOCX, images, and more
+            EHR exports, lab reports, clinical trial PDFs, DICOM, HL7, FHIR, and more
           </p>
           <Button variant="outline" size="sm" className="mt-4" onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}>
             Browse Files
