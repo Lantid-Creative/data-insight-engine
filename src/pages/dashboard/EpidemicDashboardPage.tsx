@@ -253,6 +253,11 @@ const EpidemicDashboardPage = () => {
               <SelectItem value="1y">1 Year</SelectItem>
             </SelectContent>
           </Select>
+          {data && (
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={exportReportPdf}>
+              <Download className="w-3 h-3" /> Export PDF
+            </Button>
+          )}
           <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={runAnalysis} disabled={loading}>
             {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCcw className="w-3 h-3" />}
             {loading ? "Analyzing..." : "Run Analysis"}
