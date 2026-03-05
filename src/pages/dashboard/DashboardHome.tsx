@@ -1,4 +1,4 @@
-import { FolderOpen, MessageSquare, Files, Zap, Clock, CheckCircle2, Circle, ArrowUpRight, BarChart3, HardDrive, MapPin } from "lucide-react";
+import { FolderOpen, MessageSquare, Files, Zap, Clock, CheckCircle2, Circle, ArrowUpRight, BarChart3, HardDrive, MapPin, Stethoscope, ShieldCheck, Globe, Workflow, FileText, FolderLock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -371,6 +371,37 @@ const DashboardHome = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Intelligence Suite */}
+      <motion.div className="space-y-3" {...fadeUp(0.4)}>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Intelligence Suite</h2>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          {[
+            { title: "Clinical Co-Pilot", desc: "AI-powered clinical assistance", icon: Stethoscope, url: "/dashboard/copilot", color: "text-primary" },
+            { title: "PHI Redaction", desc: "Auto-detect & redact PHI", icon: ShieldCheck, url: "/dashboard/phi-redaction", color: "text-green-500" },
+            { title: "Epidemic Intel", desc: "Disease surveillance", icon: Globe, url: "/dashboard/epidemic", color: "text-blue-500" },
+            { title: "Pipeline Builder", desc: "No-code data workflows", icon: Workflow, url: "/dashboard/pipelines", color: "text-purple-500" },
+            { title: "Reg. Submissions", desc: "FDA/EMA documents", icon: FileText, url: "/dashboard/submissions", color: "text-yellow-500" },
+            { title: "Data Rooms", desc: "Secure multi-org collaboration", icon: FolderLock, url: "/dashboard/data-rooms", color: "text-red-500" },
+          ].map((feature) => (
+            <Card
+              key={feature.title}
+              className="shadow-soft hover:shadow-card transition-all cursor-pointer group hover:border-primary/20"
+              onClick={() => navigate(feature.url)}
+            >
+              <CardContent className="p-4 flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <feature.icon className={`w-4 h-4 ${feature.color}`} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{feature.title}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{feature.desc}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </motion.div>
     </div>
     </>
   );

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Bot, Send, Stethoscope, Pill, FileText, AlertTriangle,
   Sparkles, Copy, ThumbsUp, ThumbsDown, Loader2, Heart, Brain,
@@ -12,16 +11,16 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
-  type?: "general" | "icd-lookup" | "drug-interaction" | "summary";
 }
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/clinical-copilot`;
 
 const quickPrompts = [
   { label: "Summarize Patient History", icon: FileText, prompt: "Summarize the patient history from the uploaded records, including key diagnoses, medications, and recent lab results." },
@@ -33,14 +32,12 @@ const quickPrompts = [
 ];
 
 const ClinicalCoPilotPage = () => {
-  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "assistant",
-      content: "Hello! I'm your **AI Clinical Co-Pilot**. I can help you with:\n\n• **Patient history summaries** from uploaded records\n• **Drug interaction checks** across medication lists\n• **ICD-10/CPT code suggestions** from clinical notes\n• **Adverse event detection** and safety signal flagging\n• **Clinical decision support** based on patient data\n\nHow can I assist you today?",
+      content: "Hello! I'm your **AI Clinical Co-Pilot**. I can help you with:\n\n- **Patient history summaries** from uploaded records\n- **Drug interaction checks** across medication lists\n- **ICD-10/CPT code suggestions** from clinical notes\n- **Adverse event detection** and safety signal flagging\n- **Clinical decision support** based on patient data\n\nHow can I assist you today?",
       timestamp: new Date(),
-      type: "general",
     },
   ]);
   const [input, setInput] = useState("");
@@ -63,34 +60,119 @@ const ClinicalCoPilotPage = () => {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInput("");
     setIsLoading(true);
 
-    try {
-      const { data, error } = await supabase.functions.invoke("project-chat", {
-        body: {
-          message: content.trim(),
-          systemPrompt: `You are an expert AI Clinical Co-Pilot for healthcare professionals. You help with:
-- Summarizing patient histories and medical records
-- Checking drug interactions and contraindications
-- Suggesting appropriate ICD-10 and CPT codes
-- Flagging potential adverse events and safety signals
-- Providing evidence-based clinical decision support
+    // Build conversation history for API (exclude welcome message)
+    const apiMessages = updatedMessages
+      .filter((m) => m.id !== "welcome")
+      .map((m) => ({ role: m.role, content: m.content }));
 
-Always be precise, cite medical references when possible, and include appropriate disclaimers that your suggestions should be verified by qualified medical professionals. Format your responses with clear headings, bullet points, and highlight critical findings.`,
-          projectId: "clinical-copilot",
+    let assistantContent = "";
+
+    try {
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
+        body: JSON.stringify({ messages: apiMessages }),
       });
 
-      const assistantMsg: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: data?.reply || "I apologize, but I was unable to process that request. Please try again.",
-        timestamp: new Date(),
-        type: "general",
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
+      if (resp.status === 429) {
+        toast.error("Rate limit exceeded. Please wait a moment and try again.");
+        setIsLoading(false);
+        return;
+      }
+      if (resp.status === 402) {
+        toast.error("AI credits exhausted. Please add credits to continue.");
+        setIsLoading(false);
+        return;
+      }
+      if (!resp.ok || !resp.body) {
+        throw new Error("Failed to get response");
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+
+      const assistantId = crypto.randomUUID();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              assistantContent += delta;
+              setMessages((prev) => {
+                const last = prev[prev.length - 1];
+                if (last?.role === "assistant" && last.id === assistantId) {
+                  return prev.map((m, i) =>
+                    i === prev.length - 1 ? { ...m, content: assistantContent } : m
+                  );
+                }
+                return [
+                  ...prev,
+                  { id: assistantId, role: "assistant" as const, content: assistantContent, timestamp: new Date() },
+                ];
+              });
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Flush remaining buffer
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split("\n")) {
+          if (!raw || !raw.startsWith("data: ")) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              assistantContent += delta;
+              setMessages((prev) =>
+                prev.map((m, i) =>
+                  i === prev.length - 1 && m.role === "assistant"
+                    ? { ...m, content: assistantContent }
+                    : m
+                )
+              );
+            }
+          } catch { /* ignore */ }
+        }
+      }
+
+      if (!assistantContent.trim()) {
+        setMessages((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), role: "assistant", content: "I apologize, but I couldn't generate a response. Please try again.", timestamp: new Date() },
+        ]);
+      }
     } catch {
       toast.error("Failed to get response. Please try again.");
     } finally {
@@ -150,7 +232,9 @@ Always be precise, cite medical references when possible, and include appropriat
                             <span className="text-xs font-semibold">Clinical Co-Pilot</span>
                           </div>
                         )}
-                        <div className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                        <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        </div>
                         {msg.role === "assistant" && msg.id !== "welcome" && (
                           <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/30">
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(msg.content)}>
@@ -168,7 +252,7 @@ Always be precise, cite medical references when possible, and include appropriat
                     </motion.div>
                   ))}
                 </AnimatePresence>
-                {isLoading && (
+                {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
                     <div className="bg-muted rounded-2xl px-4 py-3 flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin text-primary" />

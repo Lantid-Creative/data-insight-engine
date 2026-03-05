@@ -4,6 +4,7 @@ import Stats from "@/components/landing/Stats";
 import HowItWorks from "@/components/landing/HowItWorks";
 import Features from "@/components/landing/Features";
 import FileTypes from "@/components/landing/FileTypes";
+import IntelligenceSuite from "@/components/landing/IntelligenceSuite";
 import UseCases from "@/components/landing/UseCases";
 import Consulting from "@/components/landing/Consulting";
 import Testimonials from "@/components/landing/Testimonials";
@@ -21,6 +22,7 @@ const Index = () => {
       <Features />
       <HowItWorks />
       <FileTypes />
+      <IntelligenceSuite />
       <UseCases />
       <Testimonials />
       <Pricing />
