@@ -9,7 +9,7 @@ import {
   Bot, Send, Stethoscope, Pill, FileText, AlertTriangle,
   Sparkles, Copy, ThumbsUp, ThumbsDown, Loader2, Heart, Brain,
   Activity, Syringe, ClipboardList, Plus, Trash2, MessageSquare,
-  Download, Search, PanelLeftClose, PanelLeft,
+  Download, Search, PanelLeftClose, PanelLeft, Paperclip, X, File,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
