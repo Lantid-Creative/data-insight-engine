@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 interface DataRoom {
   id: string;
