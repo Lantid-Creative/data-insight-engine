@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.clinical-copilot]
 verify_jwt = false
+
+[functions.phi-redaction]
+verify_jwt = false
