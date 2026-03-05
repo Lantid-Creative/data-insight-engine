@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.phi-redaction]
 verify_jwt = false
+
+[functions.epidemic-intel]
+verify_jwt = false
