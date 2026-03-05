@@ -323,6 +323,55 @@ const ClinicalCoPilotPage = () => {
     toast.success("Copied to clipboard");
   };
 
+  const handleFilePin = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    const maxFiles = 5;
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = [
+      "text/plain", "text/csv", "application/json",
+      "application/pdf", "text/markdown", "text/html",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
+    Array.from(files).forEach((file) => {
+      if (pinnedFiles.length >= maxFiles) {
+        toast.error(`Maximum ${maxFiles} files allowed`);
+        return;
+      }
+      if (file.size > maxSize) {
+        toast.error(`${file.name} exceeds 5MB limit`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const content = reader.result as string;
+        setPinnedFiles((prev) => [
+          ...prev,
+          { name: file.name, size: file.size, type: file.type, content },
+        ]);
+        toast.success(`${file.name} pinned`);
+      };
+      // Read text files as text, others as base64
+      if (file.type.startsWith("text/") || file.type === "application/json") {
+        reader.readAsText(file);
+      } else {
+        reader.readAsDataURL(file);
+      }
+    });
+    e.target.value = "";
+  };
+
+  const removePinnedFile = (index: number) => {
+    setPinnedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  };
+
   const filteredConversations = conversations.filter((c) =>
     c.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
