@@ -32,6 +32,15 @@ const mainItems = [
   { title: "Teams", url: "/dashboard/teams", icon: Users },
 ];
 
+const intelligenceItems = [
+  { title: "Clinical Co-Pilot", url: "/dashboard/copilot", icon: Sparkles },
+  { title: "PHI Redaction", url: "/dashboard/phi-redaction", icon: Shield },
+  { title: "Epidemic Intel", url: "/dashboard/epidemic", icon: LayoutDashboard },
+  { title: "Pipeline Builder", url: "/dashboard/pipelines", icon: Settings },
+  { title: "Reg. Submissions", url: "/dashboard/submissions", icon: FileText },
+  { title: "Data Rooms", url: "/dashboard/data-rooms", icon: FolderOpen },
+];
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -173,6 +182,11 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>{renderItems(mainItems)}</SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Intelligence Suite</SidebarGroupLabel>
+          <SidebarGroupContent>{renderItems(intelligenceItems)}</SidebarGroupContent>
         </SidebarGroup>
 
         {/* Recent Projects */}
