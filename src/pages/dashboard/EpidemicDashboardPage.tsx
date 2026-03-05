@@ -181,6 +181,13 @@ const EpidemicDashboardPage = () => {
     }
   };
 
+  const exportReportPdf = () => {
+    if (!data) return toast.error("Run an analysis first");
+    const md = buildEpidemicMarkdown(data);
+    exportToPdf(md, `Epidemic_Intelligence_Report_${new Date().toISOString().slice(0, 10)}`);
+    toast.success("PDF exported successfully");
+  };
+
   const loadReport = (report: SavedReport) => {
     setData({
       summary: report.summary || "",
