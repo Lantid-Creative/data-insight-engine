@@ -225,7 +225,7 @@ const UploadPage = () => {
         <CardHeader><CardTitle className="text-base">Or Paste Raw Data</CardTitle></CardHeader>
         <CardContent>
           <Textarea
-            placeholder="Paste your data here (JSON, CSV, plain text...)"
+            placeholder="Paste clinical data here (HL7 messages, FHIR JSON, CSV, plain text...)"
             className="min-h-[120px]"
             value={rawText}
             onChange={(e) => setRawText(e.target.value)}
