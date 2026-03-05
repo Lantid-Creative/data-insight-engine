@@ -228,7 +228,7 @@ const PHIRedactionPage = () => {
     let text = originalText;
     entities.forEach((entity) => {
       if (selectedEntities.has(entity.id)) {
-        text = text.replaceAll(entity.original_value, entity.redacted_value);
+        text = text.split(entity.original_value).join(entity.redacted_value);
       }
     });
     setRedactedText(text);
