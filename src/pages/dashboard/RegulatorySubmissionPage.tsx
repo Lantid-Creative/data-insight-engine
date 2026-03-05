@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { exportToDocx, exportToPdf } from "@/lib/document-export";
 
 interface SubmissionDocument {
   id: string;
