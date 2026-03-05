@@ -510,6 +510,136 @@ export type Database = {
         }
         Relationships: []
       }
+      redaction_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          job_id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          job_id: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          job_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redaction_audit_log_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "redaction_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      redaction_entities: {
+        Row: {
+          confidence: number
+          created_at: string
+          end_index: number | null
+          entity_type: string
+          id: string
+          is_redacted: boolean | null
+          job_id: string
+          original_value: string
+          redacted_value: string
+          start_index: number | null
+          user_id: string
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string
+          end_index?: number | null
+          entity_type: string
+          id?: string
+          is_redacted?: boolean | null
+          job_id: string
+          original_value: string
+          redacted_value: string
+          start_index?: number | null
+          user_id: string
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          end_index?: number | null
+          entity_type?: string
+          id?: string
+          is_redacted?: boolean | null
+          job_id?: string
+          original_value?: string
+          redacted_value?: string
+          start_index?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redaction_entities_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "redaction_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      redaction_jobs: {
+        Row: {
+          avg_confidence: number | null
+          completed_at: string | null
+          created_at: string
+          entity_count: number | null
+          file_name: string
+          file_size: number | null
+          id: string
+          original_text: string
+          redacted_text: string | null
+          specialty: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          avg_confidence?: number | null
+          completed_at?: string | null
+          created_at?: string
+          entity_count?: number | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          original_text: string
+          redacted_text?: string | null
+          specialty?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          avg_confidence?: number | null
+          completed_at?: string | null
+          created_at?: string
+          entity_count?: number | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          original_text?: string
+          redacted_text?: string | null
+          specialty?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       security_settings: {
         Row: {
           created_at: string
