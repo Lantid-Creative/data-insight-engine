@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Globe, Activity, TrendingUp, TrendingDown, AlertTriangle, MapPin,
-  Calendar, RefreshCcw, Download, Virus, Thermometer, Users,
+  Calendar, RefreshCcw, Download, Bug, Thermometer, Users,
   BarChart3, ArrowUpRight, ArrowDownRight, Minus,
 } from "lucide-react";
 import { motion } from "framer-motion";
