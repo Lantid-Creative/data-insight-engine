@@ -255,10 +255,35 @@ const RegulatorySubmissionPage = () => {
                       <Button onClick={handleGenerate} className="gap-2">
                         <Sparkles className="w-4 h-4" /> Generate Document
                       </Button>
-                      {genProgress === 100 && (
-                        <Button variant="outline" className="gap-2">
-                          <Download className="w-4 h-4" /> Download
-                        </Button>
+                  {genProgress === 100 && (
+                        <>
+                          <Button variant="outline" className="gap-2" onClick={() => {
+                            const tpl = templates.find(t => t.id === selectedTemplate);
+                            const mockDoc: SubmissionDocument = {
+                              id: "gen", name: `${studyName} — ${tpl?.name || "Document"}`, type: tpl?.name || "Document",
+                              status: "ready", pages: 0, lastUpdated: new Date().toISOString().slice(0, 10),
+                              sections: (selectedTemplate === "csr" ? csrSections : Array.from({ length: tpl?.sections || 8 }, (_, i) => `Section ${i + 1}`))
+                                .map(s => ({ name: s, status: "complete" as const })),
+                            };
+                            exportToDocx(buildRegulatoryMarkdown(mockDoc), studyName.replace(/\s+/g, "_"));
+                            toast.success("DOCX exported");
+                          }}>
+                            <Download className="w-4 h-4" /> Download DOCX
+                          </Button>
+                          <Button variant="outline" className="gap-2" onClick={() => {
+                            const tpl = templates.find(t => t.id === selectedTemplate);
+                            const mockDoc: SubmissionDocument = {
+                              id: "gen", name: `${studyName} — ${tpl?.name || "Document"}`, type: tpl?.name || "Document",
+                              status: "ready", pages: 0, lastUpdated: new Date().toISOString().slice(0, 10),
+                              sections: (selectedTemplate === "csr" ? csrSections : Array.from({ length: tpl?.sections || 8 }, (_, i) => `Section ${i + 1}`))
+                                .map(s => ({ name: s, status: "complete" as const })),
+                            };
+                            exportToPdf(buildRegulatoryMarkdown(mockDoc), studyName.replace(/\s+/g, "_"));
+                            toast.success("PDF exported");
+                          }}>
+                            <Printer className="w-4 h-4" /> Download PDF
+                          </Button>
+                        </>
                       )}
                     </div>
                   )}
