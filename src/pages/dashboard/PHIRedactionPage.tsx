@@ -155,11 +155,21 @@ const PHIRedactionPage = () => {
     }, 400);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error("Please log in to scan documents");
+        setScanning(false);
+        setProgress(0);
+        clearInterval(progressInterval);
+        return;
+      }
+
       const resp = await fetch(REDACTION_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
         body: JSON.stringify({
           text: inputText,
