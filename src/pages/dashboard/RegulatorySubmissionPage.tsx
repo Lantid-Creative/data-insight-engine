@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { exportToDocx, exportToPdf } from "@/lib/document-export";
 
 interface SubmissionDocument {
   id: string;
@@ -128,6 +129,18 @@ const RegulatorySubmissionPage = () => {
         {m.label}
       </Badge>
     );
+  };
+
+  const exportDocumentDocx = (doc: SubmissionDocument) => {
+    const md = buildRegulatoryMarkdown(doc);
+    exportToDocx(md, `${doc.name.replace(/\s+/g, "_")}`);
+    toast.success("DOCX exported successfully");
+  };
+
+  const exportDocumentPdf = (doc: SubmissionDocument) => {
+    const md = buildRegulatoryMarkdown(doc);
+    exportToPdf(md, `${doc.name.replace(/\s+/g, "_")}`);
+    toast.success("PDF exported successfully");
   };
 
   const sectionStatusIcon = (status: string) => {
@@ -242,10 +255,35 @@ const RegulatorySubmissionPage = () => {
                       <Button onClick={handleGenerate} className="gap-2">
                         <Sparkles className="w-4 h-4" /> Generate Document
                       </Button>
-                      {genProgress === 100 && (
-                        <Button variant="outline" className="gap-2">
-                          <Download className="w-4 h-4" /> Download
-                        </Button>
+                  {genProgress === 100 && (
+                        <>
+                          <Button variant="outline" className="gap-2" onClick={() => {
+                            const tpl = templates.find(t => t.id === selectedTemplate);
+                            const mockDoc: SubmissionDocument = {
+                              id: "gen", name: `${studyName} — ${tpl?.name || "Document"}`, type: tpl?.name || "Document",
+                              status: "ready", pages: 0, lastUpdated: new Date().toISOString().slice(0, 10),
+                              sections: (selectedTemplate === "csr" ? csrSections : Array.from({ length: tpl?.sections || 8 }, (_, i) => `Section ${i + 1}`))
+                                .map(s => ({ name: s, status: "complete" as const })),
+                            };
+                            exportToDocx(buildRegulatoryMarkdown(mockDoc), studyName.replace(/\s+/g, "_"));
+                            toast.success("DOCX exported");
+                          }}>
+                            <Download className="w-4 h-4" /> Download DOCX
+                          </Button>
+                          <Button variant="outline" className="gap-2" onClick={() => {
+                            const tpl = templates.find(t => t.id === selectedTemplate);
+                            const mockDoc: SubmissionDocument = {
+                              id: "gen", name: `${studyName} — ${tpl?.name || "Document"}`, type: tpl?.name || "Document",
+                              status: "ready", pages: 0, lastUpdated: new Date().toISOString().slice(0, 10),
+                              sections: (selectedTemplate === "csr" ? csrSections : Array.from({ length: tpl?.sections || 8 }, (_, i) => `Section ${i + 1}`))
+                                .map(s => ({ name: s, status: "complete" as const })),
+                            };
+                            exportToPdf(buildRegulatoryMarkdown(mockDoc), studyName.replace(/\s+/g, "_"));
+                            toast.success("PDF exported");
+                          }}>
+                            <Printer className="w-4 h-4" /> Download PDF
+                          </Button>
+                        </>
                       )}
                     </div>
                   )}
@@ -281,8 +319,11 @@ const RegulatorySubmissionPage = () => {
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewDoc(doc)}>
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.success("Document downloaded")}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => exportDocumentDocx(doc)} title="Export DOCX">
                         <Download className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => exportDocumentPdf(doc)} title="Export PDF">
+                        <Printer className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
@@ -391,5 +432,48 @@ const RegulatorySubmissionPage = () => {
     </div>
   );
 };
+
+function buildRegulatoryMarkdown(doc: SubmissionDocument): string {
+  const lines: string[] = [];
+  lines.push(`# ${doc.name}`);
+  lines.push("");
+  lines.push(`> ${doc.type} — Generated ${doc.lastUpdated} — Status: ${doc.status.toUpperCase()}`);
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  lines.push("## Document Overview");
+  lines.push("");
+  lines.push(`- **Document Type:** ${doc.type}`);
+  lines.push(`- **Total Pages:** ${doc.pages}`);
+  lines.push(`- **Status:** ${doc.status}`);
+  lines.push(`- **Last Updated:** ${doc.lastUpdated}`);
+  lines.push("");
+
+  if (doc.sections?.length) {
+    lines.push("## Section Status");
+    lines.push("");
+    lines.push("| # | Section | Status |");
+    lines.push("|---|---|---|");
+    doc.sections.forEach((s, i) => {
+      const icon = s.status === "complete" ? "✅" : s.status === "draft" ? "📝" : "⚠️";
+      lines.push(`| ${i + 1} | ${s.name} | ${icon} ${s.status.charAt(0).toUpperCase() + s.status.slice(1)} |`);
+    });
+    lines.push("");
+
+    const complete = doc.sections.filter(s => s.status === "complete").length;
+    const total = doc.sections.length;
+    lines.push("## Completion Summary");
+    lines.push("");
+    lines.push(`- **Complete:** ${complete} / ${total} sections (${Math.round((complete / total) * 100)}%)`);
+    lines.push(`- **Draft:** ${doc.sections.filter(s => s.status === "draft").length} sections`);
+    lines.push(`- **Missing:** ${doc.sections.filter(s => s.status === "missing").length} sections`);
+    lines.push("");
+  }
+
+  lines.push("---");
+  lines.push("");
+  lines.push("*This document was generated by DataAfro Regulatory Submission Generator. It follows ICH E3/E6(R2) guidelines.*");
+  return lines.join("\n");
+}
 
 export default RegulatorySubmissionPage;
