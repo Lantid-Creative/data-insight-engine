@@ -22,6 +22,7 @@ const Index = () => {
       <Features />
       <HowItWorks />
       <FileTypes />
+      <IntelligenceSuite />
       <UseCases />
       <Testimonials />
       <Pricing />
