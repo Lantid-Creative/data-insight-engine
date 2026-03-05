@@ -242,6 +242,105 @@ export type Database = {
           },
         ]
       }
+      epidemic_alerts: {
+        Row: {
+          case_count: number | null
+          change_percent: number | null
+          created_at: string
+          description: string | null
+          disease_category: string | null
+          id: string
+          is_active: boolean | null
+          region: string
+          resolved_at: string | null
+          severity: string
+          source: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          case_count?: number | null
+          change_percent?: number | null
+          created_at?: string
+          description?: string | null
+          disease_category?: string | null
+          id?: string
+          is_active?: boolean | null
+          region: string
+          resolved_at?: string | null
+          severity?: string
+          source?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          case_count?: number | null
+          change_percent?: number | null
+          created_at?: string
+          description?: string | null
+          disease_category?: string | null
+          id?: string
+          is_active?: boolean | null
+          region?: string
+          resolved_at?: string | null
+          severity?: string
+          source?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      epidemic_reports: {
+        Row: {
+          alert_count: number | null
+          created_at: string
+          disease_data: Json | null
+          disease_filter: string | null
+          full_analysis: string | null
+          id: string
+          regions: Json | null
+          report_type: string
+          summary: string | null
+          time_range: string | null
+          title: string
+          total_cases: number | null
+          trend_data: Json | null
+          user_id: string
+        }
+        Insert: {
+          alert_count?: number | null
+          created_at?: string
+          disease_data?: Json | null
+          disease_filter?: string | null
+          full_analysis?: string | null
+          id?: string
+          regions?: Json | null
+          report_type?: string
+          summary?: string | null
+          time_range?: string | null
+          title?: string
+          total_cases?: number | null
+          trend_data?: Json | null
+          user_id: string
+        }
+        Update: {
+          alert_count?: number | null
+          created_at?: string
+          disease_data?: Json | null
+          disease_filter?: string | null
+          full_analysis?: string | null
+          id?: string
+          regions?: Json | null
+          report_type?: string
+          summary?: string | null
+          time_range?: string | null
+          title?: string
+          total_cases?: number | null
+          trend_data?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           activity_email: boolean
