@@ -1,19 +1,18 @@
-import { BarChart3, FileText, Shield, Zap, Globe, Layers } from "lucide-react";
+import { Stethoscope, FileText, Shield, Zap, Microscope, Layers } from "lucide-react";
 import { motion } from "framer-motion";
 
 const features = [
-  { icon: Zap, title: "Instant Processing", description: "Results in seconds. Our pipeline is optimized for speed without sacrificing depth.", featured: true },
-  { icon: BarChart3, title: "Smart Visualizations", description: "Auto-generated charts, metrics, and trends from your raw data.", featured: true },
-  { icon: FileText, title: "8+ Output Formats", description: "PDF, DOCX, XLSX, PPTX, JSON, CSV, Markdown — one upload, every format." },
-  { icon: Shield, title: "Bank-Level Security", description: "End-to-end encryption. Your data never leaves our secure infrastructure." },
-  { icon: Globe, title: "API-First", description: "Full REST API with docs. Integrate DataAfro into your existing workflows." },
-  { icon: Layers, title: "Batch Mode", description: "Process hundreds of files in parallel. Perfect for enterprise workloads." },
+  { icon: Stethoscope, title: "Clinical Data Extraction", description: "Extract structured data from EHRs, discharge summaries, and patient charts. Auto-detect ICD-10 codes, diagnoses, and medications.", featured: true },
+  { icon: Microscope, title: "Clinical Trial Intelligence", description: "Process trial protocols, adverse event reports, and FDA submissions. Generate regulatory-ready analyses in minutes.", featured: true },
+  { icon: FileText, title: "Multi-Format Health Reports", description: "Output to PDF, DOCX, XLSX, HL7 FHIR, JSON — from a single upload. Compliance-ready formatting built in." },
+  { icon: Shield, title: "HIPAA-Ready Security", description: "End-to-end encryption, de-identification pipelines, and audit trails. Your patient data never leaves secure infrastructure." },
+  { icon: Zap, title: "Real-Time Processing", description: "Results in seconds. Process thousands of lab reports, radiology findings, or claims forms in parallel." },
+  { icon: Layers, title: "API-First Integration", description: "REST API with full docs. Plug DataAfro into your EHR, LIMS, or clinical workflow — no rip-and-replace." },
 ];
 
 const Features = () => {
   return (
     <section className="py-28 bg-background relative" id="features">
-      {/* Subtle grid pattern */}
       <div className="absolute inset-0 opacity-[0.02]" style={{
         backgroundImage: "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
         backgroundSize: "60px 60px",
@@ -29,10 +28,10 @@ const Features = () => {
         >
           <span className="text-xs font-mono uppercase tracking-[0.2em] text-primary font-bold">Features</span>
           <h2 className="text-3xl md:text-5xl font-extrabold mt-4 tracking-tight text-foreground">
-            Built different. Built bold.
+            Built for clinical precision.
           </h2>
           <p className="text-lg mt-4 max-w-2xl mx-auto text-muted-foreground">
-            Everything you need to turn chaos into clarity.
+            Everything health data teams need to turn unstructured medical records into actionable intelligence.
           </p>
         </motion.div>
 

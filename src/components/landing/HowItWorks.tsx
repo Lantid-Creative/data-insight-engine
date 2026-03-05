@@ -5,20 +5,20 @@ const steps = [
   {
     icon: Upload,
     num: "01",
-    title: "Drop Your Data",
-    description: "CSV, Excel, PDF, JSON, images — we handle everything. Just drag, drop, done.",
+    title: "Upload Clinical Data",
+    description: "EHRs, lab reports, DICOM images, clinical trial PDFs, insurance claims — drag, drop, done.",
   },
   {
     icon: Cpu,
     num: "02",
-    title: "AI Does the Heavy Lifting",
-    description: "Pattern recognition, trend analysis, anomaly detection — all automated.",
+    title: "AI Extracts & Structures",
+    description: "NLP-powered extraction of diagnoses, ICD codes, medications, lab values, and adverse events — all automated.",
   },
   {
     icon: Download,
     num: "03",
-    title: "Export & Share",
-    description: "Download polished reports in PDF, DOCX, XLSX, PPTX, or raw data formats.",
+    title: "Export & Integrate",
+    description: "Download structured data as FHIR bundles, CSV, PDF reports, or push directly to your EHR via API.",
   },
 ];
 
@@ -29,15 +29,14 @@ const HowItWorks = () => {
         <div className="text-center mb-20">
           <span className="text-xs font-mono uppercase tracking-[0.2em] text-primary font-bold">How It Works</span>
           <h2 className="text-3xl md:text-5xl font-extrabold mt-4 tracking-tight text-foreground">
-            Three steps. Zero friction.
+            Three steps. Clinical precision.
           </h2>
           <p className="text-muted-foreground mt-4 max-w-lg mx-auto">
-            Go from raw data to polished insights in under a minute.
+            Go from unstructured medical records to structured, actionable data in under a minute.
           </p>
         </div>
 
         <div className="relative max-w-5xl mx-auto">
-          {/* Connecting line */}
           <div className="hidden md:block absolute top-[72px] left-[16.67%] right-[16.67%] h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
           <div className="grid md:grid-cols-3 gap-12">

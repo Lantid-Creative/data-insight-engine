@@ -2,12 +2,12 @@ import { motion } from "framer-motion";
 import { Star, Quote } from "lucide-react";
 
 const testimonials = [
-  { name: "Amara Okafor", role: "Data Analyst, FinStack", avatar: "AO", quote: "DataAfro turned 3 hours of manual reporting into 5 seconds. My entire team switched within a week." },
-  { name: "Kwame Mensah", role: "CEO, GrowthLabs", avatar: "KM", quote: "The AI insights are genuinely useful — not just fluff. It caught trends in our sales data we completely missed." },
-  { name: "Fatima Al-Hassan", role: "Research Lead, NovaTech", avatar: "FA", quote: "I upload messy CSVs and get back beautifully formatted reports. It feels like magic every single time." },
-  { name: "Daniel Otieno", role: "Freelance Consultant", avatar: "DO", quote: "My clients think I have a whole analytics team. It's just me and DataAfro. Don't tell them." },
-  { name: "Chioma Nwankwo", role: "Product Manager, Buildify", avatar: "CN", quote: "We integrated via the API and now auto-generate weekly performance reports. Absolute game changer." },
-  { name: "Yusuf Ibrahim", role: "Finance Director, Apex Group", avatar: "YI", quote: "Bank-level security was non-negotiable for us. DataAfro delivered that plus incredible speed." },
+  { name: "Dr. Amara Okafor", role: "Chief Medical Officer, MedVault Health", avatar: "AO", quote: "DataAfro cut our clinical data extraction time from 3 weeks to 3 hours. Our research team can now focus on discovery, not data entry." },
+  { name: "Kwame Mensah", role: "VP Data Science, TrialSync CRO", avatar: "KM", quote: "We process 10,000+ adverse event reports monthly. DataAfro's AI catches signals our manual review missed — it's transformed our safety monitoring." },
+  { name: "Dr. Fatima Al-Hassan", role: "Director of Informatics, Regional Health System", avatar: "FA", quote: "The EHR extraction is incredible. We upload discharge summaries and get structured, coded data back. HIPAA compliance was a non-negotiable — DataAfro delivered." },
+  { name: "Daniel Otieno", role: "CEO, AfriMed Digital Health", avatar: "DO", quote: "As a telehealth startup, we needed to extract patient intake data at scale. DataAfro gave us enterprise-grade capability on a startup budget." },
+  { name: "Dr. Chioma Nwankwo", role: "Clinical Research Lead, BioGenesis Pharma", avatar: "CN", quote: "We integrated the API into our clinical trial pipeline. FDA submission prep that took a month now takes a week. Absolute game changer." },
+  { name: "Yusuf Ibrahim", role: "Head of Claims Analytics, AfriCare Insurance", avatar: "YI", quote: "Processing thousands of insurance claims with ICD/CPT coding used to require a team of 8. Now it's automated with 99% accuracy." },
 ];
 
 const Testimonials = () => {
@@ -25,15 +25,14 @@ const Testimonials = () => {
         >
           <span className="text-xs font-mono uppercase tracking-[0.2em] text-primary font-bold">Testimonials</span>
           <h2 className="text-3xl md:text-5xl font-extrabold mt-4 tracking-tight text-foreground">
-            Loved by data people<br />
-            <span className="text-gradient">everywhere.</span>
+            Trusted by health data<br />
+            <span className="text-gradient">teams worldwide.</span>
           </h2>
           <p className="text-muted-foreground mt-4 max-w-lg mx-auto">
-            Join thousands of analysts, founders, and researchers who trust DataAfro.
+            From CROs to hospital systems, digital health startups to pharma enterprises.
           </p>
         </motion.div>
 
-        {/* Masonry-style layout: 2 cols with offset */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {testimonials.map((t, i) => (
             <motion.div

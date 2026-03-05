@@ -2,12 +2,12 @@ import { motion } from "framer-motion";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const faqs = [
-  { q: "What file types does DataAfro support?", a: "We support CSV, Excel (.xlsx), JSON, PDF, Word (.docx), TXT, images (PNG, JPG), XML, Parquet, and more. If it contains data, we can likely process it." },
-  { q: "How does the AI analysis work?", a: "Our AI pipeline automatically detects data structure, identifies patterns, runs statistical analysis, and generates human-readable insights — all in seconds. No prompts needed." },
-  { q: "Is my data secure?", a: "Absolutely. We use end-to-end encryption, SOC 2 compliant infrastructure, and your data is never stored longer than needed. We never train on your data." },
-  { q: "Can I integrate DataAfro into my own tools?", a: "Yes! Our REST API lets you automate uploads, trigger analyses, and pull results programmatically. Full API documentation is available on the Pro plan and above." },
-  { q: "What's the difference between Free and Pro?", a: "Free gives you 3 analyses per month with 2 output files. Pro unlocks 50 analyses, 5 outputs per analysis, all file formats, advanced AI reports, and priority support." },
-  { q: "Do I need to know coding or data science?", a: "Not at all. DataAfro is designed for everyone — just upload your file and let the AI do the rest. No technical skills required." },
+  { q: "What health data formats does DataAfro support?", a: "We support HL7 v2/v3, FHIR (R4), CDA, DICOM metadata, PDF lab reports, EHR exports, insurance claims (837/835), ICD-10/CPT coded documents, plus all standard formats like CSV, Excel, JSON, and Word." },
+  { q: "Is DataAfro HIPAA compliant?", a: "Yes. We provide HIPAA-ready infrastructure with end-to-end encryption, automated de-identification pipelines, audit trails, and access controls. Enterprise plans include a signed Business Associate Agreement (BAA)." },
+  { q: "How does clinical data extraction work?", a: "Our AI pipeline uses medical NLP to detect clinical entities — diagnoses, medications, lab values, ICD codes, procedures — from unstructured documents. It structures them into standardized formats like FHIR resources or coded datasets." },
+  { q: "Can I integrate DataAfro into our EHR or LIMS?", a: "Yes! Our REST API lets you automate data extraction, push structured results to your systems, and trigger analyses programmatically. We support integration with Epic, Cerner, and custom LIMS platforms." },
+  { q: "Who is DataAfro built for?", a: "Digital health startups processing patient intake forms, CROs managing clinical trial data, pharma companies handling regulatory submissions, hospital systems extracting insights from medical records, and health insurers processing claims." },
+  { q: "How is patient data protected?", a: "All data is encrypted at rest (AES-256) and in transit (TLS 1.3). We offer automated PHI de-identification, role-based access controls, and your data is never used to train our models. SOC 2 Type II compliant infrastructure." },
 ];
 
 const FAQ = () => {

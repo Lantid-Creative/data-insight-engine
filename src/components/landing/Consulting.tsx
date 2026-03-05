@@ -1,44 +1,43 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, BarChart3, Brain, GraduationCap, FileText } from "lucide-react";
+import { ArrowRight, Stethoscope, Brain, GraduationCap, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const services = [
   {
-    icon: BarChart3,
-    title: "Data Strategy & Analytics",
-    description: "We help organizations build robust data pipelines, custom dashboards, and decision-making frameworks tailored to their goals.",
+    icon: Stethoscope,
+    title: "Clinical Data Strategy",
+    description: "We help health organizations design data extraction pipelines, build clinical dashboards, and create decision-support frameworks tailored to their workflows.",
   },
   {
     icon: Brain,
-    title: "AI Implementation",
-    description: "From custom ML models to AI-powered automation — we design and deploy intelligent systems that transform how you work.",
+    title: "Health AI Implementation",
+    description: "From custom NLP models for clinical notes to AI-powered claims processing — we deploy intelligent systems purpose-built for healthcare.",
   },
   {
     icon: GraduationCap,
-    title: "Training & Workshops",
-    description: "Hands-on sessions to upskill your team in data literacy, AI tools, and DataAfro platform mastery.",
+    title: "Training & Compliance",
+    description: "Hands-on workshops for your team on health data best practices, HIPAA compliance, and DataAfro platform mastery.",
   },
   {
     icon: FileText,
-    title: "Custom Reports & Research",
-    description: "Bespoke data analysis, market research, competitor intelligence, and professionally formatted deliverables.",
+    title: "Regulatory & Research Support",
+    description: "Bespoke clinical trial analysis, FDA submission prep, real-world evidence studies, and professionally formatted regulatory deliverables.",
   },
 ];
 
 const audiences = [
-  "Businesses & Enterprises",
-  "NGOs & Non-Profits",
-  "Government Agencies",
-  "Research Institutions",
-  "Startups & Founders",
-  "Consultants & Freelancers",
+  "Hospitals & Health Systems",
+  "Clinical Research Organizations",
+  "Pharmaceutical Companies",
+  "Digital Health Startups",
+  "Health Insurance Providers",
+  "Public Health & NGOs",
 ];
 
 const Consulting = () => {
   return (
     <section className="py-28 bg-background relative overflow-hidden" id="consulting">
-      {/* Accent glow */}
       <div className="absolute bottom-0 right-1/4 w-[500px] h-[300px] bg-primary/5 blur-[150px] rounded-full" />
 
       <div className="container mx-auto px-6 relative">
@@ -51,15 +50,14 @@ const Consulting = () => {
         >
           <span className="text-xs font-mono uppercase tracking-[0.2em] text-primary font-bold">Consulting & Services</span>
           <h2 className="text-3xl md:text-5xl font-extrabold mt-4 tracking-tight text-foreground">
-            Need a partner,<br />
-            <span className="text-gradient">not just a tool?</span>
+            Need a health data<br />
+            <span className="text-gradient">partner?</span>
           </h2>
           <p className="text-lg mt-4 max-w-2xl mx-auto text-muted-foreground">
-            Our expert team works directly with businesses, governments, NGOs, and research organizations to unlock the full power of their data.
+            Our team of health data scientists and clinical informatics experts works directly with your organization to unlock the full power of your clinical data.
           </p>
         </motion.div>
 
-        {/* Services grid */}
         <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-16">
           {services.map((s, i) => (
             <motion.div
@@ -80,7 +78,6 @@ const Consulting = () => {
           ))}
         </div>
 
-        {/* Who we work with */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -105,7 +102,6 @@ const Consulting = () => {
           </div>
         </motion.div>
 
-        {/* CTA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -118,7 +114,7 @@ const Consulting = () => {
               Book a Discovery Call <ArrowRight className="ml-2 w-5 h-5" />
             </Link>
           </Button>
-          <p className="text-xs text-muted-foreground mt-3">Free initial consultation • No commitment required</p>
+          <p className="text-xs text-muted-foreground mt-3">Free initial consultation • HIPAA-compliant engagement</p>
         </motion.div>
       </div>
     </section>

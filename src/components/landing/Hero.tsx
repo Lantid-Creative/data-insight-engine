@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight, Play, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import heroBg from "@/assets/hero-bg.jpg";
 
-const rotatingWords = ["Forged Bold.", "Made Clear.", "Turned Smart.", "Decoded."];
+const rotatingWords = ["Extracted.", "Structured.", "Decoded.", "Actionable."];
 
 const Hero = () => {
   const [wordIndex, setWordIndex] = useState(0);
@@ -49,7 +49,7 @@ const Hero = () => {
             </motion.div>
 
             <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight leading-[0.95] mb-8 text-foreground">
-              Your Data.
+              Health Data.
               <br />
               <span className="relative inline-block h-[1.1em] overflow-hidden">
                 <AnimatePresence mode="wait">
@@ -68,7 +68,7 @@ const Hero = () => {
             </h1>
 
             <p className="text-lg md:text-xl max-w-xl mb-12 leading-relaxed text-muted-foreground">
-              Enterprise-grade file intelligence for data teams and research labs. Ingest any format — CSV, PDF, Excel, DICOM, Parquet — and get structured insights in seconds, not sprints.
+              AI-powered intelligence for clinical data teams. Extract structured insights from EHRs, lab reports, clinical trials, and medical records — in seconds, not weeks.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -93,6 +93,8 @@ const Hero = () => {
               transition={{ delay: 0.8, duration: 0.6 }}
               className="mt-12 flex items-center gap-6 text-[11px] font-mono uppercase tracking-wider text-muted-foreground/40"
             >
+              <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> HIPAA Ready</span>
+              <span className="w-px h-3 bg-border" />
               <span>🔒 SOC 2</span>
               <span className="w-px h-3 bg-border" />
               <span>⚡ 99.9% Uptime</span>
@@ -101,7 +103,7 @@ const Hero = () => {
             </motion.div>
           </motion.div>
 
-          {/* Right side — mini demo card */}
+          {/* Right side — health demo card */}
           <motion.div
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -116,8 +118,9 @@ const Hero = () => {
                 <span className="ml-auto text-[10px] font-mono text-muted-foreground/50">dataafro.app</span>
               </div>
               <div className="border border-dashed border-border rounded-xl p-8 text-center mb-4 hover:border-primary/30 transition-colors">
-                <div className="text-3xl mb-2">📄</div>
-                <p className="text-xs text-muted-foreground font-mono">Drop your file here</p>
+                <div className="text-3xl mb-2">🏥</div>
+                <p className="text-xs text-muted-foreground font-mono">Drop your clinical data here</p>
+                <p className="text-[10px] text-muted-foreground/50 mt-1">EHR · Lab Reports · DICOM · HL7</p>
               </div>
               <div className="space-y-2">
                 <div className="h-2 rounded-full bg-primary/20 w-full overflow-hidden">
@@ -129,8 +132,8 @@ const Hero = () => {
                   />
                 </div>
                 <div className="flex justify-between text-[10px] font-mono text-muted-foreground/50">
-                  <span>Analyzing...</span>
-                  <span>report.pdf</span>
+                  <span>Extracting patient data...</span>
+                  <span>clinical_trial.pdf</span>
                 </div>
               </div>
             </div>
@@ -144,9 +147,9 @@ const Hero = () => {
           transition={{ delay: 0.9, duration: 0.7 }}
           className="mt-20 flex flex-col items-center gap-5"
         >
-          <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-muted-foreground/30">Early adopters from</p>
+          <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-muted-foreground/30">Trusted by teams at</p>
           <div className="flex items-center gap-8 md:gap-12 flex-wrap justify-center">
-            {["Palantir", "Snowflake", "Databricks", "MIT Media Lab", "DeepMind"].map((name) => (
+            {["Mayo Clinic", "Roche", "Medtronic", "IQVIA", "Tempus AI"].map((name) => (
               <span
                 key={name}
                 className="text-sm md:text-base font-semibold tracking-wide text-muted-foreground/20 hover:text-muted-foreground/40 transition-colors duration-300 select-none"

@@ -33,10 +33,10 @@ function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: str
 }
 
 const stats = [
-  { value: 50000, suffix: "+", label: "Files Processed" },
-  { value: 12, suffix: "", label: "Output Formats" },
-  { value: 4, suffix: "s", label: "Avg Analysis Time" },
-  { value: 98, suffix: "%", label: "User Satisfaction" },
+  { value: 120000, suffix: "+", label: "Clinical Records Processed" },
+  { value: 15, suffix: "+", label: "Health Data Formats" },
+  { value: 4, suffix: "s", label: "Avg Extraction Time" },
+  { value: 99, suffix: "%", label: "Data Accuracy" },
 ];
 
 const Stats = () => {
