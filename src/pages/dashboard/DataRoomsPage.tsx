@@ -201,9 +201,16 @@ const DataRoomsPage = () => {
             <p className="text-xs text-muted-foreground">Multi-org virtual data rooms with granular permissions</p>
           </div>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
-          <Plus className="w-3.5 h-3.5" /> Create Data Room
-        </Button>
+        <div className="flex gap-2">
+          {selectedRoom && (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={exportRoomZip}>
+              <Download className="w-3.5 h-3.5" /> Export ZIP
+            </Button>
+          )}
+          <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
+            <Plus className="w-3.5 h-3.5" /> Create Data Room
+          </Button>
+        </div>
       </div>
 
       {/* KPIs */}

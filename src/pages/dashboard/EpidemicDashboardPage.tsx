@@ -545,4 +545,78 @@ const EpidemicDashboardPage = () => {
   );
 };
 
+function buildEpidemicMarkdown(data: EpidemicData): string {
+  const lines: string[] = [];
+  lines.push("# Epidemic Intelligence Report");
+  lines.push("");
+  lines.push(`> Generated on ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`);
+  lines.push("");
+
+  if (data.summary) {
+    lines.push("## Executive Summary");
+    lines.push(data.summary);
+    lines.push("");
+  }
+
+  lines.push("## Key Indicators");
+  lines.push("");
+  lines.push("| Metric | Value |");
+  lines.push("|---|---|");
+  lines.push(`| Total Cases | ${data.totalCases?.toLocaleString() || 0} |`);
+  lines.push(`| Active Outbreaks | ${data.activeOutbreaks || 0} |`);
+  lines.push(`| Resolved Outbreaks | ${data.resolvedOutbreaks || 0} |`);
+  lines.push(`| Affected Regions | ${data.affectedRegions || 0} |`);
+  lines.push("");
+
+  if (data.regionData?.length) {
+    lines.push("## Regional Breakdown");
+    lines.push("");
+    lines.push("| Region | Cases | Change | Status |");
+    lines.push("|---|---|---|---|");
+    data.regionData.forEach((r) => {
+      lines.push(`| ${r.name} | ${r.cases?.toLocaleString()} | ${r.change > 0 ? "+" : ""}${r.change}% | ${r.status} |`);
+    });
+    lines.push("");
+  }
+
+  if (data.diseaseBreakdown?.length) {
+    lines.push("## Disease Classification");
+    lines.push("");
+    lines.push("| Disease | Proportion |");
+    lines.push("|---|---|");
+    data.diseaseBreakdown.forEach((d) => {
+      lines.push(`| ${d.name} | ${d.value}% |`);
+    });
+    lines.push("");
+  }
+
+  if (data.alerts?.length) {
+    lines.push("## Active Alerts");
+    lines.push("");
+    data.alerts.forEach((a, i) => {
+      lines.push(`### ${i + 1}. ${a.title}`);
+      lines.push(`- **Severity:** ${a.severity.toUpperCase()}`);
+      lines.push(`- **Region:** ${a.region}`);
+      lines.push(`- **Category:** ${a.diseaseCategory}`);
+      if (a.caseCount) lines.push(`- **Case Count:** ${a.caseCount.toLocaleString()}`);
+      if (a.changePercent) lines.push(`- **Change:** ${a.changePercent > 0 ? "+" : ""}${a.changePercent}%`);
+      if (a.description) lines.push(`\n${a.description}`);
+      lines.push("");
+    });
+  }
+
+  if (data.trendData?.length) {
+    lines.push("## Trend Data");
+    lines.push("");
+    lines.push("| Date | Cases | Recovered | Deaths |");
+    lines.push("|---|---|---|---|");
+    data.trendData.forEach((t) => {
+      lines.push(`| ${t.date} | ${t.cases?.toLocaleString()} | ${t.recovered?.toLocaleString()} | ${t.deaths?.toLocaleString()} |`);
+    });
+    lines.push("");
+  }
+
+  return lines.join("\n");
+}
+
 export default EpidemicDashboardPage;
