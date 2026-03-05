@@ -9,7 +9,7 @@ import {
   Bot, Send, Stethoscope, Pill, FileText, AlertTriangle,
   Sparkles, Copy, ThumbsUp, ThumbsDown, Loader2, Heart, Brain,
   Activity, Syringe, ClipboardList, Plus, Trash2, MessageSquare,
-  Download, Search, PanelLeftClose, PanelLeft,
+  Download, Search, PanelLeftClose, PanelLeft, Paperclip, X, File,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -59,6 +59,13 @@ const WELCOME_MSG: Message = {
   timestamp: new Date(),
 };
 
+interface PinnedFile {
+  name: string;
+  size: number;
+  type: string;
+  content: string; // base64 or text content
+}
+
 const ClinicalCoPilotPage = () => {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -69,7 +76,9 @@ const ClinicalCoPilotPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSpecialty, setActiveSpecialty] = useState("general");
+  const [pinnedFiles, setPinnedFiles] = useState<PinnedFile[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load conversations
   useEffect(() => {
@@ -215,10 +224,24 @@ const ClinicalCoPilotPage = () => {
       await updateConvoTitle(convoId, content.trim());
     }
 
-    // Build API messages
+    // Build API messages with pinned file context
     const apiMessages = updatedMessages
       .filter((m) => m.id !== "welcome")
       .map((m) => ({ role: m.role, content: m.content }));
+
+    // If there are pinned files, prepend their content as context to the last user message
+    if (pinnedFiles.length > 0) {
+      const fileContext = pinnedFiles
+        .map((f) => `--- Attached File: ${f.name} ---\n${f.content}\n--- End of ${f.name} ---`)
+        .join("\n\n");
+      const lastUserIdx = apiMessages.length - 1;
+      apiMessages[lastUserIdx] = {
+        ...apiMessages[lastUserIdx],
+        content: `[Attached Files Context]\n${fileContext}\n\n[User Query]\n${apiMessages[lastUserIdx].content}`,
+      };
+      // Clear pinned files after sending
+      setPinnedFiles([]);
+    }
 
     let assistantContent = "";
 
@@ -312,6 +335,55 @@ const ClinicalCoPilotPage = () => {
   const handleCopy = (content: string) => {
     navigator.clipboard.writeText(content);
     toast.success("Copied to clipboard");
+  };
+
+  const handleFilePin = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    const maxFiles = 5;
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = [
+      "text/plain", "text/csv", "application/json",
+      "application/pdf", "text/markdown", "text/html",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
+    Array.from(files).forEach((file) => {
+      if (pinnedFiles.length >= maxFiles) {
+        toast.error(`Maximum ${maxFiles} files allowed`);
+        return;
+      }
+      if (file.size > maxSize) {
+        toast.error(`${file.name} exceeds 5MB limit`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const content = reader.result as string;
+        setPinnedFiles((prev) => [
+          ...prev,
+          { name: file.name, size: file.size, type: file.type, content },
+        ]);
+        toast.success(`${file.name} pinned`);
+      };
+      // Read text files as text, others as base64
+      if (file.type.startsWith("text/") || file.type === "application/json") {
+        reader.readAsText(file);
+      } else {
+        reader.readAsDataURL(file);
+      }
+    });
+    e.target.value = "";
+  };
+
+  const removePinnedFile = (index: number) => {
+    setPinnedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
   };
 
   const filteredConversations = conversations.filter((c) =>
@@ -513,7 +585,39 @@ const ClinicalCoPilotPage = () => {
           {/* Input */}
           <div className="p-4 border-t border-border">
             <div className="max-w-3xl mx-auto">
+              {/* Pinned Files Chips */}
+              {pinnedFiles.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {pinnedFiles.map((f, i) => (
+                    <Badge key={i} variant="secondary" className="gap-1 text-xs py-1 px-2">
+                      <File className="w-3 h-3" />
+                      <span className="max-w-[120px] truncate">{f.name}</span>
+                      <span className="text-muted-foreground">({formatFileSize(f.size)})</span>
+                      <button onClick={() => removePinnedFile(i)} className="ml-0.5 hover:text-destructive">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
               <div className="flex gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".txt,.csv,.json,.pdf,.md,.html,.docx"
+                  className="hidden"
+                  onChange={handleFilePin}
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-[44px] w-[44px] flex-shrink-0"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Attach files for context"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </Button>
                 <Textarea
                   placeholder="Ask about patient records, drug interactions, ICD codes..."
                   value={input}
