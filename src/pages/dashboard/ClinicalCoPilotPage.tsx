@@ -570,7 +570,7 @@ const ClinicalCoPilotPage = () => {
                       variant="outline"
                       size="sm"
                       className="justify-start text-xs h-auto py-2.5 px-3"
-                      onClick={() => sendMessage(qp.prompt)}
+                      onClick={() => setInput(qp.prompt)}
                       disabled={isLoading}
                     >
                       <qp.icon className="w-3.5 h-3.5 mr-2 flex-shrink-0 text-primary" />
