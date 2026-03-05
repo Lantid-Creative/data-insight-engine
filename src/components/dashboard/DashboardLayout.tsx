@@ -13,6 +13,12 @@ const breadcrumbMap: Record<string, string> = {
   "/dashboard/api": "API Access",
   "/dashboard/billing": "Billing",
   "/dashboard/settings": "Settings",
+  "/dashboard/copilot": "Clinical Co-Pilot",
+  "/dashboard/phi-redaction": "PHI Redaction",
+  "/dashboard/epidemic": "Epidemic Intelligence",
+  "/dashboard/pipelines": "Pipeline Builder",
+  "/dashboard/submissions": "Regulatory Submissions",
+  "/dashboard/data-rooms": "Secure Data Rooms",
 };
 
 const DashboardLayout = () => {
