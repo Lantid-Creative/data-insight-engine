@@ -84,11 +84,37 @@ const UploadPage = () => {
   const allComplete = files.every((f) => f.status === "complete");
   const uploading = files.some((f) => f.status === "uploading");
 
+  const healthPresets = [
+    { label: "EHR / Patient Records", formats: "HL7, CDA, PDF, FHIR JSON", emoji: "🏥" },
+    { label: "Lab Reports", formats: "PDF, CSV, HL7", emoji: "🔬" },
+    { label: "Clinical Trial Data", formats: "PDF, XML, CSV, SAS", emoji: "💊" },
+    { label: "Insurance Claims", formats: "837/835, CSV, PDF", emoji: "📋" },
+    { label: "DICOM / Imaging", formats: ".dcm, metadata XML", emoji: "🩻" },
+    { label: "General Data", formats: "CSV, Excel, JSON, PDF", emoji: "📄" },
+  ];
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold font-heading">Upload Data</h1>
-        <p className="text-muted-foreground mt-1">Upload files or paste raw data to start your analysis.</p>
+        <h1 className="text-2xl font-bold font-heading">Upload Health Data</h1>
+        <p className="text-muted-foreground mt-1">Upload clinical files or paste raw data to start extraction and analysis.</p>
+      </div>
+
+      {/* Health Data Presets */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {healthPresets.map((preset) => (
+          <button
+            key={preset.label}
+            onClick={() => inputRef.current?.click()}
+            className="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-card hover:border-primary/30 hover:bg-primary/[0.03] transition-all text-left group"
+          >
+            <span className="text-xl">{preset.emoji}</span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-foreground truncate">{preset.label}</p>
+              <p className="text-[10px] text-muted-foreground font-mono truncate">{preset.formats}</p>
+            </div>
+          </button>
+        ))}
       </div>
 
       {/* Drop Zone */}
