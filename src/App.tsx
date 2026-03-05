@@ -37,6 +37,12 @@ import ApiAccessPage from "./pages/dashboard/ApiAccessPage";
 import TeamsPage from "./pages/dashboard/TeamsPage";
 import NotificationPreferencesPage from "./pages/dashboard/NotificationPreferencesPage";
 import SecuritySettingsPage from "./pages/dashboard/SecuritySettingsPage";
+import ClinicalCoPilotPage from "./pages/dashboard/ClinicalCoPilotPage";
+import PHIRedactionPage from "./pages/dashboard/PHIRedactionPage";
+import EpidemicDashboardPage from "./pages/dashboard/EpidemicDashboardPage";
+import PipelineBuilderPage from "./pages/dashboard/PipelineBuilderPage";
+import RegulatorySubmissionPage from "./pages/dashboard/RegulatorySubmissionPage";
+import DataRoomsPage from "./pages/dashboard/DataRoomsPage";
 import UseCaseDetailPage from "./pages/use-cases/UseCaseDetailPage";
 
 const queryClient = new QueryClient();
