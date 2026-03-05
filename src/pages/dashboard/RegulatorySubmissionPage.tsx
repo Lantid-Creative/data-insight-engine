@@ -294,8 +294,11 @@ const RegulatorySubmissionPage = () => {
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewDoc(doc)}>
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.success("Document downloaded")}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => exportDocumentDocx(doc)} title="Export DOCX">
                         <Download className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => exportDocumentPdf(doc)} title="Export PDF">
+                        <Printer className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
