@@ -59,6 +59,13 @@ const WELCOME_MSG: Message = {
   timestamp: new Date(),
 };
 
+interface PinnedFile {
+  name: string;
+  size: number;
+  type: string;
+  content: string; // base64 or text content
+}
+
 const ClinicalCoPilotPage = () => {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -69,7 +76,9 @@ const ClinicalCoPilotPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSpecialty, setActiveSpecialty] = useState("general");
+  const [pinnedFiles, setPinnedFiles] = useState<PinnedFile[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load conversations
   useEffect(() => {
