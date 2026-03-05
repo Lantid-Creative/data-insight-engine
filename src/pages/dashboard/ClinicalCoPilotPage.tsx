@@ -1,17 +1,21 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import {
   Bot, Send, Stethoscope, Pill, FileText, AlertTriangle,
   Sparkles, Copy, ThumbsUp, ThumbsDown, Loader2, Heart, Brain,
-  Activity, Syringe, ClipboardList,
+  Activity, Syringe, ClipboardList, Plus, Trash2, MessageSquare,
+  Download, Search, PanelLeftClose, PanelLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Message {
   id: string;
@@ -20,7 +24,24 @@ interface Message {
   timestamp: Date;
 }
 
+interface Conversation {
+  id: string;
+  title: string;
+  specialty: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/clinical-copilot`;
+
+const specialties = [
+  { value: "general", label: "General Medicine", icon: Stethoscope },
+  { value: "cardiology", label: "Cardiology", icon: Heart },
+  { value: "neurology", label: "Neurology", icon: Brain },
+  { value: "oncology", label: "Oncology", icon: Activity },
+  { value: "pediatrics", label: "Pediatrics", icon: Syringe },
+  { value: "pharmacology", label: "Pharmacology", icon: Pill },
+];
 
 const quickPrompts = [
   { label: "Summarize Patient History", icon: FileText, prompt: "Summarize the patient history from the uploaded records, including key diagnoses, medications, and recent lab results." },
@@ -31,18 +52,66 @@ const quickPrompts = [
   { label: "Clinical Decision Support", icon: Brain, prompt: "Based on the patient's vitals, lab results, and history, provide clinical decision support recommendations." },
 ];
 
+const WELCOME_MSG: Message = {
+  id: "welcome",
+  role: "assistant",
+  content: "Hello! I'm your **AI Clinical Co-Pilot**. I can help you with:\n\n- **Patient history summaries** from uploaded records\n- **Drug interaction checks** across medication lists\n- **ICD-10/CPT code suggestions** from clinical notes\n- **Adverse event detection** and safety signal flagging\n- **Clinical decision support** based on patient data\n\nHow can I assist you today?",
+  timestamp: new Date(),
+};
+
 const ClinicalCoPilotPage = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: "Hello! I'm your **AI Clinical Co-Pilot**. I can help you with:\n\n- **Patient history summaries** from uploaded records\n- **Drug interaction checks** across medication lists\n- **ICD-10/CPT code suggestions** from clinical notes\n- **Adverse event detection** and safety signal flagging\n- **Clinical decision support** based on patient data\n\nHow can I assist you today?",
-      timestamp: new Date(),
-    },
-  ]);
+  const { user } = useAuth();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConvoId, setActiveConvoId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([WELCOME_MSG]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeSpecialty, setActiveSpecialty] = useState("general");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Load conversations
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      const { data } = await supabase
+        .from("copilot_conversations")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
+      if (data) setConversations(data as Conversation[]);
+    };
+    load();
+  }, [user]);
+
+  // Load messages when conversation changes
+  useEffect(() => {
+    if (!activeConvoId || !user) {
+      setMessages([WELCOME_MSG]);
+      return;
+    }
+    const load = async () => {
+      const { data } = await supabase
+        .from("copilot_messages")
+        .select("*")
+        .eq("conversation_id", activeConvoId)
+        .order("created_at", { ascending: true });
+      if (data && data.length > 0) {
+        setMessages(
+          data.map((m: any) => ({
+            id: m.id,
+            role: m.role as "user" | "assistant",
+            content: m.content,
+            timestamp: new Date(m.created_at),
+          }))
+        );
+      } else {
+        setMessages([WELCOME_MSG]);
+      }
+    };
+    load();
+  }, [activeConvoId, user]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -50,8 +119,80 @@ const ClinicalCoPilotPage = () => {
     }
   }, [messages]);
 
+  const createConversation = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("copilot_conversations")
+      .insert({ user_id: user.id, title: "New Conversation", specialty: activeSpecialty })
+      .select()
+      .single();
+    if (error) { toast.error("Failed to create conversation"); return; }
+    const convo = data as Conversation;
+    setConversations((prev) => [convo, ...prev]);
+    setActiveConvoId(convo.id);
+    setMessages([WELCOME_MSG]);
+  };
+
+  const deleteConversation = async (id: string) => {
+    await supabase.from("copilot_conversations").delete().eq("id", id);
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+    if (activeConvoId === id) {
+      setActiveConvoId(null);
+      setMessages([WELCOME_MSG]);
+    }
+    toast.success("Conversation deleted");
+  };
+
+  const persistMessage = async (convoId: string, role: string, content: string) => {
+    if (!user) return;
+    await supabase.from("copilot_messages").insert({
+      conversation_id: convoId,
+      user_id: user.id,
+      role,
+      content,
+    });
+  };
+
+  const updateConvoTitle = async (convoId: string, firstMsg: string) => {
+    const title = firstMsg.slice(0, 60) + (firstMsg.length > 60 ? "..." : "");
+    await supabase.from("copilot_conversations").update({ title, updated_at: new Date().toISOString() }).eq("id", convoId);
+    setConversations((prev) =>
+      prev.map((c) => (c.id === convoId ? { ...c, title, updated_at: new Date().toISOString() } : c))
+    );
+  };
+
+  const exportConversation = () => {
+    const text = messages
+      .filter((m) => m.id !== "welcome")
+      .map((m) => `[${m.role.toUpperCase()}]\n${m.content}\n`)
+      .join("\n---\n\n");
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `copilot-conversation-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Conversation exported");
+  };
+
   const sendMessage = async (content: string) => {
-    if (!content.trim() || isLoading) return;
+    if (!content.trim() || isLoading || !user) return;
+
+    // Auto-create conversation if none active
+    let convoId = activeConvoId;
+    if (!convoId) {
+      const { data, error } = await supabase
+        .from("copilot_conversations")
+        .insert({ user_id: user.id, title: content.slice(0, 60), specialty: activeSpecialty })
+        .select()
+        .single();
+      if (error || !data) { toast.error("Failed to create conversation"); return; }
+      const convo = data as Conversation;
+      setConversations((prev) => [convo, ...prev]);
+      setActiveConvoId(convo.id);
+      convoId = convo.id;
+    }
 
     const userMsg: Message = {
       id: crypto.randomUUID(),
@@ -65,7 +206,16 @@ const ClinicalCoPilotPage = () => {
     setInput("");
     setIsLoading(true);
 
-    // Build conversation history for API (exclude welcome message)
+    // Persist user message
+    await persistMessage(convoId, "user", content.trim());
+
+    // Update title if first real message
+    const realMsgs = updatedMessages.filter((m) => m.id !== "welcome" && m.role === "user");
+    if (realMsgs.length === 1) {
+      await updateConvoTitle(convoId, content.trim());
+    }
+
+    // Build API messages
     const apiMessages = updatedMessages
       .filter((m) => m.id !== "welcome")
       .map((m) => ({ role: m.role, content: m.content }));
@@ -82,24 +232,13 @@ const ClinicalCoPilotPage = () => {
         body: JSON.stringify({ messages: apiMessages }),
       });
 
-      if (resp.status === 429) {
-        toast.error("Rate limit exceeded. Please wait a moment and try again.");
-        setIsLoading(false);
-        return;
-      }
-      if (resp.status === 402) {
-        toast.error("AI credits exhausted. Please add credits to continue.");
-        setIsLoading(false);
-        return;
-      }
-      if (!resp.ok || !resp.body) {
-        throw new Error("Failed to get response");
-      }
+      if (resp.status === 429) { toast.error("Rate limit exceeded. Please wait a moment."); setIsLoading(false); return; }
+      if (resp.status === 402) { toast.error("AI credits exhausted. Please add credits."); setIsLoading(false); return; }
+      if (!resp.ok || !resp.body) throw new Error("Failed to get response");
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let textBuffer = "";
-
       const assistantId = crypto.randomUUID();
 
       while (true) {
@@ -111,14 +250,11 @@ const ClinicalCoPilotPage = () => {
         while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
           let line = textBuffer.slice(0, newlineIndex);
           textBuffer = textBuffer.slice(newlineIndex + 1);
-
           if (line.endsWith("\r")) line = line.slice(0, -1);
           if (line.startsWith(":") || line.trim() === "") continue;
           if (!line.startsWith("data: ")) continue;
-
           const jsonStr = line.slice(6).trim();
           if (jsonStr === "[DONE]") break;
-
           try {
             const parsed = JSON.parse(jsonStr);
             const delta = parsed.choices?.[0]?.delta?.content;
@@ -127,14 +263,9 @@ const ClinicalCoPilotPage = () => {
               setMessages((prev) => {
                 const last = prev[prev.length - 1];
                 if (last?.role === "assistant" && last.id === assistantId) {
-                  return prev.map((m, i) =>
-                    i === prev.length - 1 ? { ...m, content: assistantContent } : m
-                  );
+                  return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantContent } : m);
                 }
-                return [
-                  ...prev,
-                  { id: assistantId, role: "assistant" as const, content: assistantContent, timestamp: new Date() },
-                ];
+                return [...prev, { id: assistantId, role: "assistant" as const, content: assistantContent, timestamp: new Date() }];
               });
             }
           } catch {
@@ -144,7 +275,7 @@ const ClinicalCoPilotPage = () => {
         }
       }
 
-      // Flush remaining buffer
+      // Flush
       if (textBuffer.trim()) {
         for (let raw of textBuffer.split("\n")) {
           if (!raw || !raw.startsWith("data: ")) continue;
@@ -156,11 +287,7 @@ const ClinicalCoPilotPage = () => {
             if (delta) {
               assistantContent += delta;
               setMessages((prev) =>
-                prev.map((m, i) =>
-                  i === prev.length - 1 && m.role === "assistant"
-                    ? { ...m, content: assistantContent }
-                    : m
-                )
+                prev.map((m, i) => i === prev.length - 1 && m.role === "assistant" ? { ...m, content: assistantContent } : m)
               );
             }
           } catch { /* ignore */ }
@@ -168,11 +295,13 @@ const ClinicalCoPilotPage = () => {
       }
 
       if (!assistantContent.trim()) {
-        setMessages((prev) => [
-          ...prev,
-          { id: crypto.randomUUID(), role: "assistant", content: "I apologize, but I couldn't generate a response. Please try again.", timestamp: new Date() },
-        ]);
+        assistantContent = "I apologize, but I couldn't generate a response. Please try again.";
+        setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "assistant", content: assistantContent, timestamp: new Date() }]);
       }
+
+      // Persist assistant message
+      await persistMessage(convoId, "assistant", assistantContent);
+
     } catch {
       toast.error("Failed to get response. Please try again.");
     } finally {
@@ -185,86 +314,205 @@ const ClinicalCoPilotPage = () => {
     toast.success("Copied to clipboard");
   };
 
+  const filteredConversations = conversations.filter((c) =>
+    c.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="h-[calc(100vh-3.5rem)] flex flex-col gap-4 p-4 sm:p-6">
+    <div className="h-[calc(100vh-3.5rem)] flex flex-col gap-0 p-0">
       {/* Header */}
-      <div className="flex items-center justify-between flex-shrink-0">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center">
-            <Stethoscope className="w-5 h-5 text-primary-foreground" />
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
+          </Button>
+          <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center">
+            <Stethoscope className="w-4 h-4 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground">AI Clinical Co-Pilot</h1>
-            <p className="text-xs text-muted-foreground">Intelligent clinical assistance powered by AI</p>
+            <h1 className="text-lg font-bold text-foreground">AI Clinical Co-Pilot</h1>
+            <p className="text-[10px] text-muted-foreground">AI-powered clinical intelligence</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="gap-1.5 text-xs">
+          <Badge variant="outline" className="gap-1.5 text-xs hidden sm:flex">
             <Activity className="w-3 h-3 text-green-500" />
             Online
           </Badge>
-          <Badge variant="secondary" className="text-xs">HIPAA Compliant</Badge>
+          <Badge variant="secondary" className="text-xs hidden sm:flex">HIPAA Compliant</Badge>
+          {activeConvoId && (
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={exportConversation}>
+              <Download className="w-3 h-3" /> Export
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="flex-1 flex gap-4 min-h-0">
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <Card className="flex-1 flex flex-col min-h-0">
-            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-              <div className="space-y-4">
-                <AnimatePresence>
-                  {messages.map((msg) => (
-                    <motion.div
-                      key={msg.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+      <div className="flex-1 flex min-h-0">
+        {/* Conversation Sidebar */}
+        <AnimatePresence>
+          {sidebarOpen && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 280, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="border-r border-border flex flex-col overflow-hidden flex-shrink-0"
+            >
+              <div className="p-3 space-y-2">
+                <Button className="w-full gap-2 text-xs" size="sm" onClick={createConversation}>
+                  <Plus className="w-3.5 h-3.5" /> New Conversation
+                </Button>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search conversations..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Specialty Filter */}
+              <div className="px-3 pb-2">
+                <div className="flex flex-wrap gap-1">
+                  {specialties.map((s) => (
+                    <Badge
+                      key={s.value}
+                      variant={activeSpecialty === s.value ? "default" : "outline"}
+                      className="text-[9px] cursor-pointer transition-colors"
+                      onClick={() => setActiveSpecialty(s.value)}
                     >
-                      <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                        msg.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-foreground"
-                      }`}>
-                        {msg.role === "assistant" && (
-                          <div className="flex items-center gap-1.5 mb-2">
-                            <Bot className="w-3.5 h-3.5" />
-                            <span className="text-xs font-semibold">Clinical Co-Pilot</span>
-                          </div>
-                        )}
-                        <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
-                        </div>
-                        {msg.role === "assistant" && msg.id !== "welcome" && (
-                          <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/30">
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(msg.content)}>
-                              <Copy className="w-3 h-3" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6">
-                              <ThumbsUp className="w-3 h-3" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6">
-                              <ThumbsDown className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
+                      {s.label}
+                    </Badge>
                   ))}
-                </AnimatePresence>
-                {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-                    <div className="bg-muted rounded-2xl px-4 py-3 flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                      <span className="text-sm text-muted-foreground">Analyzing clinical data...</span>
+                </div>
+              </div>
+
+              <ScrollArea className="flex-1">
+                <div className="p-2 space-y-1">
+                  {filteredConversations.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">No conversations yet</p>
+                  )}
+                  {filteredConversations.map((convo) => (
+                    <div
+                      key={convo.id}
+                      className={`group flex items-center gap-2 p-2.5 rounded-lg cursor-pointer transition-colors ${
+                        activeConvoId === convo.id
+                          ? "bg-primary/10 border border-primary/20"
+                          : "hover:bg-muted/50 border border-transparent"
+                      }`}
+                      onClick={() => setActiveConvoId(convo.id)}
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">{convo.title}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {new Date(convo.updated_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        onClick={(e) => { e.stopPropagation(); deleteConversation(convo.id); }}
+                      >
+                        <Trash2 className="w-3 h-3 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Main Chat */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+            <div className="max-w-3xl mx-auto space-y-4">
+              <AnimatePresence>
+                {messages.map((msg) => (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-foreground"
+                    }`}>
+                      {msg.role === "assistant" && (
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Bot className="w-3.5 h-3.5" />
+                          <span className="text-xs font-semibold">Clinical Co-Pilot</span>
+                          {activeSpecialty !== "general" && (
+                            <Badge variant="outline" className="text-[9px] ml-1">
+                              {specialties.find((s) => s.value === activeSpecialty)?.label}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                      <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+                      {msg.role === "assistant" && msg.id !== "welcome" && (
+                        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/30">
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(msg.content)}>
+                            <Copy className="w-3 h-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                            <ThumbsUp className="w-3 h-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                            <ThumbsDown className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
-                )}
-              </div>
-            </ScrollArea>
+                ))}
+              </AnimatePresence>
+              {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
+                  <div className="bg-muted rounded-2xl px-4 py-3 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span className="text-sm text-muted-foreground">Analyzing clinical data...</span>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </ScrollArea>
 
-            {/* Input */}
-            <div className="p-4 border-t border-border">
+          {/* Quick Prompts - show only when conversation is new */}
+          {messages.length <= 1 && (
+            <div className="px-4 pb-2">
+              <div className="max-w-3xl mx-auto">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                  {quickPrompts.map((qp) => (
+                    <Button
+                      key={qp.label}
+                      variant="outline"
+                      size="sm"
+                      className="justify-start text-xs h-auto py-2.5 px-3"
+                      onClick={() => sendMessage(qp.prompt)}
+                      disabled={isLoading}
+                    >
+                      <qp.icon className="w-3.5 h-3.5 mr-2 flex-shrink-0 text-primary" />
+                      <span className="truncate">{qp.label}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Input */}
+          <div className="p-4 border-t border-border">
+            <div className="max-w-3xl mx-auto">
               <div className="flex gap-2">
                 <Textarea
                   placeholder="Ask about patient records, drug interactions, ICD codes..."
@@ -287,52 +535,7 @@ const ClinicalCoPilotPage = () => {
                 ⚕️ AI suggestions are for informational purposes only. Always verify with qualified medical professionals.
               </p>
             </div>
-          </Card>
-        </div>
-
-        {/* Quick Actions Sidebar */}
-        <div className="w-72 flex-shrink-0 hidden lg:flex flex-col gap-3">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {quickPrompts.map((qp) => (
-                <Button
-                  key={qp.label}
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-xs h-auto py-2.5 px-3"
-                  onClick={() => sendMessage(qp.prompt)}
-                  disabled={isLoading}
-                >
-                  <qp.icon className="w-3.5 h-3.5 mr-2 flex-shrink-0 text-primary" />
-                  {qp.label}
-                </Button>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Heart className="w-4 h-4 text-destructive" />
-                Specialties
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-1.5">
-                {["Cardiology", "Oncology", "Neurology", "Pediatrics", "Radiology", "Pathology"].map((s) => (
-                  <Badge key={s} variant="secondary" className="text-[10px] cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors">
-                    {s}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          </div>
         </div>
       </div>
     </div>
