@@ -87,6 +87,12 @@ const App = () => (
                 <Route path="teams" element={<TeamsPage />} />
                 <Route path="notifications" element={<NotificationPreferencesPage />} />
                 <Route path="security" element={<SecuritySettingsPage />} />
+                <Route path="copilot" element={<ClinicalCoPilotPage />} />
+                <Route path="phi-redaction" element={<PHIRedactionPage />} />
+                <Route path="epidemic" element={<EpidemicDashboardPage />} />
+                <Route path="pipelines" element={<PipelineBuilderPage />} />
+                <Route path="submissions" element={<RegulatorySubmissionPage />} />
+                <Route path="data-rooms" element={<DataRoomsPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

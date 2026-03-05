@@ -184,6 +184,11 @@ export function AppSidebar() {
           <SidebarGroupContent>{renderItems(mainItems)}</SidebarGroupContent>
         </SidebarGroup>
 
+        <SidebarGroup>
+          <SidebarGroupLabel>Intelligence Suite</SidebarGroupLabel>
+          <SidebarGroupContent>{renderItems(intelligenceItems)}</SidebarGroupContent>
+        </SidebarGroup>
+
         {/* Recent Projects */}
         {!collapsed && filteredProjects.length > 0 && (
           <SidebarGroup>

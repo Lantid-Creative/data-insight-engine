@@ -112,7 +112,7 @@ const EpidemicDashboardPage = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "Active Cases", value: "57,400", change: "+3.2%", trend: "up", icon: Virus, color: "text-destructive" },
+          { label: "Active Cases", value: "57,400", change: "+3.2%", trend: "up", icon: Bug, color: "text-destructive" },
           { label: "Under Surveillance", value: "142", change: "+12", trend: "up", icon: Activity, color: "text-primary" },
           { label: "Resolved Outbreaks", value: "28", change: "+4 this month", trend: "up", icon: Thermometer, color: "text-green-500" },
           { label: "Affected Regions", value: "34", change: "-2", trend: "down", icon: MapPin, color: "text-yellow-500" },
