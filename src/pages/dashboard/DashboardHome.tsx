@@ -1,4 +1,4 @@
-import { FolderOpen, MessageSquare, Files, Zap, Clock, CheckCircle2, Circle, ArrowUpRight, BarChart3, HardDrive, MapPin } from "lucide-react";
+import { FolderOpen, MessageSquare, Files, Zap, Clock, CheckCircle2, Circle, ArrowUpRight, BarChart3, HardDrive, MapPin, Stethoscope, ShieldCheck, Globe, Workflow, FileText, FolderLock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
