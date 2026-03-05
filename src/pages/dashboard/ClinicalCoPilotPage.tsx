@@ -224,10 +224,24 @@ const ClinicalCoPilotPage = () => {
       await updateConvoTitle(convoId, content.trim());
     }
 
-    // Build API messages
+    // Build API messages with pinned file context
     const apiMessages = updatedMessages
       .filter((m) => m.id !== "welcome")
       .map((m) => ({ role: m.role, content: m.content }));
+
+    // If there are pinned files, prepend their content as context to the last user message
+    if (pinnedFiles.length > 0) {
+      const fileContext = pinnedFiles
+        .map((f) => `--- Attached File: ${f.name} ---\n${f.content}\n--- End of ${f.name} ---`)
+        .join("\n\n");
+      const lastUserIdx = apiMessages.length - 1;
+      apiMessages[lastUserIdx] = {
+        ...apiMessages[lastUserIdx],
+        content: `[Attached Files Context]\n${fileContext}\n\n[User Query]\n${apiMessages[lastUserIdx].content}`,
+      };
+      // Clear pinned files after sending
+      setPinnedFiles([]);
+    }
 
     let assistantContent = "";
 
