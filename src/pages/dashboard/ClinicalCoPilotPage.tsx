@@ -585,7 +585,39 @@ const ClinicalCoPilotPage = () => {
           {/* Input */}
           <div className="p-4 border-t border-border">
             <div className="max-w-3xl mx-auto">
+              {/* Pinned Files Chips */}
+              {pinnedFiles.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {pinnedFiles.map((f, i) => (
+                    <Badge key={i} variant="secondary" className="gap-1 text-xs py-1 px-2">
+                      <File className="w-3 h-3" />
+                      <span className="max-w-[120px] truncate">{f.name}</span>
+                      <span className="text-muted-foreground">({formatFileSize(f.size)})</span>
+                      <button onClick={() => removePinnedFile(i)} className="ml-0.5 hover:text-destructive">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
               <div className="flex gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".txt,.csv,.json,.pdf,.md,.html,.docx"
+                  className="hidden"
+                  onChange={handleFilePin}
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-[44px] w-[44px] flex-shrink-0"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Attach files for context"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </Button>
                 <Textarea
                   placeholder="Ask about patient records, drug interactions, ICD codes..."
                   value={input}
