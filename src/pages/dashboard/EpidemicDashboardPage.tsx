@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { exportToPdf } from "@/lib/document-export";
 
 const PIE_COLORS = [
   "hsl(24, 95%, 53%)",
