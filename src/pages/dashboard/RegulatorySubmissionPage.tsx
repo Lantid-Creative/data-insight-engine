@@ -131,6 +131,18 @@ const RegulatorySubmissionPage = () => {
     );
   };
 
+  const exportDocumentDocx = (doc: SubmissionDocument) => {
+    const md = buildRegulatoryMarkdown(doc);
+    exportToDocx(md, `${doc.name.replace(/\s+/g, "_")}`);
+    toast.success("DOCX exported successfully");
+  };
+
+  const exportDocumentPdf = (doc: SubmissionDocument) => {
+    const md = buildRegulatoryMarkdown(doc);
+    exportToPdf(md, `${doc.name.replace(/\s+/g, "_")}`);
+    toast.success("PDF exported successfully");
+  };
+
   const sectionStatusIcon = (status: string) => {
     if (status === "complete") return <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />;
     if (status === "draft") return <Clock className="w-3.5 h-3.5 text-yellow-500" />;
