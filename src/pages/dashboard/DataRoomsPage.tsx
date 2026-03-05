@@ -134,6 +134,58 @@ const DataRoomsPage = () => {
     return <Activity className="w-3.5 h-3.5 text-muted-foreground" />;
   };
 
+  const exportRoomZip = async () => {
+    const room = sampleRooms.find(r => r.id === selectedRoom);
+    if (!room) return toast.error("Select a data room first");
+
+    const zip = new JSZip();
+    const roomFolder = zip.folder(room.name.replace(/[^a-zA-Z0-9_\- ]/g, ""))!;
+
+    // Manifest
+    const manifest = [
+      `Data Room Export: ${room.name}`,
+      `Description: ${room.description}`,
+      `Access Level: ${room.accessLevel}`,
+      `Status: ${room.status}`,
+      `Exported: ${new Date().toISOString()}`,
+      "",
+      "=== FILES ===",
+      ...sampleFiles.map(f => `  ${f.name} (${f.size}) — uploaded by ${f.uploadedBy} at ${f.uploadedAt}`),
+      "",
+      "=== MEMBERS ===",
+      ...sampleMembers.map(m => `  ${m.name} <${m.email}> — ${m.org} — ${m.role}`),
+      "",
+      "=== AUDIT TRAIL ===",
+      ...recentActivity.map(a => `  [${a.time}] ${a.user} (${a.org}): ${a.action}`),
+    ].join("\n");
+    roomFolder.file("MANIFEST.txt", manifest);
+
+    // Audit trail CSV
+    const auditCsv = [
+      "Timestamp,User,Organization,Action,Type",
+      ...recentActivity.map(a => `"${a.time}","${a.user}","${a.org}","${a.action}","${a.type}"`),
+    ].join("\n");
+    roomFolder.file("audit_trail.csv", auditCsv);
+
+    // Members CSV
+    const membersCsv = [
+      "Name,Email,Organization,Role,Last Active",
+      ...sampleMembers.map(m => `"${m.name}","${m.email}","${m.org}","${m.role}","${m.lastActive}"`),
+    ].join("\n");
+    roomFolder.file("members.csv", membersCsv);
+
+    // File index CSV
+    const filesCsv = [
+      "File Name,Type,Size,Uploaded By,Uploaded At,Views",
+      ...sampleFiles.map(f => `"${f.name}","${f.type}","${f.size}","${f.uploadedBy}","${f.uploadedAt}",${f.accessed}`),
+    ].join("\n");
+    roomFolder.file("file_index.csv", filesCsv);
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    saveAs(blob, `${room.name.replace(/\s+/g, "_")}_export.zip`);
+    toast.success("Data room exported as ZIP");
+  };
+
   const filteredFiles = sampleFiles.filter((f) => f.name.toLowerCase().includes(fileSearch.toLowerCase()));
 
   return (
