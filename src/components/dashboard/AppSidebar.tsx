@@ -1,7 +1,8 @@
 import {
-  Upload, FolderOpen, FileText, Key, CreditCard, Settings,
+  FolderOpen, FileText, Key, CreditCard, Settings,
   LayoutDashboard, Sparkles, ChevronUp, Plus, MessageSquare, Search,
   MoreHorizontal, Pencil, Trash2, Users, Shield,
+  Stethoscope, Globe, Workflow, FolderLock, ShieldCheck, Bell,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -33,12 +34,12 @@ const mainItems = [
 ];
 
 const intelligenceItems = [
-  { title: "Clinical Co-Pilot", url: "/dashboard/copilot", icon: Sparkles },
-  { title: "PHI Redaction", url: "/dashboard/phi-redaction", icon: Shield },
-  { title: "Epidemic Intel", url: "/dashboard/epidemic", icon: LayoutDashboard },
-  { title: "Pipeline Builder", url: "/dashboard/pipelines", icon: Settings },
+  { title: "Clinical Co-Pilot", url: "/dashboard/copilot", icon: Stethoscope },
+  { title: "PHI Redaction", url: "/dashboard/phi-redaction", icon: ShieldCheck },
+  { title: "Epidemic Intel", url: "/dashboard/epidemic", icon: Globe },
+  { title: "Pipeline Builder", url: "/dashboard/pipelines", icon: Workflow },
   { title: "Reg. Submissions", url: "/dashboard/submissions", icon: FileText },
-  { title: "Data Rooms", url: "/dashboard/data-rooms", icon: FolderOpen },
+  { title: "Data Rooms", url: "/dashboard/data-rooms", icon: FolderLock },
 ];
 
 export function AppSidebar() {
@@ -49,6 +50,11 @@ export function AppSidebar() {
   const queryClient = useQueryClient();
   const { user, signOut } = useAuth();
   const [chatSearch, setChatSearch] = useState("");
+
+  // Create project dialog
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createDesc, setCreateDesc] = useState("");
 
   // Rename/delete dialog state
   const [renameOpen, setRenameOpen] = useState(false);
@@ -65,7 +71,11 @@ export function AppSidebar() {
   const isActive = (path: string) =>
     location.pathname === path || (path !== "/dashboard" && location.pathname.startsWith(path + "/"));
 
-  const initials = user?.email?.slice(0, 2).toUpperCase() || "U";
+  const initials = user?.user_metadata?.full_name
+    ? user.user_metadata.full_name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+    : user?.email?.slice(0, 2).toUpperCase() || "U";
+
+  const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
 
   const { data: recentProjects = [] } = useQuery({
     queryKey: ["sidebar-projects", user?.id],
@@ -79,6 +89,28 @@ export function AppSidebar() {
       return data;
     },
     enabled: !!user?.id,
+  });
+
+  const createProject = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .insert({ user_id: user!.id, name: createName, description: createDesc || null })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["sidebar-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      setCreateOpen(false);
+      setCreateName("");
+      setCreateDesc("");
+      toast.success("Project created!");
+      navigate(`/dashboard/projects/${data.id}`);
+    },
+    onError: () => toast.error("Failed to create project"),
   });
 
   const renameProject = useMutation({
@@ -106,7 +138,6 @@ export function AppSidebar() {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success("Project deleted");
       setDeleteOpen(false);
-      // If we're viewing the deleted project, navigate away
       if (deleteId === projectId) {
         navigate("/dashboard/projects");
       }
@@ -171,7 +202,7 @@ export function AppSidebar() {
               variant="outline"
               size="sm"
               className="w-full h-8 text-xs gap-1.5 border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-              onClick={() => navigate("/dashboard/projects")}
+              onClick={() => setCreateOpen(true)}
             >
               <Plus className="w-3.5 h-3.5" />
               New Project
@@ -271,13 +302,19 @@ export function AppSidebar() {
                   </Avatar>
                   {!collapsed && (
                     <div className="flex-1 min-w-0 flex items-center justify-between">
-                      <span className="text-sm truncate">{user?.email}</span>
-                      <ChevronUp className="w-4 h-4 text-sidebar-foreground/50" />
+                      <div className="min-w-0">
+                        <p className="text-sm truncate font-medium text-sidebar-accent-foreground">{displayName}</p>
+                        <p className="text-[10px] truncate text-sidebar-foreground/50">{user?.email}</p>
+                      </div>
+                      <ChevronUp className="w-4 h-4 text-sidebar-foreground/50 flex-shrink-0" />
                     </div>
                   )}
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-56">
+                <DropdownMenuItem onClick={() => navigate("/dashboard/notifications")}>
+                  <Bell className="mr-2 h-4 w-4" /> Notifications
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/dashboard/api")}>
                   <Key className="mr-2 h-4 w-4" /> API Access
                 </DropdownMenuItem>
@@ -300,6 +337,40 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
+
+    {/* Create Project Dialog */}
+    <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create New Project</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">Project Name</label>
+            <Input
+              placeholder="e.g. Q1 Revenue Analysis"
+              value={createName}
+              onChange={(e) => setCreateName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && createName.trim() && createProject.mutate()}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">Description (optional)</label>
+            <Textarea placeholder="What is this project about?" value={createDesc} onChange={(e) => setCreateDesc(e.target.value)} rows={3} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+          <Button
+            disabled={!createName.trim() || createProject.isPending}
+            onClick={() => createProject.mutate()}
+            className="bg-gradient-primary text-primary-foreground hover:opacity-90"
+          >
+            {createProject.isPending ? "Creating…" : "Create Project"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     {/* Rename Dialog */}
     <Dialog open={renameOpen} onOpenChange={setRenameOpen}>

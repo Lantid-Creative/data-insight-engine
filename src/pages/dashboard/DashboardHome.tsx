@@ -378,11 +378,11 @@ const DashboardHome = () => {
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {[
             { title: "Clinical Co-Pilot", desc: "AI-powered clinical assistance", icon: Stethoscope, url: "/dashboard/copilot", color: "text-primary" },
-            { title: "PHI Redaction", desc: "Auto-detect & redact PHI", icon: ShieldCheck, url: "/dashboard/phi-redaction", color: "text-green-500" },
-            { title: "Epidemic Intel", desc: "Disease surveillance", icon: Globe, url: "/dashboard/epidemic", color: "text-blue-500" },
-            { title: "Pipeline Builder", desc: "No-code data workflows", icon: Workflow, url: "/dashboard/pipelines", color: "text-purple-500" },
-            { title: "Reg. Submissions", desc: "FDA/EMA documents", icon: FileText, url: "/dashboard/submissions", color: "text-yellow-500" },
-            { title: "Data Rooms", desc: "Secure multi-org collaboration", icon: FolderLock, url: "/dashboard/data-rooms", color: "text-red-500" },
+            { title: "PHI Redaction", desc: "Auto-detect & redact PHI", icon: ShieldCheck, url: "/dashboard/phi-redaction", color: "text-accent-foreground" },
+            { title: "Epidemic Intel", desc: "Disease surveillance", icon: Globe, url: "/dashboard/epidemic", color: "text-primary" },
+            { title: "Pipeline Builder", desc: "No-code data workflows", icon: Workflow, url: "/dashboard/pipelines", color: "text-accent-foreground" },
+            { title: "Reg. Submissions", desc: "FDA/EMA documents", icon: FileText, url: "/dashboard/submissions", color: "text-primary" },
+            { title: "Data Rooms", desc: "Secure multi-org collaboration", icon: FolderLock, url: "/dashboard/data-rooms", color: "text-accent-foreground" },
           ].map((feature) => (
             <Card
               key={feature.title}
