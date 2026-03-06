@@ -31,6 +31,7 @@ const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Projects", url: "/dashboard/projects", icon: FolderOpen },
   { title: "Teams", url: "/dashboard/teams", icon: Users },
+  { title: "Community", url: "/dashboard/community", icon: MessageSquare },
 ];
 
 const intelligenceItems = [

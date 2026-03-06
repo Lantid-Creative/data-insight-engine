@@ -43,6 +43,7 @@ import EpidemicDashboardPage from "./pages/dashboard/EpidemicDashboardPage";
 import PipelineBuilderPage from "./pages/dashboard/PipelineBuilderPage";
 import RegulatorySubmissionPage from "./pages/dashboard/RegulatorySubmissionPage";
 import DataRoomsPage from "./pages/dashboard/DataRoomsPage";
+import CommunityForumPage from "./pages/dashboard/CommunityForumPage";
 import UseCaseDetailPage from "./pages/use-cases/UseCaseDetailPage";
 
 const queryClient = new QueryClient();
