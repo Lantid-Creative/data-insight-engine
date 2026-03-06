@@ -650,6 +650,9 @@ export default function CommunityForumPage() {
                       <TrendingUp className="w-3 h-3" /> Trending
                     </button>
                   </div>
+                  <Button variant="outline" size="sm" className="h-8 text-xs gap-1 hidden lg:flex" onClick={() => setShowMembers(!showMembers)}>
+                    <Users className="w-3.5 h-3.5" /> Members
+                  </Button>
                   <Button size="sm" className="h-8 text-xs gap-1 bg-primary text-primary-foreground" onClick={() => setCreatePostOpen(true)}>
                     <Plus className="w-3.5 h-3.5" /> New Post
                   </Button>
