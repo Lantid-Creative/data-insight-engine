@@ -494,7 +494,7 @@ export default function CommunityForumPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col md:flex-row gap-0 overflow-hidden">
+    <div className="h-[calc(100vh-4rem)] flex flex-col md:flex-row gap-0 overflow-hidden relative">
       {/* Channel Sidebar */}
       <div className={`w-full md:w-60 lg:w-64 border-r border-border bg-muted/30 flex flex-col ${activePost ? "hidden md:flex" : "flex"}`}>
         <div className="p-3 border-b border-border">
