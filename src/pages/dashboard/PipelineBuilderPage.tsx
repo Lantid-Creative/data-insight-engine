@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { motion, Reorder } from "framer-motion";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PipelineStep {
   id: string;
@@ -32,9 +34,11 @@ interface PipelineStep {
 interface SavedPipeline {
   id: string;
   name: string;
-  steps: number;
-  lastRun: string;
-  status: "success" | "failed" | "never";
+  steps: any[];
+  last_run_at: string | null;
+  last_run_status: string;
+  last_run_records: number;
+  created_at: string;
 }
 
 const stepTemplates = [
@@ -48,60 +52,120 @@ const stepTemplates = [
   { type: "qc", label: "Quality Check", icon: CheckCircle2, desc: "Validate output against standards", color: "bg-indigo-500/10 text-indigo-500" },
 ];
 
-const stepConfigFields: Record<string, { label: string; options: string[] }[]> = {
-  ingest: [
-    { label: "Source Type", options: ["EHR Upload", "FHIR API", "HL7 Feed", "CSV Import", "DICOM"] },
-    { label: "Encoding", options: ["UTF-8", "ASCII", "ISO-8859-1"] },
-  ],
-  clean: [
-    { label: "Validation Rules", options: ["Standard", "Strict", "Lenient", "Custom"] },
-    { label: "Duplicate Detection", options: ["Exact Match", "Fuzzy Match", "Disabled"] },
-  ],
-  deidentify: [
-    { label: "Method", options: ["Safe Harbor", "Expert Determination", "Limited Dataset"] },
-    { label: "Date Shift", options: ["Random ±90d", "Random ±365d", "Remove dates"] },
-  ],
-  transform: [
-    { label: "Target Schema", options: ["FHIR R4", "HL7 v2.5", "OMOP CDM", "Custom JSON"] },
-    { label: "Mapping Mode", options: ["Auto-map", "Manual mapping", "Template"] },
-  ],
-  analyze: [
-    { label: "AI Model", options: ["Gemini Pro", "Gemini Flash", "GPT-5", "GPT-5 Mini"] },
-    { label: "Analysis Type", options: ["Clinical Summary", "Risk Stratification", "Cohort Analysis", "Trend Detection"] },
-  ],
-  report: [
-    { label: "Format", options: ["PDF", "DOCX", "HTML", "PPTX"] },
-    { label: "Template", options: ["Clinical Summary", "Regulatory", "Research", "Custom"] },
-  ],
-  export: [
-    { label: "Destination", options: ["Download", "Cloud Storage", "SFTP", "API Endpoint"] },
-    { label: "Encryption", options: ["AES-256", "PGP", "None"] },
-  ],
-  qc: [
-    { label: "Standard", options: ["CDISC", "ICH E6", "HIPAA", "Custom Rules"] },
-    { label: "Threshold", options: ["95% pass rate", "99% pass rate", "100% required"] },
-  ],
+const iconMap: Record<string, typeof FileInput> = {
+  ingest: FileInput, clean: Eraser, deidentify: Lock, transform: Filter,
+  analyze: Brain, report: FileOutput, export: Send, qc: CheckCircle2,
 };
 
-const savedPipelines: SavedPipeline[] = [
-  { id: "p1", name: "EHR Intake → De-ID → FHIR Export", steps: 5, lastRun: "2h ago", status: "success" },
-  { id: "p2", name: "Clinical Trial Data Cleaning", steps: 4, lastRun: "1d ago", status: "success" },
-  { id: "p3", name: "Insurance Claims Processing", steps: 6, lastRun: "3d ago", status: "failed" },
-];
+const colorMap: Record<string, string> = {
+  ingest: "bg-blue-500/10 text-blue-500", clean: "bg-purple-500/10 text-purple-500",
+  deidentify: "bg-red-500/10 text-red-500", transform: "bg-yellow-500/10 text-yellow-500",
+  analyze: "bg-primary/10 text-primary", report: "bg-green-500/10 text-green-500",
+  export: "bg-teal-500/10 text-teal-500", qc: "bg-indigo-500/10 text-indigo-500",
+};
+
+const stepConfigFields: Record<string, { label: string; options: string[] }[]> = {
+  ingest: [{ label: "Source Type", options: ["EHR Upload", "FHIR API", "HL7 Feed", "CSV Import", "DICOM"] }, { label: "Encoding", options: ["UTF-8", "ASCII", "ISO-8859-1"] }],
+  clean: [{ label: "Validation Rules", options: ["Standard", "Strict", "Lenient", "Custom"] }, { label: "Duplicate Detection", options: ["Exact Match", "Fuzzy Match", "Disabled"] }],
+  deidentify: [{ label: "Method", options: ["Safe Harbor", "Expert Determination", "Limited Dataset"] }, { label: "Date Shift", options: ["Random ±90d", "Random ±365d", "Remove dates"] }],
+  transform: [{ label: "Target Schema", options: ["FHIR R4", "HL7 v2.5", "OMOP CDM", "Custom JSON"] }, { label: "Mapping Mode", options: ["Auto-map", "Manual mapping", "Template"] }],
+  analyze: [{ label: "AI Model", options: ["Gemini Pro", "Gemini Flash", "GPT-5", "GPT-5 Mini"] }, { label: "Analysis Type", options: ["Clinical Summary", "Risk Stratification", "Cohort Analysis", "Trend Detection"] }],
+  report: [{ label: "Format", options: ["PDF", "DOCX", "HTML", "PPTX"] }, { label: "Template", options: ["Clinical Summary", "Regulatory", "Research", "Custom"] }],
+  export: [{ label: "Destination", options: ["Download", "Cloud Storage", "SFTP", "API Endpoint"] }, { label: "Encryption", options: ["AES-256", "PGP", "None"] }],
+  qc: [{ label: "Standard", options: ["CDISC", "ICH E6", "HIPAA", "Custom Rules"] }, { label: "Threshold", options: ["95% pass rate", "99% pass rate", "100% required"] }],
+};
 
 const PipelineBuilderPage = () => {
+  const { user } = useAuth();
+  const [savedPipelines, setSavedPipelines] = useState<SavedPipeline[]>([]);
+  const [currentPipelineId, setCurrentPipelineId] = useState<string | null>(null);
   const [pipelineName, setPipelineName] = useState("Clinical Data Pipeline");
-  const [steps, setSteps] = useState<PipelineStep[]>([
-    { id: "1", type: "ingest", label: "Ingest EHR Records", icon: FileInput, config: { "Source Type": "EHR Upload", Encoding: "UTF-8" }, status: "idle", color: "bg-blue-500/10 text-blue-500" },
-    { id: "2", type: "clean", label: "Clean & Validate", icon: Eraser, config: { "Validation Rules": "Standard", "Duplicate Detection": "Fuzzy Match" }, status: "idle", color: "bg-purple-500/10 text-purple-500" },
-    { id: "3", type: "deidentify", label: "PHI De-identification", icon: Lock, config: { Method: "Safe Harbor", "Date Shift": "Random ±90d" }, status: "idle", color: "bg-red-500/10 text-red-500" },
-    { id: "4", type: "analyze", label: "Clinical Analysis", icon: Brain, config: { "AI Model": "Gemini Pro", "Analysis Type": "Clinical Summary" }, status: "idle", color: "bg-primary/10 text-primary" },
-    { id: "5", type: "report", label: "Generate Summary", icon: FileOutput, config: { Format: "PDF", Template: "Clinical Summary" }, status: "idle", color: "bg-green-500/10 text-green-500" },
-  ]);
+  const [steps, setSteps] = useState<PipelineStep[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [selectedStep, setSelectedStep] = useState<string | null>(null);
   const [totalRecords, setTotalRecords] = useState(0);
   const [runProgress, setRunProgress] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPipelines = useCallback(async () => {
+    const { data } = await supabase.from("pipelines").select("*").order("updated_at", { ascending: false });
+    setSavedPipelines((data as any[]) || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchPipelines(); }, [fetchPipelines]);
+
+  const stepsToJson = (steps: PipelineStep[]) =>
+    steps.map(s => ({ id: s.id, type: s.type, label: s.label, config: s.config }));
+
+  const jsonToSteps = (json: any[]): PipelineStep[] =>
+    json.map(s => ({
+      ...s,
+      icon: iconMap[s.type] || FileInput,
+      color: colorMap[s.type] || "bg-muted text-muted-foreground",
+      status: "idle" as const,
+    }));
+
+  const savePipeline = async () => {
+    if (!user) return;
+    const payload = {
+      name: pipelineName,
+      steps: stepsToJson(steps),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (currentPipelineId) {
+      const { error } = await supabase.from("pipelines").update(payload as any).eq("id", currentPipelineId);
+      if (error) return toast.error(error.message);
+    } else {
+      const { data, error } = await supabase.from("pipelines").insert({ ...payload, user_id: user.id } as any).select().single();
+      if (error) return toast.error(error.message);
+      setCurrentPipelineId((data as any).id);
+    }
+    toast.success("Pipeline saved");
+    fetchPipelines();
+  };
+
+  const loadPipeline = (p: SavedPipeline) => {
+    setCurrentPipelineId(p.id);
+    setPipelineName(p.name);
+    setSteps(jsonToSteps(p.steps));
+    setTotalRecords(0);
+    setRunProgress(0);
+    toast.success(`Loaded "${p.name}"`);
+  };
+
+  const deletePipeline = async (id: string) => {
+    const { error } = await supabase.from("pipelines").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    if (currentPipelineId === id) {
+      setCurrentPipelineId(null);
+      setSteps([]);
+      setPipelineName("Clinical Data Pipeline");
+    }
+    toast.success("Pipeline deleted");
+    fetchPipelines();
+  };
+
+  const duplicatePipeline = async () => {
+    if (!user) return;
+    const { error } = await supabase.from("pipelines").insert({
+      user_id: user.id,
+      name: `${pipelineName} (copy)`,
+      steps: stepsToJson(steps),
+    } as any);
+    if (error) return toast.error(error.message);
+    toast.success("Pipeline duplicated");
+    fetchPipelines();
+  };
+
+  const newPipeline = () => {
+    setCurrentPipelineId(null);
+    setPipelineName("Untitled Pipeline");
+    setSteps([]);
+    setTotalRecords(0);
+    setRunProgress(0);
+  };
 
   const addStep = (template: typeof stepTemplates[0]) => {
     const defaults: Record<string, string> = {};
@@ -129,6 +193,7 @@ const PipelineBuilderPage = () => {
     setIsRunning(true);
     setTotalRecords(0);
     setRunProgress(0);
+    let total = 0;
 
     for (let i = 0; i < steps.length; i++) {
       setSteps((prev) => prev.map((s, j) => j === i ? { ...s, status: "running" } : s));
@@ -136,25 +201,37 @@ const PipelineBuilderPage = () => {
       const duration = 1200 + Math.random() * 1200;
       await new Promise((r) => setTimeout(r, duration));
       const records = Math.floor(Math.random() * 500) + 100;
-      setTotalRecords((prev) => prev + records);
+      total += records;
+      setTotalRecords(total);
       setSteps((prev) => prev.map((s, j) => j === i ? { ...s, status: "complete", duration: Math.round(duration), recordsProcessed: records } : s));
     }
     setRunProgress(100);
     setIsRunning(false);
+
+    // Save run status
+    if (currentPipelineId) {
+      await supabase.from("pipelines").update({
+        last_run_at: new Date().toISOString(),
+        last_run_status: "success",
+        last_run_records: total,
+        updated_at: new Date().toISOString(),
+      } as any).eq("id", currentPipelineId);
+      fetchPipelines();
+    }
     toast.success("Pipeline completed successfully!");
   };
 
   const resetPipeline = () => {
-    setSteps((prev) => prev.map((s) => ({ ...s, status: "idle", duration: undefined, recordsProcessed: undefined })));
+    setSteps((prev) => prev.map((s) => ({ ...s, status: "idle" as const, duration: undefined, recordsProcessed: undefined })));
     setTotalRecords(0);
     setRunProgress(0);
   };
 
-  const duplicatePipeline = () => {
-    toast.success("Pipeline duplicated");
-  };
-
   const currentStep = steps.find((s) => s.id === selectedStep);
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -170,10 +247,13 @@ const PipelineBuilderPage = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={newPipeline}>
+            <Plus className="w-3 h-3" /> New
+          </Button>
           <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={duplicatePipeline}>
             <Copy className="w-3 h-3" /> Duplicate
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => toast.success("Pipeline saved")}>
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={savePipeline}>
             <Save className="w-3 h-3" /> Save
           </Button>
           <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={resetPipeline} disabled={isRunning}>
@@ -207,12 +287,8 @@ const PipelineBuilderPage = () => {
 
       <Tabs defaultValue="builder">
         <TabsList>
-          <TabsTrigger value="builder" className="gap-1.5 text-xs">
-            <Workflow className="w-3.5 h-3.5" /> Builder
-          </TabsTrigger>
-          <TabsTrigger value="saved" className="gap-1.5 text-xs">
-            <Clock className="w-3.5 h-3.5" /> Saved Pipelines ({savedPipelines.length})
-          </TabsTrigger>
+          <TabsTrigger value="builder" className="gap-1.5 text-xs"><Workflow className="w-3.5 h-3.5" /> Builder</TabsTrigger>
+          <TabsTrigger value="saved" className="gap-1.5 text-xs"><Clock className="w-3.5 h-3.5" /> Saved Pipelines ({savedPipelines.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="builder" className="mt-4">
@@ -357,33 +433,42 @@ const PipelineBuilderPage = () => {
         <TabsContent value="saved" className="mt-4">
           <Card>
             <CardContent className="p-0">
-              <div className="divide-y divide-border">
-                {savedPipelines.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Workflow className="w-4 h-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{p.name}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-muted-foreground">{p.steps} steps</span>
-                          <span className="text-[10px] text-muted-foreground">·</span>
-                          <span className="text-[10px] text-muted-foreground">Last run: {p.lastRun}</span>
+              {savedPipelines.length === 0 ? (
+                <div className="py-16 text-center text-muted-foreground text-sm">No saved pipelines yet. Build and save your first one.</div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {savedPipelines.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Workflow className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{p.name}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-muted-foreground">{p.steps.length} steps</span>
+                            <span className="text-[10px] text-muted-foreground">·</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {p.last_run_at ? `Last run: ${new Date(p.last_run_at).toLocaleDateString()}` : "Never run"}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={p.last_run_status === "success" ? "default" : p.last_run_status === "failed" ? "destructive" : "secondary"} className="text-[10px]">
+                          {p.last_run_status === "success" ? "✓ Success" : p.last_run_status === "failed" ? "✗ Failed" : "Never Run"}
+                        </Badge>
+                        <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => loadPipeline(p)}>
+                          <Play className="w-3 h-3" /> Load
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deletePipeline(p.id)}>
+                          <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={p.status === "success" ? "default" : p.status === "failed" ? "destructive" : "secondary"} className="text-[10px]">
-                        {p.status === "success" ? "✓ Success" : p.status === "failed" ? "✗ Failed" : "Never Run"}
-                      </Badge>
-                      <Button variant="outline" size="sm" className="text-xs gap-1">
-                        <Play className="w-3 h-3" /> Load
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

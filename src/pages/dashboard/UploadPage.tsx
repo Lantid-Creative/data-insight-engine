@@ -4,8 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 function getFileIcon(name: string) {
   const ext = name.split(".").pop()?.toLowerCase() || "";
@@ -30,6 +33,7 @@ interface FileWithProgress {
   file: File;
   progress: number;
   status: "uploading" | "complete" | "error";
+  storagePath?: string;
 }
 
 const UploadPage = () => {
@@ -37,48 +41,83 @@ const UploadPage = () => {
   const [rawText, setRawText] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get("project");
   const inputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
 
-  const simulateUpload = (newFiles: File[]) => {
-    const withProgress = newFiles.map((file) => ({
+  const uploadFiles = useCallback(async (newFiles: File[]) => {
+    if (!user) return toast.error("Please sign in first");
+
+    const withProgress: FileWithProgress[] = newFiles.map((file) => ({
       file,
       progress: 0,
       status: "uploading" as const,
     }));
+    const startIdx = files.length;
     setFiles((prev) => [...prev, ...withProgress]);
 
-    withProgress.forEach((fp, idx) => {
-      const startIdx = files.length + idx;
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += Math.random() * 30 + 10;
-        if (progress >= 100) {
-          progress = 100;
-          clearInterval(interval);
-          setFiles((prev) =>
-            prev.map((f, i) => (i === startIdx ? { ...f, progress: 100, status: "complete" } : f))
-          );
-        } else {
-          setFiles((prev) =>
-            prev.map((f, i) => (i === startIdx ? { ...f, progress: Math.min(progress, 95) } : f))
-          );
-        }
-      }, 200 + Math.random() * 300);
-    });
-  };
+    for (let i = 0; i < newFiles.length; i++) {
+      const file = newFiles[i];
+      const idx = startIdx + i;
+      const storagePath = `${user.id}/${crypto.randomUUID()}_${file.name}`;
+
+      // Simulate progress while uploading
+      const progressInterval = setInterval(() => {
+        setFiles((prev) =>
+          prev.map((f, j) => j === idx && f.status === "uploading" ? { ...f, progress: Math.min(f.progress + 15, 90) } : f)
+        );
+      }, 200);
+
+      const { error: uploadError } = await supabase.storage.from("project-files").upload(storagePath, file);
+      clearInterval(progressInterval);
+
+      if (uploadError) {
+        setFiles((prev) => prev.map((f, j) => j === idx ? { ...f, status: "error", progress: 100 } : f));
+        toast.error(`Failed to upload ${file.name}`);
+        continue;
+      }
+
+      // Record in project_files if we have a project
+      if (projectId) {
+        await supabase.from("project_files").insert({
+          project_id: projectId,
+          user_id: user.id,
+          file_name: file.name,
+          file_path: storagePath,
+          file_size: file.size,
+          mime_type: file.type || null,
+        });
+      }
+
+      setFiles((prev) =>
+        prev.map((f, j) => j === idx ? { ...f, progress: 100, status: "complete", storagePath } : f)
+      );
+    }
+    toast.success(`${newFiles.length} file(s) uploaded successfully`);
+  }, [user, files.length, projectId]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    simulateUpload(Array.from(e.dataTransfer.files));
-  }, [files.length]);
+    uploadFiles(Array.from(e.dataTransfer.files));
+  }, [uploadFiles]);
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) simulateUpload(Array.from(e.target.files));
+    if (e.target.files) uploadFiles(Array.from(e.target.files));
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  const removeFile = (index: number) => setFiles((prev) => prev.filter((_, i) => i !== index));
+  const removeFile = async (index: number) => {
+    const fp = files[index];
+    if (fp.storagePath) {
+      await supabase.storage.from("project-files").remove([fp.storagePath]);
+      if (projectId) {
+        await supabase.from("project_files").delete().eq("file_path", fp.storagePath);
+      }
+    }
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const canProceed = files.length > 0 || rawText.trim().length > 0;
   const allComplete = files.every((f) => f.status === "complete");
@@ -235,7 +274,7 @@ const UploadPage = () => {
 
       <Button
         disabled={!canProceed || uploading}
-        onClick={() => navigate("/dashboard/process")}
+        onClick={() => navigate(`/dashboard/process${projectId ? `?project=${projectId}` : ""}`)}
         className="w-full bg-gradient-primary text-primary-foreground hover:opacity-90 h-12 text-base"
       >
         {uploading ? "Waiting for uploads…" : "Continue to Analysis"}
