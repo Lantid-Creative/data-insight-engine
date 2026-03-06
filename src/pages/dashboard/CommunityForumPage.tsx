@@ -593,12 +593,13 @@ export default function CommunityForumPage() {
                     <button onClick={() => setReplyFile(null)}><X className="w-3 h-3" /></button>
                   </div>
                 )}
-                <div className="flex gap-2">
+                <div className="flex gap-2 relative">
+                  <MentionDropdown target="reply" />
                   <input ref={replyFileRef} type="file" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setReplyFile(e.target.files[0]); }} />
                   <Button variant="ghost" size="icon" className="h-9 w-9 flex-shrink-0" onClick={() => replyFileRef.current?.click()}>
                     <Paperclip className="w-4 h-4" />
                   </Button>
-                  <Input placeholder="Write a reply…" value={replyContent} onChange={(e) => setReplyContent(e.target.value)}
+                  <Input placeholder="Write a reply… (use @ to mention)" value={replyContent} onChange={(e) => handleTextChange(e.target.value, "reply")}
                     onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (replyContent.trim() || replyFile) && createReply.mutate()}
                     className="flex-1 h-9 text-sm" />
                   <Button size="icon" className="h-9 w-9 bg-primary text-primary-foreground"
