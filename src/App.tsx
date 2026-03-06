@@ -94,6 +94,7 @@ const App = () => (
                 <Route path="pipelines" element={<PipelineBuilderPage />} />
                 <Route path="submissions" element={<RegulatorySubmissionPage />} />
                 <Route path="data-rooms" element={<DataRoomsPage />} />
+                <Route path="community" element={<CommunityForumPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
