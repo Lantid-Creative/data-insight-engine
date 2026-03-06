@@ -349,22 +349,26 @@ export default function CommunityForumPage() {
   const getName = (userId: string) => profileMap[userId]?.full_name || "Anonymous";
 
   // File attachment preview
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
   const FilePreview = ({ url }: { url: string }) => {
     if (isImageUrl(url)) {
       return (
-        <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-2">
-          <img src={url} alt="Attachment" className="max-w-xs max-h-48 rounded-lg border border-border object-cover" />
-        </a>
+        <div className="mt-2 cursor-pointer" onClick={() => setPreviewUrl(url)}>
+          <img src={url} alt="Attachment" className="max-w-xs max-h-48 rounded-lg border border-border object-cover hover:opacity-90 transition-opacity" />
+        </div>
       );
     }
     const fileName = decodeURIComponent(url.split("/").pop() || "file");
     return (
-      <a href={url} target="_blank" rel="noopener noreferrer"
+      <button onClick={() => { 
+        const link = document.createElement("a"); link.href = url; link.download = fileName; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+      }}
         className="inline-flex items-center gap-2 mt-2 px-3 py-1.5 rounded-md bg-muted/60 text-xs text-foreground hover:bg-muted transition-colors border border-border/50">
         <FileText className="w-3.5 h-3.5" />
         <span className="truncate max-w-[200px]">{fileName}</span>
         <Download className="w-3 h-3 text-muted-foreground" />
-      </a>
+      </button>
     );
   };
 
@@ -757,6 +761,15 @@ export default function CommunityForumPage() {
               {createPost.isPending ? "Posting…" : "Post"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image preview dialog */}
+      <Dialog open={!!previewUrl} onOpenChange={() => setPreviewUrl(null)}>
+        <DialogContent className="max-w-3xl p-2">
+          {previewUrl && (
+            <img src={previewUrl} alt="Preview" className="w-full h-auto max-h-[80vh] object-contain rounded-lg" />
+          )}
         </DialogContent>
       </Dialog>
     </div>
