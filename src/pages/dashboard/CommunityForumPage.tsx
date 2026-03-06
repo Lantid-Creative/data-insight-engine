@@ -227,6 +227,7 @@ export default function CommunityForumPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forum-posts"] });
+      queryClient.invalidateQueries({ queryKey: ["forum-channel-stats"] });
       setCreatePostOpen(false); setPostTitle(""); setPostContent("");
       setPostFile(null); setPostIsAnnouncement(false);
       toast.success("Post created!");
