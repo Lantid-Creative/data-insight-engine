@@ -16,7 +16,6 @@ const LoginPage = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const { signIn, user, isAdmin, applicationStatus, loading: authLoading } = useAuth();
-  const { toast } = useToast();
 
   useEffect(() => {
     if (authLoading || !user) return;
