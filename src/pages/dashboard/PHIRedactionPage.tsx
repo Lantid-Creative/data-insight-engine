@@ -380,7 +380,7 @@ const PHIRedactionPage = () => {
 
       <div className="flex-1 flex min-h-0">
         {/* History Sidebar */}
-        <div className="w-[260px] border-r border-border flex flex-col overflow-hidden flex-shrink-0">
+        <div className="hidden md:flex w-[260px] border-r border-border flex-col overflow-hidden flex-shrink-0">
           <div className="p-3 space-y-2">
             <Button className="w-full gap-2 text-xs" size="sm" onClick={resetScan}>
               <Scan className="w-3.5 h-3.5" /> New Scan
