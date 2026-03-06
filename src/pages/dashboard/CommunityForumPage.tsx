@@ -419,6 +419,59 @@ export default function CommunityForumPage() {
     );
   };
 
+  // Mention helpers
+  const mentionableProfiles = useMemo(() => {
+    if (!mentionQuery) return profiles.filter(p => p.user_id !== user?.id).slice(0, 5);
+    return profiles.filter(p => p.user_id !== user?.id && p.full_name?.toLowerCase().includes(mentionQuery.toLowerCase())).slice(0, 5);
+  }, [profiles, mentionQuery, user?.id]);
+
+  const insertMention = (name: string, target: "post" | "reply") => {
+    const mention = `@${name} `;
+    if (target === "post") {
+      // Replace the last @query with the mention
+      const lastAt = postContent.lastIndexOf("@");
+      setPostContent(lastAt >= 0 ? postContent.slice(0, lastAt) + mention : postContent + mention);
+    } else {
+      const lastAt = replyContent.lastIndexOf("@");
+      setReplyContent(lastAt >= 0 ? replyContent.slice(0, lastAt) + mention : replyContent + mention);
+    }
+    setShowMentions(false);
+    setMentionQuery("");
+  };
+
+  const handleTextChange = (value: string, target: "post" | "reply") => {
+    if (target === "post") setPostContent(value);
+    else setReplyContent(value);
+    // Detect @mention typing
+    const lastAt = value.lastIndexOf("@");
+    if (lastAt >= 0 && (lastAt === 0 || value[lastAt - 1] === " " || value[lastAt - 1] === "\n")) {
+      const query = value.slice(lastAt + 1);
+      if (query.length <= 30 && !/\s{2}/.test(query)) {
+        setMentionQuery(query);
+        setMentionTarget(target);
+        setShowMentions(true);
+        return;
+      }
+    }
+    setShowMentions(false);
+  };
+
+  const MentionDropdown = ({ target }: { target: "post" | "reply" }) => {
+    if (!showMentions || mentionTarget !== target || mentionableProfiles.length === 0) return null;
+    return (
+      <div className="absolute bottom-full left-0 mb-1 w-64 bg-popover border border-border rounded-lg shadow-lg z-50 py-1 max-h-40 overflow-y-auto">
+        {mentionableProfiles.map(p => (
+          <button key={p.user_id} className="w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted transition-colors text-left"
+            onClick={() => insertMention(p.full_name || "User", target)}>
+            <Avatar className="h-5 w-5"><AvatarFallback className="text-[8px] bg-primary/10 text-primary">{p.full_name?.charAt(0) || "U"}</AvatarFallback></Avatar>
+            <span className="truncate text-foreground">{p.full_name || "Anonymous"}</span>
+            {p.expertise_tags?.[0] && <Badge variant="secondary" className="text-[9px] h-3.5 ml-auto">{p.expertise_tags[0]}</Badge>}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col md:flex-row gap-0 overflow-hidden">
       {/* Channel Sidebar */}
@@ -434,14 +487,25 @@ export default function CommunityForumPage() {
           <div className="p-2 space-y-0.5">
             {channels.map((ch) => {
               const Icon = CHANNEL_ICONS[ch.icon] || Hash;
+              const stats = (channelStats as Record<string, { count: number; latest: string }>)[ch.id];
               return (
                 <button key={ch.id}
                   onClick={() => { setActiveChannel(ch.id); setActivePost(null); }}
-                  className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-sm transition-colors ${
+                  className={`w-full flex items-start gap-2 px-2.5 py-2 rounded-md text-sm transition-colors ${
                     ch.id === activeChannel ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}>
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="truncate">{ch.name}</span>
+                  <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1 text-left">
+                    <span className="truncate block">{ch.name}</span>
+                    {stats && (
+                      <span className="text-[10px] text-muted-foreground block mt-0.5">
+                        {stats.count} {stats.count === 1 ? "post" : "posts"} · {formatDistanceToNow(new Date(stats.latest), { addSuffix: true })}
+                      </span>
+                    )}
+                  </div>
+                  {stats && stats.count > 0 && (
+                    <Badge variant="secondary" className="text-[9px] h-4 min-w-[1.25rem] justify-center mt-0.5">{stats.count}</Badge>
+                  )}
                 </button>
               );
             })}
