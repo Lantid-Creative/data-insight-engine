@@ -705,7 +705,10 @@ export default function CommunityForumPage() {
           </DialogHeader>
           <div className="space-y-3 pt-1">
             <Input placeholder="Post title" value={postTitle} onChange={(e) => setPostTitle(e.target.value)} />
-            <Textarea placeholder="Share your thoughts, insights, or questions…" value={postContent} onChange={(e) => setPostContent(e.target.value)} rows={5} />
+            <div className="relative">
+              <MentionDropdown target="post" />
+              <Textarea placeholder="Share your thoughts… (use @ to mention someone)" value={postContent} onChange={(e) => handleTextChange(e.target.value, "post")} rows={5} />
+            </div>
 
             {/* File attachment */}
             <div>
