@@ -105,6 +105,23 @@ export default function CommunityForumPage() {
     },
   });
 
+  // Fetch channel activity stats (post count + latest post date)
+  const { data: channelStats = {} } = useQuery({
+    queryKey: ["forum-channel-stats"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("forum_posts").select("channel_id, created_at");
+      if (error) throw error;
+      const stats: Record<string, { count: number; latest: string }> = {};
+      (data || []).forEach((p: { channel_id: string; created_at: string }) => {
+        if (!stats[p.channel_id]) stats[p.channel_id] = { count: 0, latest: p.created_at };
+        stats[p.channel_id].count++;
+        if (p.created_at > stats[p.channel_id].latest) stats[p.channel_id].latest = p.created_at;
+      });
+      return stats;
+    },
+  });
+
   useEffect(() => {
     if (channels.length > 0 && !activeChannel) setActiveChannel(channels[0].id);
   }, [channels, activeChannel]);
