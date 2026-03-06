@@ -472,6 +472,19 @@ export default function CommunityForumPage() {
     );
   };
 
+  // Render @mentions as highlighted spans
+  const renderMentions = (text: string) => {
+    const parts = text.split(/(@[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ ]{1,50}?)(?=[\s,.\!?\)]|$)/);
+    return parts.map((part, i) => {
+      if (part.startsWith("@")) {
+        const name = part.slice(1);
+        const found = profiles.some(p => p.full_name?.toLowerCase() === name.toLowerCase());
+        if (found) return <span key={i} className="text-primary font-medium">{part}</span>;
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col md:flex-row gap-0 overflow-hidden">
       {/* Channel Sidebar */}
