@@ -5,7 +5,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/dashboard/NotificationBell";
 import { GlobalSearch } from "@/components/dashboard/GlobalSearch";
 import { ChevronRight, Home } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 const breadcrumbMap: Record<string, string> = {
   "/dashboard": "Dashboard",
