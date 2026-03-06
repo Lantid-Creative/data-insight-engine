@@ -24,8 +24,11 @@ import {
   Hash, Sparkles, HelpCircle, Megaphone, Plus, Send,
   ThumbsUp, Heart, Flame, MessageCircle, Pin, ArrowLeft,
   Search, Clock, TrendingUp, ChevronRight, MoreVertical,
-  Paperclip, Image as ImageIcon, FileText, X, Download,
+  Paperclip, Image as ImageIcon, FileText, X, Download, AtSign,
 } from "lucide-react";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 import { formatDistanceToNow } from "date-fns";
 
 const CHANNEL_ICONS: Record<string, React.ElementType> = {
@@ -89,6 +92,9 @@ export default function CommunityForumPage() {
   const [sortBy, setSortBy] = useState<"recent" | "trending">("recent");
   const postFileRef = useRef<HTMLInputElement>(null);
   const replyFileRef = useRef<HTMLInputElement>(null);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionTarget, setMentionTarget] = useState<"post" | "reply">("post");
 
   // Fetch channels
   const { data: channels = [] } = useQuery({
@@ -99,6 +105,23 @@ export default function CommunityForumPage() {
         .order("is_default", { ascending: false }).order("name");
       if (error) throw error;
       return data as ForumChannel[];
+    },
+  });
+
+  // Fetch channel activity stats (post count + latest post date)
+  const { data: channelStats = {} } = useQuery({
+    queryKey: ["forum-channel-stats"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("forum_posts").select("channel_id, created_at");
+      if (error) throw error;
+      const stats: Record<string, { count: number; latest: string }> = {};
+      (data || []).forEach((p: { channel_id: string; created_at: string }) => {
+        if (!stats[p.channel_id]) stats[p.channel_id] = { count: 0, latest: p.created_at };
+        stats[p.channel_id].count++;
+        if (p.created_at > stats[p.channel_id].latest) stats[p.channel_id].latest = p.created_at;
+      });
+      return stats;
     },
   });
 
@@ -204,6 +227,7 @@ export default function CommunityForumPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forum-posts"] });
+      queryClient.invalidateQueries({ queryKey: ["forum-channel-stats"] });
       setCreatePostOpen(false); setPostTitle(""); setPostContent("");
       setPostFile(null); setPostIsAnnouncement(false);
       toast.success("Post created!");
@@ -396,6 +420,72 @@ export default function CommunityForumPage() {
     );
   };
 
+  // Mention helpers
+  const mentionableProfiles = useMemo(() => {
+    if (!mentionQuery) return profiles.filter(p => p.user_id !== user?.id).slice(0, 5);
+    return profiles.filter(p => p.user_id !== user?.id && p.full_name?.toLowerCase().includes(mentionQuery.toLowerCase())).slice(0, 5);
+  }, [profiles, mentionQuery, user?.id]);
+
+  const insertMention = (name: string, target: "post" | "reply") => {
+    const mention = `@${name} `;
+    if (target === "post") {
+      // Replace the last @query with the mention
+      const lastAt = postContent.lastIndexOf("@");
+      setPostContent(lastAt >= 0 ? postContent.slice(0, lastAt) + mention : postContent + mention);
+    } else {
+      const lastAt = replyContent.lastIndexOf("@");
+      setReplyContent(lastAt >= 0 ? replyContent.slice(0, lastAt) + mention : replyContent + mention);
+    }
+    setShowMentions(false);
+    setMentionQuery("");
+  };
+
+  const handleTextChange = (value: string, target: "post" | "reply") => {
+    if (target === "post") setPostContent(value);
+    else setReplyContent(value);
+    // Detect @mention typing
+    const lastAt = value.lastIndexOf("@");
+    if (lastAt >= 0 && (lastAt === 0 || value[lastAt - 1] === " " || value[lastAt - 1] === "\n")) {
+      const query = value.slice(lastAt + 1);
+      if (query.length <= 30 && !/\s{2}/.test(query)) {
+        setMentionQuery(query);
+        setMentionTarget(target);
+        setShowMentions(true);
+        return;
+      }
+    }
+    setShowMentions(false);
+  };
+
+  const MentionDropdown = ({ target }: { target: "post" | "reply" }) => {
+    if (!showMentions || mentionTarget !== target || mentionableProfiles.length === 0) return null;
+    return (
+      <div className="absolute bottom-full left-0 mb-1 w-64 bg-popover border border-border rounded-lg shadow-lg z-50 py-1 max-h-40 overflow-y-auto">
+        {mentionableProfiles.map(p => (
+          <button key={p.user_id} className="w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted transition-colors text-left"
+            onClick={() => insertMention(p.full_name || "User", target)}>
+            <Avatar className="h-5 w-5"><AvatarFallback className="text-[8px] bg-primary/10 text-primary">{p.full_name?.charAt(0) || "U"}</AvatarFallback></Avatar>
+            <span className="truncate text-foreground">{p.full_name || "Anonymous"}</span>
+            {p.expertise_tags?.[0] && <Badge variant="secondary" className="text-[9px] h-3.5 ml-auto">{p.expertise_tags[0]}</Badge>}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  // Render @mentions as highlighted spans
+  const renderMentions = (text: string) => {
+    const parts = text.split(/(@[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ ]{1,50}?)(?=[\s,.\!?\)]|$)/);
+    return parts.map((part, i) => {
+      if (part.startsWith("@")) {
+        const name = part.slice(1);
+        const found = profiles.some(p => p.full_name?.toLowerCase() === name.toLowerCase());
+        if (found) return <span key={i} className="text-primary font-medium">{part}</span>;
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col md:flex-row gap-0 overflow-hidden">
       {/* Channel Sidebar */}
@@ -411,14 +501,25 @@ export default function CommunityForumPage() {
           <div className="p-2 space-y-0.5">
             {channels.map((ch) => {
               const Icon = CHANNEL_ICONS[ch.icon] || Hash;
+              const stats = (channelStats as Record<string, { count: number; latest: string }>)[ch.id];
               return (
                 <button key={ch.id}
                   onClick={() => { setActiveChannel(ch.id); setActivePost(null); }}
-                  className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-sm transition-colors ${
+                  className={`w-full flex items-start gap-2 px-2.5 py-2 rounded-md text-sm transition-colors ${
                     ch.id === activeChannel ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}>
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="truncate">{ch.name}</span>
+                  <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1 text-left">
+                    <span className="truncate block">{ch.name}</span>
+                    {stats && (
+                      <span className="text-[10px] text-muted-foreground block mt-0.5">
+                        {stats.count} {stats.count === 1 ? "post" : "posts"} · {formatDistanceToNow(new Date(stats.latest), { addSuffix: true })}
+                      </span>
+                    )}
+                  </div>
+                  {stats && stats.count > 0 && (
+                    <Badge variant="secondary" className="text-[9px] h-4 min-w-[1.25rem] justify-center mt-0.5">{stats.count}</Badge>
+                  )}
                 </button>
               );
             })}
@@ -467,7 +568,7 @@ export default function CommunityForumPage() {
                           <Badge key={tag} variant="secondary" className="text-[10px] h-4">{tag}</Badge>
                         ))}
                       </div>
-                      <p className="text-sm text-foreground/90 whitespace-pre-wrap">{activePostData.content}</p>
+                      <p className="text-sm text-foreground/90 whitespace-pre-wrap">{renderMentions(activePostData.content)}</p>
                       {activePostData.file_url && <FilePreview url={activePostData.file_url} />}
                       <div className="mt-2"><ReactionBar postId={activePostData.id} /></div>
                     </div>
@@ -487,7 +588,7 @@ export default function CommunityForumPage() {
                             <span className="text-xs font-semibold text-foreground">{getName(reply.user_id)}</span>
                             <span className="text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}</span>
                           </div>
-                          <p className="text-sm text-foreground/90 whitespace-pre-wrap">{reply.content}</p>
+                          <p className="text-sm text-foreground/90 whitespace-pre-wrap">{renderMentions(reply.content)}</p>
                           {reply.file_url && <FilePreview url={reply.file_url} />}
                           <div className="mt-1"><ReactionBar replyId={reply.id} /></div>
                         </div>
@@ -506,12 +607,13 @@ export default function CommunityForumPage() {
                     <button onClick={() => setReplyFile(null)}><X className="w-3 h-3" /></button>
                   </div>
                 )}
-                <div className="flex gap-2">
+                <div className="flex gap-2 relative">
+                  <MentionDropdown target="reply" />
                   <input ref={replyFileRef} type="file" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setReplyFile(e.target.files[0]); }} />
                   <Button variant="ghost" size="icon" className="h-9 w-9 flex-shrink-0" onClick={() => replyFileRef.current?.click()}>
                     <Paperclip className="w-4 h-4" />
                   </Button>
-                  <Input placeholder="Write a reply…" value={replyContent} onChange={(e) => setReplyContent(e.target.value)}
+                  <Input placeholder="Write a reply… (use @ to mention)" value={replyContent} onChange={(e) => handleTextChange(e.target.value, "reply")}
                     onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (replyContent.trim() || replyFile) && createReply.mutate()}
                     className="flex-1 h-9 text-sm" />
                   <Button size="icon" className="h-9 w-9 bg-primary text-primary-foreground"
@@ -617,7 +719,10 @@ export default function CommunityForumPage() {
           </DialogHeader>
           <div className="space-y-3 pt-1">
             <Input placeholder="Post title" value={postTitle} onChange={(e) => setPostTitle(e.target.value)} />
-            <Textarea placeholder="Share your thoughts, insights, or questions…" value={postContent} onChange={(e) => setPostContent(e.target.value)} rows={5} />
+            <div className="relative">
+              <MentionDropdown target="post" />
+              <Textarea placeholder="Share your thoughts… (use @ to mention someone)" value={postContent} onChange={(e) => handleTextChange(e.target.value, "post")} rows={5} />
+            </div>
 
             {/* File attachment */}
             <div>
