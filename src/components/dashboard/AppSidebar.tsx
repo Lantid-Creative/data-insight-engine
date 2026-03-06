@@ -244,6 +244,7 @@ export function AppSidebar() {
                             to={`/dashboard/projects/${p.id}`}
                             className="hover:bg-sidebar-accent/50 transition-colors"
                             activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                            onClick={handleNavClick}
                           >
                             <MessageSquare className="mr-2 h-3.5 w-3.5 flex-shrink-0" />
                             <span className="truncate text-xs">{p.name}</span>
