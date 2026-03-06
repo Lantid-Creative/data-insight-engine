@@ -24,8 +24,11 @@ import {
   Hash, Sparkles, HelpCircle, Megaphone, Plus, Send,
   ThumbsUp, Heart, Flame, MessageCircle, Pin, ArrowLeft,
   Search, Clock, TrendingUp, ChevronRight, MoreVertical,
-  Paperclip, Image as ImageIcon, FileText, X, Download,
+  Paperclip, Image as ImageIcon, FileText, X, Download, AtSign,
 } from "lucide-react";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 import { formatDistanceToNow } from "date-fns";
 
 const CHANNEL_ICONS: Record<string, React.ElementType> = {
