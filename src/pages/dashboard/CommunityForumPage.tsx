@@ -763,6 +763,15 @@ export default function CommunityForumPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Image preview dialog */}
+      <Dialog open={!!previewUrl} onOpenChange={() => setPreviewUrl(null)}>
+        <DialogContent className="max-w-3xl p-2">
+          {previewUrl && (
+            <img src={previewUrl} alt="Preview" className="w-full h-auto max-h-[80vh] object-contain rounded-lg" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
