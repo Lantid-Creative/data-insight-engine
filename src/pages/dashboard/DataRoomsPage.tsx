@@ -255,7 +255,7 @@ const DataRoomsPage = () => {
                     {statusBadge(room.status)}
                   </div>
                 </div>
-                <div className="grid grid-cols-4 gap-4 mb-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-3">
                   {[
                     { label: "Organizations", value: room.organizations },
                     { label: "Members", value: room.members },

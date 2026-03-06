@@ -180,7 +180,7 @@ const SecuritySettingsPage = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="sessions">Sessions</TabsTrigger>
           <TabsTrigger value="ip">IP Allowlist</TabsTrigger>
