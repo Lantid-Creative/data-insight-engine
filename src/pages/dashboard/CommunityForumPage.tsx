@@ -25,6 +25,7 @@ import {
   ThumbsUp, Heart, Flame, MessageCircle, Pin, ArrowLeft,
   Search, Clock, TrendingUp, ChevronRight, MoreVertical,
   Paperclip, Image as ImageIcon, FileText, X, Download, AtSign,
+  Users, ChevronLeft,
 } from "lucide-react";
 import {
   Popover, PopoverContent, PopoverTrigger,
