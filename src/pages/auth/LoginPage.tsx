@@ -36,12 +36,21 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     setLoading(true);
     const { error } = await signIn(email, password);
     setLoading(false);
 
     if (error) {
-      toast({ title: "Sign in failed", description: error, variant: "destructive" });
+      // Map Supabase error messages to user-friendly ones
+      const friendly = error.toLowerCase().includes("invalid login")
+        ? "Incorrect email or password. Please try again."
+        : error.toLowerCase().includes("email not confirmed")
+        ? "Your email hasn't been verified yet. Check your inbox."
+        : error.toLowerCase().includes("too many requests")
+        ? "Too many attempts. Please wait a moment and try again."
+        : error;
+      setErrorMessage(friendly);
     }
   };
 
