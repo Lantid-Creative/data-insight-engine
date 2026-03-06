@@ -165,12 +165,33 @@ const LoginPage = () => {
               </div>
             </div>
 
+            <AnimatePresence>
+              {errorMessage && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  className="flex items-start gap-2.5 p-3 rounded-xl bg-destructive/10 border border-destructive/20"
+                >
+                  <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-destructive font-medium">{errorMessage}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <Button
               type="submit"
               disabled={loading}
               className="w-full h-12 bg-gradient-primary text-primary-foreground hover:opacity-90 font-bold rounded-xl shadow-glow text-base transition-all"
             >
-              {loading ? "Signing in..." : <>Sign In <ArrowRight className="ml-2 w-4 h-4" /></>}
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Signing in…
+                </span>
+              ) : (
+                <>Sign In <ArrowRight className="ml-2 w-4 h-4" /></>
+              )}
             </Button>
           </form>
 
