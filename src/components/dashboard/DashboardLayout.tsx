@@ -84,18 +84,15 @@ const DashboardLayout = () => {
               <ThemeToggle />
             </div>
           </header>
-          <AnimatePresence mode="wait">
-            <motion.main
-              key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className={`flex-1 overflow-auto ${isProjectDetail ? "" : "p-4 sm:p-6"}`}
-            >
-              <Outlet />
-            </motion.main>
-          </AnimatePresence>
+          <motion.main
+            key={location.pathname}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className={`flex-1 overflow-auto ${isProjectDetail ? "" : "p-4 sm:p-6"}`}
+          >
+            <Outlet />
+          </motion.main>
         </div>
       </div>
     </SidebarProvider>
