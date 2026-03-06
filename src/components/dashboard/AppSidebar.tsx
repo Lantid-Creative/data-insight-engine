@@ -43,7 +43,7 @@ const intelligenceItems = [
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile, isMobile } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
@@ -150,6 +150,10 @@ export function AppSidebar() {
     p.name.toLowerCase().includes(chatSearch.toLowerCase())
   );
 
+  const handleNavClick = () => {
+    if (isMobile) setOpenMobile(false);
+  };
+
   const renderItems = (items: typeof mainItems) => (
     <SidebarMenu>
       {items.map((item) => (
@@ -160,6 +164,7 @@ export function AppSidebar() {
               end={item.url === "/dashboard"}
               className="hover:bg-sidebar-accent/50 transition-colors"
               activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+              onClick={handleNavClick}
             >
               <item.icon className="mr-2 h-4 w-4 flex-shrink-0" />
               {!collapsed && <span>{item.title}</span>}
@@ -239,6 +244,7 @@ export function AppSidebar() {
                             to={`/dashboard/projects/${p.id}`}
                             className="hover:bg-sidebar-accent/50 transition-colors"
                             activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                            onClick={handleNavClick}
                           >
                             <MessageSquare className="mr-2 h-3.5 w-3.5 flex-shrink-0" />
                             <span className="truncate text-xs">{p.name}</span>
