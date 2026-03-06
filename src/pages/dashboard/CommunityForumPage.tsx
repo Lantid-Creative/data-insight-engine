@@ -96,6 +96,8 @@ export default function CommunityForumPage() {
   const [mentionQuery, setMentionQuery] = useState("");
   const [showMentions, setShowMentions] = useState(false);
   const [mentionTarget, setMentionTarget] = useState<"post" | "reply">("post");
+  const [showMembers, setShowMembers] = useState(false);
+  const [memberSearch, setMemberSearch] = useState("");
 
   // Fetch channels
   const { data: channels = [] } = useQuery({
