@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,25 +9,32 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   FileText, Download, CheckCircle2, Clock, AlertTriangle,
   Globe, Loader2, Sparkles, FileCheck, BookOpen,
-  ScrollText, Stethoscope, TestTubes, Shield, ChevronRight,
-  Eye, Printer, Copy, BarChart3, ListChecks,
+  ScrollText, Stethoscope, TestTubes, Shield,
+  Eye, Printer, Copy, BarChart3, ListChecks, Trash2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { exportToDocx, exportToPdf } from "@/lib/document-export";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
-interface SubmissionDocument {
+interface RegDocument {
   id: string;
   name: string;
-  type: string;
-  status: "ready" | "generating" | "review" | "approved";
+  document_type: string;
+  template_id: string;
+  status: string;
   pages: number;
-  lastUpdated: string;
-  sections?: { name: string; status: "complete" | "draft" | "missing" }[];
+  sections: { name: string; status: string }[];
+  study_name: string;
+  study_description: string;
+  target_agency: string;
+  compliance_checks: { label: string; passed: boolean }[];
+  created_at: string;
+  updated_at: string;
 }
 
 const templates = [
@@ -47,26 +54,7 @@ const csrSections = [
   "Tables & Figures", "Reference List", "Appendices",
 ];
 
-const sampleDocuments: SubmissionDocument[] = [
-  {
-    id: "1", name: "CSR — Phase III CARDIO-TRIAL", type: "Clinical Study Report", status: "approved", pages: 245, lastUpdated: "2024-01-15",
-    sections: csrSections.map((s, i) => ({ name: s, status: i < 14 ? "complete" as const : "draft" as const })),
-  },
-  {
-    id: "2", name: "Safety Narrative — AE-2024-0042", type: "Safety Narrative", status: "review", pages: 18, lastUpdated: "2024-01-12",
-    sections: ["Patient Info", "Adverse Event", "Medical History", "Concomitant Meds", "Narrative", "Assessment", "Follow-up", "Conclusion"].map((s, i) => ({
-      name: s, status: i < 6 ? "complete" as const : "draft" as const,
-    })),
-  },
-  {
-    id: "3", name: "Protocol Amendment v3.2", type: "Study Protocol", status: "ready", pages: 86, lastUpdated: "2024-01-10",
-    sections: ["Title Page", "Synopsis", "Background", "Objectives", "Study Design", "Population", "Treatments", "Assessments", "Statistics", "Ethics", "References", "Amendments"].map((s, i) => ({
-      name: s, status: i < 10 ? "complete" as const : "missing" as const,
-    })),
-  },
-];
-
-const complianceChecks = [
+const defaultComplianceChecks = [
   { label: "ICH E3 Structure Compliance", passed: true },
   { label: "Section Completeness", passed: true },
   { label: "Cross-reference Integrity", passed: true },
@@ -77,6 +65,9 @@ const complianceChecks = [
 ];
 
 const RegulatorySubmissionPage = () => {
+  const { user } = useAuth();
+  const [documents, setDocuments] = useState<RegDocument[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [genProgress, setGenProgress] = useState(0);
@@ -84,45 +75,87 @@ const RegulatorySubmissionPage = () => {
   const [studyName, setStudyName] = useState("");
   const [studyDescription, setStudyDescription] = useState("");
   const [targetAgency, setTargetAgency] = useState("fda");
-  const [viewDoc, setViewDoc] = useState<SubmissionDocument | null>(null);
+  const [viewDoc, setViewDoc] = useState<RegDocument | null>(null);
 
-  const handleGenerate = () => {
-    if (!selectedTemplate) return toast.error("Select a template first");
+  const fetchDocuments = useCallback(async () => {
+    const { data } = await supabase.from("regulatory_documents").select("*").order("created_at", { ascending: false });
+    setDocuments(((data as any[]) || []).map(d => ({
+      ...d,
+      sections: d.sections || [],
+      compliance_checks: d.compliance_checks || [],
+    })));
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchDocuments(); }, [fetchDocuments]);
+
+  const handleGenerate = async () => {
+    if (!selectedTemplate || !user) return toast.error("Select a template first");
     if (!studyName.trim()) return toast.error("Enter a study name");
     setGenerating(true);
     setGenProgress(0);
 
     const template = templates.find((t) => t.id === selectedTemplate);
     const sectionNames = selectedTemplate === "csr" ? csrSections : Array.from({ length: template?.sections || 8 }, (_, i) => `Section ${i + 1}`);
+    const sections = sectionNames.map(s => ({ name: s, status: "complete" }));
     let idx = 0;
 
-    const interval = setInterval(() => {
-      setGenProgress((prev) => {
-        const next = prev + (100 / sectionNames.length);
-        if (idx < sectionNames.length) {
-          setGenSection(sectionNames[idx]);
-          idx++;
-        }
-        if (next >= 100) {
-          clearInterval(interval);
-          setGenerating(false);
-          setGenSection("");
-          toast.success("Document generated successfully!");
-          return 100;
-        }
-        return next;
-      });
-    }, 600);
+    await new Promise<void>((resolve) => {
+      const interval = setInterval(() => {
+        setGenProgress((prev) => {
+          const next = prev + (100 / sectionNames.length);
+          if (idx < sectionNames.length) {
+            setGenSection(sectionNames[idx]);
+            idx++;
+          }
+          if (next >= 100) {
+            clearInterval(interval);
+            resolve();
+            return 100;
+          }
+          return next;
+        });
+      }, 600);
+    });
+
+    // Save to DB
+    const { error } = await supabase.from("regulatory_documents").insert({
+      user_id: user.id,
+      name: `${studyName} — ${template?.name || "Document"}`,
+      document_type: template?.name || "Document",
+      template_id: selectedTemplate,
+      status: "ready",
+      pages: Math.floor(Math.random() * 200) + 50,
+      sections,
+      study_name: studyName,
+      study_description: studyDescription,
+      target_agency: targetAgency,
+      compliance_checks: defaultComplianceChecks,
+    } as any);
+
+    setGenerating(false);
+    setGenSection("");
+    if (error) return toast.error(error.message);
+    toast.success("Document generated and saved!");
+    setGenProgress(100);
+    fetchDocuments();
   };
 
-  const statusBadge = (status: SubmissionDocument["status"]) => {
-    const map = {
-      ready: { label: "Ready", variant: "secondary" as const, icon: CheckCircle2 },
-      generating: { label: "Generating", variant: "secondary" as const, icon: Loader2 },
-      review: { label: "In Review", variant: "outline" as const, icon: Clock },
-      approved: { label: "Approved", variant: "default" as const, icon: CheckCircle2 },
+  const deleteDocument = async (id: string) => {
+    const { error } = await supabase.from("regulatory_documents").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Document deleted");
+    fetchDocuments();
+  };
+
+  const statusBadge = (status: string) => {
+    const map: Record<string, { label: string; variant: "default" | "secondary" | "outline"; icon: typeof CheckCircle2 }> = {
+      ready: { label: "Ready", variant: "secondary", icon: CheckCircle2 },
+      generating: { label: "Generating", variant: "secondary", icon: Loader2 },
+      review: { label: "In Review", variant: "outline", icon: Clock },
+      approved: { label: "Approved", variant: "default", icon: CheckCircle2 },
     };
-    const m = map[status];
+    const m = map[status] || map.ready;
     return (
       <Badge variant={m.variant} className="text-[10px] gap-1">
         <m.icon className={`w-3 h-3 ${status === "generating" ? "animate-spin" : ""}`} />
@@ -131,15 +164,13 @@ const RegulatorySubmissionPage = () => {
     );
   };
 
-  const exportDocumentDocx = (doc: SubmissionDocument) => {
-    const md = buildRegulatoryMarkdown(doc);
-    exportToDocx(md, `${doc.name.replace(/\s+/g, "_")}`);
+  const exportDocumentDocx = (doc: RegDocument) => {
+    exportToDocx(buildRegulatoryMarkdown(doc), `${doc.name.replace(/\s+/g, "_")}`);
     toast.success("DOCX exported successfully");
   };
 
-  const exportDocumentPdf = (doc: SubmissionDocument) => {
-    const md = buildRegulatoryMarkdown(doc);
-    exportToPdf(md, `${doc.name.replace(/\s+/g, "_")}`);
+  const exportDocumentPdf = (doc: RegDocument) => {
+    exportToPdf(buildRegulatoryMarkdown(doc), `${doc.name.replace(/\s+/g, "_")}`);
     toast.success("PDF exported successfully");
   };
 
@@ -148,6 +179,15 @@ const RegulatorySubmissionPage = () => {
     if (status === "draft") return <Clock className="w-3.5 h-3.5 text-yellow-500" />;
     return <AlertTriangle className="w-3.5 h-3.5 text-destructive" />;
   };
+
+  // Compute compliance from all documents
+  const allChecks = documents.flatMap(d => d.compliance_checks || []);
+  const passedChecks = allChecks.filter(c => c.passed).length;
+  const totalChecks = allChecks.length || 1;
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -169,15 +209,9 @@ const RegulatorySubmissionPage = () => {
 
       <Tabs defaultValue="generate" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="generate" className="gap-1.5">
-            <Sparkles className="w-3.5 h-3.5" /> Generate New
-          </TabsTrigger>
-          <TabsTrigger value="documents" className="gap-1.5">
-            <FileText className="w-3.5 h-3.5" /> My Documents ({sampleDocuments.length})
-          </TabsTrigger>
-          <TabsTrigger value="compliance" className="gap-1.5">
-            <ListChecks className="w-3.5 h-3.5" /> Compliance
-          </TabsTrigger>
+          <TabsTrigger value="generate" className="gap-1.5"><Sparkles className="w-3.5 h-3.5" /> Generate New</TabsTrigger>
+          <TabsTrigger value="documents" className="gap-1.5"><FileText className="w-3.5 h-3.5" /> My Documents ({documents.length})</TabsTrigger>
+          <TabsTrigger value="compliance" className="gap-1.5"><ListChecks className="w-3.5 h-3.5" /> Compliance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="generate" className="space-y-4">
@@ -251,41 +285,9 @@ const RegulatorySubmissionPage = () => {
                       <Progress value={genProgress} className="h-2" />
                     </div>
                   ) : (
-                    <div className="flex gap-2">
-                      <Button onClick={handleGenerate} className="gap-2">
-                        <Sparkles className="w-4 h-4" /> Generate Document
-                      </Button>
-                  {genProgress === 100 && (
-                        <>
-                          <Button variant="outline" className="gap-2" onClick={() => {
-                            const tpl = templates.find(t => t.id === selectedTemplate);
-                            const mockDoc: SubmissionDocument = {
-                              id: "gen", name: `${studyName} — ${tpl?.name || "Document"}`, type: tpl?.name || "Document",
-                              status: "ready", pages: 0, lastUpdated: new Date().toISOString().slice(0, 10),
-                              sections: (selectedTemplate === "csr" ? csrSections : Array.from({ length: tpl?.sections || 8 }, (_, i) => `Section ${i + 1}`))
-                                .map(s => ({ name: s, status: "complete" as const })),
-                            };
-                            exportToDocx(buildRegulatoryMarkdown(mockDoc), studyName.replace(/\s+/g, "_"));
-                            toast.success("DOCX exported");
-                          }}>
-                            <Download className="w-4 h-4" /> Download DOCX
-                          </Button>
-                          <Button variant="outline" className="gap-2" onClick={() => {
-                            const tpl = templates.find(t => t.id === selectedTemplate);
-                            const mockDoc: SubmissionDocument = {
-                              id: "gen", name: `${studyName} — ${tpl?.name || "Document"}`, type: tpl?.name || "Document",
-                              status: "ready", pages: 0, lastUpdated: new Date().toISOString().slice(0, 10),
-                              sections: (selectedTemplate === "csr" ? csrSections : Array.from({ length: tpl?.sections || 8 }, (_, i) => `Section ${i + 1}`))
-                                .map(s => ({ name: s, status: "complete" as const })),
-                            };
-                            exportToPdf(buildRegulatoryMarkdown(mockDoc), studyName.replace(/\s+/g, "_"));
-                            toast.success("PDF exported");
-                          }}>
-                            <Printer className="w-4 h-4" /> Download PDF
-                          </Button>
-                        </>
-                      )}
-                    </div>
+                    <Button onClick={handleGenerate} className="gap-2">
+                      <Sparkles className="w-4 h-4" /> Generate Document
+                    </Button>
                   )}
                 </CardContent>
               </Card>
@@ -296,39 +298,46 @@ const RegulatorySubmissionPage = () => {
         <TabsContent value="documents">
           <Card>
             <CardContent className="p-0">
-              <div className="divide-y divide-border">
-                {sampleDocuments.map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <FileText className="w-4 h-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{doc.name}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-muted-foreground">{doc.type}</span>
-                          <span className="text-[10px] text-muted-foreground">·</span>
-                          <span className="text-[10px] text-muted-foreground">{doc.pages} pages</span>
-                          <span className="text-[10px] text-muted-foreground">·</span>
-                          <span className="text-[10px] text-muted-foreground">{doc.lastUpdated}</span>
+              {documents.length === 0 ? (
+                <div className="py-16 text-center text-muted-foreground text-sm">No documents yet. Generate your first one.</div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {documents.map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <FileText className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{doc.name}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-muted-foreground">{doc.document_type}</span>
+                            <span className="text-[10px] text-muted-foreground">·</span>
+                            <span className="text-[10px] text-muted-foreground">{doc.pages} pages</span>
+                            <span className="text-[10px] text-muted-foreground">·</span>
+                            <span className="text-[10px] text-muted-foreground">{new Date(doc.created_at).toLocaleDateString()}</span>
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        {statusBadge(doc.status)}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewDoc(doc)}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => exportDocumentDocx(doc)} title="Export DOCX">
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => exportDocumentPdf(doc)} title="Export PDF">
+                          <Printer className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteDocument(doc.id)}>
+                          <Trash2 className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {statusBadge(doc.status)}
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewDoc(doc)}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => exportDocumentDocx(doc)} title="Export DOCX">
-                        <Download className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => exportDocumentPdf(doc)} title="Export PDF">
-                        <Printer className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -343,7 +352,7 @@ const RegulatorySubmissionPage = () => {
                 <CardDescription className="text-xs">Automated regulatory compliance verification</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {complianceChecks.map((check) => (
+                {defaultComplianceChecks.map((check) => (
                   <div key={check.label} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                     <div className="flex items-center gap-3">
                       {check.passed ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <AlertTriangle className="w-4 h-4 text-yellow-500" />}
@@ -366,19 +375,19 @@ const RegulatorySubmissionPage = () => {
               <CardContent className="space-y-6">
                 <div className="text-center">
                   <p className="text-5xl font-bold text-foreground">
-                    {Math.round((complianceChecks.filter((c) => c.passed).length / complianceChecks.length) * 100)}%
+                    {Math.round((passedChecks / totalChecks) * 100)}%
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">Overall Compliance</p>
                 </div>
-                <Progress value={(complianceChecks.filter((c) => c.passed).length / complianceChecks.length) * 100} className="h-3" />
+                <Progress value={(passedChecks / totalChecks) * 100} className="h-3" />
                 <div className="grid grid-cols-2 gap-4 text-center">
                   <div>
-                    <p className="text-lg font-bold text-green-500">{complianceChecks.filter((c) => c.passed).length}</p>
-                    <p className="text-[10px] text-muted-foreground">Checks Passed</p>
+                    <p className="text-lg font-bold text-green-500">{documents.length}</p>
+                    <p className="text-[10px] text-muted-foreground">Documents Generated</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-yellow-500">{complianceChecks.filter((c) => !c.passed).length}</p>
-                    <p className="text-[10px] text-muted-foreground">Action Required</p>
+                    <p className="text-lg font-bold text-yellow-500">{defaultComplianceChecks.filter(c => !c.passed).length}</p>
+                    <p className="text-[10px] text-muted-foreground">Actions Required</p>
                   </div>
                 </div>
               </CardContent>
@@ -399,11 +408,11 @@ const RegulatorySubmissionPage = () => {
             {viewDoc && statusBadge(viewDoc.status)}
             <span className="text-xs text-muted-foreground">{viewDoc?.pages} pages</span>
             <div className="ml-auto flex gap-1">
-              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => toast.success("Copied to clipboard")}>
-                <Copy className="w-3 h-3" /> Copy
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => { if (viewDoc) exportDocumentDocx(viewDoc); }}>
+                <Download className="w-3 h-3" /> DOCX
               </Button>
-              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => toast.success("Sent to printer")}>
-                <Printer className="w-3 h-3" /> Print
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => { if (viewDoc) exportDocumentPdf(viewDoc); }}>
+                <Printer className="w-3 h-3" /> PDF
               </Button>
             </div>
           </div>
@@ -433,20 +442,21 @@ const RegulatorySubmissionPage = () => {
   );
 };
 
-function buildRegulatoryMarkdown(doc: SubmissionDocument): string {
+function buildRegulatoryMarkdown(doc: RegDocument): string {
   const lines: string[] = [];
   lines.push(`# ${doc.name}`);
   lines.push("");
-  lines.push(`> ${doc.type} — Generated ${doc.lastUpdated} — Status: ${doc.status.toUpperCase()}`);
+  lines.push(`> ${doc.document_type} — Generated ${new Date(doc.created_at).toLocaleDateString()} — Status: ${doc.status.toUpperCase()}`);
   lines.push("");
   lines.push("---");
   lines.push("");
   lines.push("## Document Overview");
   lines.push("");
-  lines.push(`- **Document Type:** ${doc.type}`);
+  lines.push(`- **Document Type:** ${doc.document_type}`);
   lines.push(`- **Total Pages:** ${doc.pages}`);
   lines.push(`- **Status:** ${doc.status}`);
-  lines.push(`- **Last Updated:** ${doc.lastUpdated}`);
+  lines.push(`- **Study:** ${doc.study_name}`);
+  lines.push(`- **Agency:** ${doc.target_agency.toUpperCase()}`);
   lines.push("");
 
   if (doc.sections?.length) {
@@ -458,15 +468,6 @@ function buildRegulatoryMarkdown(doc: SubmissionDocument): string {
       const icon = s.status === "complete" ? "✅" : s.status === "draft" ? "📝" : "⚠️";
       lines.push(`| ${i + 1} | ${s.name} | ${icon} ${s.status.charAt(0).toUpperCase() + s.status.slice(1)} |`);
     });
-    lines.push("");
-
-    const complete = doc.sections.filter(s => s.status === "complete").length;
-    const total = doc.sections.length;
-    lines.push("## Completion Summary");
-    lines.push("");
-    lines.push(`- **Complete:** ${complete} / ${total} sections (${Math.round((complete / total) * 100)}%)`);
-    lines.push(`- **Draft:** ${doc.sections.filter(s => s.status === "draft").length} sections`);
-    lines.push(`- **Missing:** ${doc.sections.filter(s => s.status === "missing").length} sections`);
     lines.push("");
   }
 

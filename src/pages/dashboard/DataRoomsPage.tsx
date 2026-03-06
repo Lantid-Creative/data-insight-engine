@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,113 +16,278 @@ import {
   Building2, Upload, Settings, Activity,
   CheckCircle2, AlertTriangle, FolderLock, Trash2, UserPlus,
   Download, Search, BarChart3, History, File, Image, Table2,
+  Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface DataRoom {
   id: string;
   name: string;
   description: string;
-  status: "active" | "archived" | "pending";
-  organizations: number;
-  members: number;
-  files: number;
-  created: string;
-  accessLevel: "restricted" | "confidential" | "top-secret";
-  storageUsed: number;
-  storageTotal: number;
+  status: string;
+  access_level: string;
+  watermarking_enabled: boolean;
+  encryption_enabled: boolean;
+  ip_restrictions_enabled: boolean;
+  two_factor_required: boolean;
+  download_limits_enabled: boolean;
+  access_expiration_enabled: boolean;
+  created_at: string;
 }
 
 interface RoomFile {
   id: string;
-  name: string;
-  type: string;
-  size: string;
-  uploadedBy: string;
-  uploadedAt: string;
-  accessed: number;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  uploaded_by_name: string;
+  view_count: number;
+  created_at: string;
+  file_path: string;
 }
 
 interface RoomMember {
   id: string;
   name: string;
   email: string;
-  org: string;
-  role: "owner" | "editor" | "viewer";
-  lastActive: string;
+  organization: string;
+  role: string;
+  last_active_at: string;
 }
 
-const sampleRooms: DataRoom[] = [
-  { id: "1", name: "CARDIO-TRIAL Phase III Data Exchange", description: "Multi-site clinical trial data sharing for cardiovascular study", status: "active", organizations: 4, members: 18, files: 142, created: "2024-01-05", accessLevel: "confidential", storageUsed: 2.4, storageTotal: 10 },
-  { id: "2", name: "Pharma-Hospital Partnership (Oncology)", description: "De-identified patient data for oncology drug development", status: "active", organizations: 2, members: 8, files: 67, created: "2024-01-12", accessLevel: "top-secret", storageUsed: 1.1, storageTotal: 5 },
-  { id: "3", name: "Public Health Surveillance — WHO Collaboration", description: "Disease surveillance data shared with WHO regional office", status: "pending", organizations: 3, members: 12, files: 34, created: "2024-01-18", accessLevel: "restricted", storageUsed: 0.6, storageTotal: 5 },
-];
-
-const sampleFiles: RoomFile[] = [
-  { id: "f1", name: "CSR_Phase3_Final.pdf", type: "PDF", size: "24.5 MB", uploadedBy: "Dr. Sarah Chen", uploadedAt: "2h ago", accessed: 12 },
-  { id: "f2", name: "Patient_Demographics_DeID.csv", type: "CSV", size: "8.2 MB", uploadedBy: "James Wilson", uploadedAt: "6h ago", accessed: 8 },
-  { id: "f3", name: "Lab_Results_Q4.xlsx", type: "Excel", size: "15.1 MB", uploadedBy: "Lisa Park", uploadedAt: "1d ago", accessed: 5 },
-  { id: "f4", name: "MRI_Scans_Batch12.zip", type: "Archive", size: "245 MB", uploadedBy: "Dr. Amara Obi", uploadedAt: "2d ago", accessed: 3 },
-  { id: "f5", name: "Protocol_Amendment_v3.docx", type: "Word", size: "2.1 MB", uploadedBy: "Dr. Sarah Chen", uploadedAt: "3d ago", accessed: 18 },
-];
-
-const sampleMembers: RoomMember[] = [
-  { id: "m1", name: "Dr. Sarah Chen", email: "s.chen@mayo.edu", org: "Mayo Clinic", role: "owner", lastActive: "2m ago" },
-  { id: "m2", name: "James Wilson", email: "j.wilson@pfizer.com", org: "Pfizer", role: "editor", lastActive: "1h ago" },
-  { id: "m3", name: "Dr. Amara Obi", email: "a.obi@who.int", org: "WHO Africa", role: "viewer", lastActive: "3h ago" },
-  { id: "m4", name: "Lisa Park", email: "l.park@stanford.edu", org: "Stanford Health", role: "editor", lastActive: "5h ago" },
-  { id: "m5", name: "Robert Kim", email: "r.kim@fda.gov", org: "FDA", role: "viewer", lastActive: "1d ago" },
-];
-
-const recentActivity = [
-  { user: "Dr. Sarah Chen", org: "Mayo Clinic", action: "uploaded 3 files", time: "2h ago", type: "upload" },
-  { user: "James Wilson", org: "Pfizer", action: "viewed CSR document", time: "4h ago", type: "view" },
-  { user: "Dr. Amara Obi", org: "WHO Africa", action: "requested access", time: "6h ago", type: "access" },
-  { user: "Lisa Park", org: "Stanford Health", action: "approved data export", time: "1d ago", type: "export" },
-  { user: "Robert Kim", org: "FDA", action: "downloaded Protocol Amendment", time: "1d ago", type: "download" },
-  { user: "Dr. Sarah Chen", org: "Mayo Clinic", action: "invited 2 new members", time: "2d ago", type: "invite" },
-];
+interface RoomActivity {
+  id: string;
+  user_name: string;
+  organization: string;
+  action: string;
+  action_type: string;
+  created_at: string;
+}
 
 const DataRoomsPage = () => {
+  const { user } = useAuth();
+  const [rooms, setRooms] = useState<DataRoom[]>([]);
+  const [roomFiles, setRoomFiles] = useState<RoomFile[]>([]);
+  const [roomMembers, setRoomMembers] = useState<RoomMember[]>([]);
+  const [roomActivity, setRoomActivity] = useState<RoomActivity[]>([]);
+  const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [roomDesc, setRoomDesc] = useState("");
   const [accessLevel, setAccessLevel] = useState("confidential");
+  const [watermark, setWatermark] = useState(true);
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [inviteOrg, setInviteOrg] = useState("");
   const [inviteRole, setInviteRole] = useState("viewer");
   const [fileSearch, setFileSearch] = useState("");
+  const [creating, setCreating] = useState(false);
 
-  const accessBadge = (level: DataRoom["accessLevel"]) => {
-    const map = {
+  const fetchRooms = useCallback(async () => {
+    const { data } = await supabase.from("data_rooms").select("*").order("created_at", { ascending: false });
+    setRooms((data as any[]) || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchRooms(); }, [fetchRooms]);
+
+  const fetchRoomDetail = useCallback(async (roomId: string) => {
+    const [filesRes, membersRes, activityRes] = await Promise.all([
+      supabase.from("data_room_files").select("*").eq("room_id", roomId).order("created_at", { ascending: false }),
+      supabase.from("data_room_members").select("*").eq("room_id", roomId).order("created_at", { ascending: false }),
+      supabase.from("data_room_activity").select("*").eq("room_id", roomId).order("created_at", { ascending: false }).limit(50),
+    ]);
+    setRoomFiles((filesRes.data as any[]) || []);
+    setRoomMembers((membersRes.data as any[]) || []);
+    setRoomActivity((activityRes.data as any[]) || []);
+  }, []);
+
+  useEffect(() => {
+    if (selectedRoom) fetchRoomDetail(selectedRoom);
+  }, [selectedRoom, fetchRoomDetail]);
+
+  const createRoom = async () => {
+    if (!roomName.trim() || !user) return;
+    setCreating(true);
+    const { error } = await supabase.from("data_rooms").insert({
+      user_id: user.id,
+      name: roomName,
+      description: roomDesc,
+      access_level: accessLevel,
+      watermarking_enabled: watermark,
+    } as any);
+    setCreating(false);
+    if (error) return toast.error(error.message);
+    toast.success("Data room created!");
+    setCreateOpen(false);
+    setRoomName("");
+    setRoomDesc("");
+    fetchRooms();
+  };
+
+  const deleteRoom = async (id: string) => {
+    const { error } = await supabase.from("data_rooms").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Room deleted");
+    if (selectedRoom === id) setSelectedRoom(null);
+    fetchRooms();
+  };
+
+  const inviteMember = async () => {
+    if (!inviteEmail.trim() || !selectedRoom || !user) return;
+    const { error } = await supabase.from("data_room_members").insert({
+      room_id: selectedRoom,
+      email: inviteEmail,
+      name: inviteName,
+      organization: inviteOrg,
+      role: inviteRole,
+      invited_by: user.id,
+    } as any);
+    if (error) return toast.error(error.message);
+    // Log activity
+    await supabase.from("data_room_activity").insert({
+      room_id: selectedRoom,
+      user_id: user.id,
+      user_name: user.user_metadata?.full_name || user.email || "",
+      action: `invited ${inviteEmail}`,
+      action_type: "invite",
+    } as any);
+    toast.success("Invitation sent!");
+    setInviteOpen(false);
+    setInviteEmail("");
+    setInviteName("");
+    setInviteOrg("");
+    fetchRoomDetail(selectedRoom);
+  };
+
+  const removeMember = async (memberId: string) => {
+    if (!selectedRoom) return;
+    const { error } = await supabase.from("data_room_members").delete().eq("id", memberId);
+    if (error) return toast.error(error.message);
+    toast.success("Member removed");
+    fetchRoomDetail(selectedRoom);
+  };
+
+  const handleFileUpload = async (files: FileList) => {
+    if (!selectedRoom || !user) return;
+    const profile = user.user_metadata?.full_name || user.email || "";
+    for (const file of Array.from(files)) {
+      const path = `${selectedRoom}/${crypto.randomUUID()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage.from("data-room-files").upload(path, file);
+      if (uploadError) { toast.error(`Failed: ${file.name}`); continue; }
+      const ext = file.name.split(".").pop()?.toUpperCase() || "";
+      await supabase.from("data_room_files").insert({
+        room_id: selectedRoom,
+        file_name: file.name,
+        file_path: path,
+        file_type: ext,
+        file_size: file.size,
+        uploaded_by: user.id,
+        uploaded_by_name: profile,
+      } as any);
+      await supabase.from("data_room_activity").insert({
+        room_id: selectedRoom,
+        user_id: user.id,
+        user_name: profile,
+        action: `uploaded ${file.name}`,
+        action_type: "upload",
+      } as any);
+    }
+    toast.success("File(s) uploaded!");
+    fetchRoomDetail(selectedRoom);
+  };
+
+  const downloadFile = async (file: RoomFile) => {
+    const { data, error } = await supabase.storage.from("data-room-files").download(file.file_path);
+    if (error || !data) return toast.error("Download failed");
+    saveAs(data, file.file_name);
+    // Increment view count
+    await supabase.from("data_room_files").update({ view_count: file.view_count + 1 } as any).eq("id", file.id);
+  };
+
+  const toggleSecurity = async (field: string, value: boolean) => {
+    if (!selectedRoom) return;
+    const { error } = await supabase.from("data_rooms").update({ [field]: value } as any).eq("id", selectedRoom);
+    if (error) return toast.error(error.message);
+    toast.success("Setting updated");
+    fetchRooms();
+  };
+
+  const exportRoomZip = async () => {
+    const room = rooms.find(r => r.id === selectedRoom);
+    if (!room) return toast.error("Select a data room first");
+    const zip = new JSZip();
+    const folder = zip.folder(room.name.replace(/[^a-zA-Z0-9_\- ]/g, ""))!;
+    const manifest = [
+      `Data Room Export: ${room.name}`,
+      `Description: ${room.description}`,
+      `Access Level: ${room.access_level}`,
+      `Status: ${room.status}`,
+      `Exported: ${new Date().toISOString()}`,
+      "", "=== FILES ===",
+      ...roomFiles.map(f => `  ${f.file_name} (${formatSize(f.file_size)}) — uploaded by ${f.uploaded_by_name}`),
+      "", "=== MEMBERS ===",
+      ...roomMembers.map(m => `  ${m.name} <${m.email}> — ${m.organization} — ${m.role}`),
+      "", "=== AUDIT TRAIL ===",
+      ...roomActivity.map(a => `  [${new Date(a.created_at).toLocaleString()}] ${a.user_name}: ${a.action}`),
+    ].join("\n");
+    folder.file("MANIFEST.txt", manifest);
+    folder.file("members.csv", ["Name,Email,Organization,Role", ...roomMembers.map(m => `"${m.name}","${m.email}","${m.organization}","${m.role}"`)].join("\n"));
+    folder.file("file_index.csv", ["File Name,Type,Size,Uploaded By,Views", ...roomFiles.map(f => `"${f.file_name}","${f.file_type}","${formatSize(f.file_size)}","${f.uploaded_by_name}",${f.view_count}`)].join("\n"));
+    folder.file("audit_trail.csv", ["Timestamp,User,Action,Type", ...roomActivity.map(a => `"${a.created_at}","${a.user_name}","${a.action}","${a.action_type}"`)].join("\n"));
+    const blob = await zip.generateAsync({ type: "blob" });
+    saveAs(blob, `${room.name.replace(/\s+/g, "_")}_export.zip`);
+    toast.success("Data room exported as ZIP");
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  const accessBadge = (level: string) => {
+    const map: Record<string, { color: string; label: string }> = {
       restricted: { color: "bg-blue-500/10 text-blue-500 border-blue-500/20", label: "Restricted" },
       confidential: { color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20", label: "Confidential" },
       "top-secret": { color: "bg-red-500/10 text-red-500 border-red-500/20", label: "Top Secret" },
     };
-    const m = map[level];
+    const m = map[level] || map.restricted;
     return <Badge variant="outline" className={`text-[10px] ${m.color}`}>{m.label}</Badge>;
   };
 
-  const statusBadge = (status: DataRoom["status"]) => {
-    const map = { active: "bg-green-500/10 text-green-500", archived: "bg-muted text-muted-foreground", pending: "bg-yellow-500/10 text-yellow-500" };
-    return <Badge variant="outline" className={`text-[10px] capitalize ${map[status]}`}>{status}</Badge>;
+  const statusBadge = (status: string) => {
+    const map: Record<string, string> = { active: "bg-green-500/10 text-green-500", archived: "bg-muted text-muted-foreground", pending: "bg-yellow-500/10 text-yellow-500" };
+    return <Badge variant="outline" className={`text-[10px] capitalize ${map[status] || ""}`}>{status}</Badge>;
   };
 
   const fileIcon = (type: string) => {
     if (type === "PDF") return <FileText className="w-4 h-4 text-red-500" />;
-    if (type === "CSV" || type === "Excel") return <Table2 className="w-4 h-4 text-green-500" />;
-    if (type === "Word") return <File className="w-4 h-4 text-blue-500" />;
-    if (type === "Image") return <Image className="w-4 h-4 text-purple-500" />;
+    if (["CSV", "XLS", "XLSX"].includes(type)) return <Table2 className="w-4 h-4 text-green-500" />;
+    if (["DOC", "DOCX"].includes(type)) return <File className="w-4 h-4 text-blue-500" />;
+    if (["PNG", "JPG", "JPEG"].includes(type)) return <Image className="w-4 h-4 text-purple-500" />;
     return <File className="w-4 h-4 text-muted-foreground" />;
   };
 
   const roleBadge = (role: string) => {
-    const map = { owner: "bg-primary/10 text-primary", editor: "bg-blue-500/10 text-blue-500", viewer: "bg-muted text-muted-foreground" };
-    return <Badge variant="outline" className={`text-[9px] capitalize ${map[role as keyof typeof map] || ""}`}>{role}</Badge>;
+    const map: Record<string, string> = { owner: "bg-primary/10 text-primary", editor: "bg-blue-500/10 text-blue-500", viewer: "bg-muted text-muted-foreground" };
+    return <Badge variant="outline" className={`text-[9px] capitalize ${map[role] || ""}`}>{role}</Badge>;
   };
 
   const activityIcon = (type: string) => {
@@ -134,59 +299,16 @@ const DataRoomsPage = () => {
     return <Activity className="w-3.5 h-3.5 text-muted-foreground" />;
   };
 
-  const exportRoomZip = async () => {
-    const room = sampleRooms.find(r => r.id === selectedRoom);
-    if (!room) return toast.error("Select a data room first");
+  const filteredFiles = roomFiles.filter((f) => f.file_name.toLowerCase().includes(fileSearch.toLowerCase()));
+  const currentRoom = rooms.find(r => r.id === selectedRoom);
 
-    const zip = new JSZip();
-    const roomFolder = zip.folder(room.name.replace(/[^a-zA-Z0-9_\- ]/g, ""))!;
-
-    // Manifest
-    const manifest = [
-      `Data Room Export: ${room.name}`,
-      `Description: ${room.description}`,
-      `Access Level: ${room.accessLevel}`,
-      `Status: ${room.status}`,
-      `Exported: ${new Date().toISOString()}`,
-      "",
-      "=== FILES ===",
-      ...sampleFiles.map(f => `  ${f.name} (${f.size}) — uploaded by ${f.uploadedBy} at ${f.uploadedAt}`),
-      "",
-      "=== MEMBERS ===",
-      ...sampleMembers.map(m => `  ${m.name} <${m.email}> — ${m.org} — ${m.role}`),
-      "",
-      "=== AUDIT TRAIL ===",
-      ...recentActivity.map(a => `  [${a.time}] ${a.user} (${a.org}): ${a.action}`),
-    ].join("\n");
-    roomFolder.file("MANIFEST.txt", manifest);
-
-    // Audit trail CSV
-    const auditCsv = [
-      "Timestamp,User,Organization,Action,Type",
-      ...recentActivity.map(a => `"${a.time}","${a.user}","${a.org}","${a.action}","${a.type}"`),
-    ].join("\n");
-    roomFolder.file("audit_trail.csv", auditCsv);
-
-    // Members CSV
-    const membersCsv = [
-      "Name,Email,Organization,Role,Last Active",
-      ...sampleMembers.map(m => `"${m.name}","${m.email}","${m.org}","${m.role}","${m.lastActive}"`),
-    ].join("\n");
-    roomFolder.file("members.csv", membersCsv);
-
-    // File index CSV
-    const filesCsv = [
-      "File Name,Type,Size,Uploaded By,Uploaded At,Views",
-      ...sampleFiles.map(f => `"${f.name}","${f.type}","${f.size}","${f.uploadedBy}","${f.uploadedAt}",${f.accessed}`),
-    ].join("\n");
-    roomFolder.file("file_index.csv", filesCsv);
-
-    const blob = await zip.generateAsync({ type: "blob" });
-    saveAs(blob, `${room.name.replace(/\s+/g, "_")}_export.zip`);
-    toast.success("Data room exported as ZIP");
-  };
-
-  const filteredFiles = sampleFiles.filter((f) => f.name.toLowerCase().includes(fileSearch.toLowerCase()));
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -216,10 +338,10 @@ const DataRoomsPage = () => {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "Active Rooms", value: "2", icon: FolderLock, color: "text-primary" },
-          { label: "Organizations", value: "9", icon: Building2, color: "text-blue-500" },
-          { label: "Total Members", value: "38", icon: Users, color: "text-green-500" },
-          { label: "Shared Files", value: "243", icon: FileText, color: "text-yellow-500" },
+          { label: "Active Rooms", value: rooms.filter(r => r.status === "active").length, icon: FolderLock, color: "text-primary" },
+          { label: "Total Rooms", value: rooms.length, icon: Building2, color: "text-blue-500" },
+          { label: "Total Members", value: roomMembers.length, icon: Users, color: "text-green-500" },
+          { label: "Total Files", value: roomFiles.length, icon: FileText, color: "text-yellow-500" },
         ].map((kpi) => (
           <Card key={kpi.label}>
             <CardContent className="p-4">
@@ -232,72 +354,65 @@ const DataRoomsPage = () => {
       </div>
 
       {/* Room List */}
-      <div className="space-y-3">
-        {sampleRooms.map((room) => (
-          <motion.div key={room.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <Card
-              className={`cursor-pointer transition-all ${selectedRoom === room.id ? "border-primary shadow-glow" : "hover:border-primary/20"}`}
-              onClick={() => setSelectedRoom(room.id === selectedRoom ? null : room.id)}
-            >
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Lock className="w-5 h-5 text-primary" />
+      {rooms.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <FolderLock className="w-12 h-12 text-muted-foreground/30 mb-3" />
+            <p className="text-sm text-muted-foreground">No data rooms yet</p>
+            <p className="text-xs text-muted-foreground/60 mb-4">Create your first secure data room to start collaborating</p>
+            <Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="w-3.5 h-3.5 mr-1" /> Create Data Room</Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {rooms.map((room) => (
+            <motion.div key={room.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <Card
+                className={`cursor-pointer transition-all ${selectedRoom === room.id ? "border-primary shadow-glow" : "hover:border-primary/20"}`}
+                onClick={() => setSelectedRoom(room.id === selectedRoom ? null : room.id)}
+              >
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Lock className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground">{room.name}</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">{room.description}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-foreground">{room.name}</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">{room.description}</p>
+                    <div className="flex items-center gap-2">
+                      {accessBadge(room.access_level)}
+                      {statusBadge(room.status)}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {accessBadge(room.accessLevel)}
-                    {statusBadge(room.status)}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-3">
-                  {[
-                    { label: "Organizations", value: room.organizations },
-                    { label: "Members", value: room.members },
-                    { label: "Files", value: room.files },
-                    { label: "Created", value: room.created },
-                  ].map((stat) => (
-                    <div key={stat.label} className="text-center">
-                      <p className="text-sm font-semibold text-foreground">{stat.value}</p>
-                      <p className="text-[10px] text-muted-foreground">{stat.label}</p>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] text-muted-foreground">Created {timeAgo(room.created_at)}</span>
+                    <div className="flex-1" />
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1" onClick={(e) => { e.stopPropagation(); setInviteOpen(true); setSelectedRoom(room.id); }}>
+                        <UserPlus className="w-3 h-3" /> Invite
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); deleteRoom(room.id); }}>
+                        <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                      </Button>
                     </div>
-                  ))}
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] text-muted-foreground">Storage</span>
-                      <span className="text-[10px] text-muted-foreground">{room.storageUsed}GB / {room.storageTotal}GB</span>
-                    </div>
-                    <Progress value={(room.storageUsed / room.storageTotal) * 100} className="h-1.5" />
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1" onClick={(e) => { e.stopPropagation(); setInviteOpen(true); }}>
-                      <UserPlus className="w-3 h-3" /> Invite
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
-                      <Settings className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
 
-      {/* Room Detail Tabs — shown when a room is selected */}
+      {/* Room Detail Tabs */}
       {selectedRoom && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <Tabs defaultValue="files">
             <TabsList>
-              <TabsTrigger value="files" className="gap-1 text-xs"><FileText className="w-3.5 h-3.5" /> Files</TabsTrigger>
-              <TabsTrigger value="members" className="gap-1 text-xs"><Users className="w-3.5 h-3.5" /> Members</TabsTrigger>
+              <TabsTrigger value="files" className="gap-1 text-xs"><FileText className="w-3.5 h-3.5" /> Files ({roomFiles.length})</TabsTrigger>
+              <TabsTrigger value="members" className="gap-1 text-xs"><Users className="w-3.5 h-3.5" /> Members ({roomMembers.length})</TabsTrigger>
               <TabsTrigger value="activity" className="gap-1 text-xs"><History className="w-3.5 h-3.5" /> Audit Trail</TabsTrigger>
               <TabsTrigger value="security" className="gap-1 text-xs"><Shield className="w-3.5 h-3.5" /> Security</TabsTrigger>
             </TabsList>
@@ -312,39 +427,46 @@ const DataRoomsPage = () => {
                         <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <Input placeholder="Search files..." value={fileSearch} onChange={(e) => setFileSearch(e.target.value)} className="pl-8 h-8 text-xs w-48" />
                       </div>
-                      <Button size="sm" className="gap-1 h-8 text-xs" onClick={() => toast.success("Upload dialog would open")}>
+                      <Button size="sm" className="gap-1 h-8 text-xs" onClick={() => {
+                        const input = document.createElement("input");
+                        input.type = "file";
+                        input.multiple = true;
+                        input.onchange = (e) => { const files = (e.target as HTMLInputElement).files; if (files) handleFileUpload(files); };
+                        input.click();
+                      }}>
                         <Upload className="w-3 h-3" /> Upload
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="divide-y divide-border">
-                    {filteredFiles.map((file) => (
-                      <div key={file.id} className="flex items-center justify-between px-5 py-3 hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center gap-3">
-                          {fileIcon(file.type)}
-                          <div>
-                            <p className="text-xs font-medium text-foreground">{file.name}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] text-muted-foreground">{file.size}</span>
-                              <span className="text-[10px] text-muted-foreground">· by {file.uploadedBy}</span>
-                              <span className="text-[10px] text-muted-foreground">· {file.uploadedAt}</span>
+                  {filteredFiles.length === 0 ? (
+                    <div className="py-12 text-center text-muted-foreground text-sm">No files yet. Upload files to get started.</div>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {filteredFiles.map((file) => (
+                        <div key={file.id} className="flex items-center justify-between px-5 py-3 hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            {fileIcon(file.file_type)}
+                            <div>
+                              <p className="text-xs font-medium text-foreground">{file.file_name}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] text-muted-foreground">{formatSize(file.file_size)}</span>
+                                <span className="text-[10px] text-muted-foreground">· by {file.uploaded_by_name}</span>
+                                <span className="text-[10px] text-muted-foreground">· {timeAgo(file.created_at)}</span>
+                              </div>
                             </div>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground">{file.view_count} views</span>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => downloadFile(file)}>
+                              <Download className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground">{file.accessed} views</span>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toast.success("File preview would open")}>
-                            <Eye className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toast.success("Download started")}>
-                            <Download className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -360,37 +482,41 @@ const DataRoomsPage = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="divide-y divide-border">
-                    {sampleMembers.map((member) => (
-                      <div key={member.id} className="flex items-center justify-between px-5 py-3 hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="text-[10px] bg-muted">
-                              {member.name.split(" ").map((n) => n[0]).join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="text-xs font-medium text-foreground">{member.name}</p>
-                              {roleBadge(member.role)}
-                            </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] text-muted-foreground">{member.email}</span>
-                              <span className="text-[10px] text-muted-foreground">· {member.org}</span>
+                  {roomMembers.length === 0 ? (
+                    <div className="py-12 text-center text-muted-foreground text-sm">No members yet. Invite collaborators to get started.</div>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {roomMembers.map((member) => (
+                        <div key={member.id} className="flex items-center justify-between px-5 py-3 hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="text-[10px] bg-muted">
+                                {member.name ? member.name.split(" ").map((n) => n[0]).join("") : member.email[0].toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="text-xs font-medium text-foreground">{member.name || member.email}</p>
+                                {roleBadge(member.role)}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] text-muted-foreground">{member.email}</span>
+                                {member.organization && <span className="text-[10px] text-muted-foreground">· {member.organization}</span>}
+                              </div>
                             </div>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground">Active {timeAgo(member.last_active_at)}</span>
+                            {member.role !== "owner" && (
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeMember(member.id)}>
+                                <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground">Active {member.lastActive}</span>
-                          {member.role !== "owner" && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toast.success("Member removed")}>
-                              <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -404,18 +530,19 @@ const DataRoomsPage = () => {
                   <CardDescription className="text-xs">Complete record of all room activity for compliance</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {recentActivity.map((a, i) => (
-                    <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                      <div className="mt-0.5">{activityIcon(a.type)}</div>
+                  {roomActivity.length === 0 ? (
+                    <div className="py-8 text-center text-muted-foreground text-sm">No activity yet</div>
+                  ) : roomActivity.map((a) => (
+                    <div key={a.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                      <div className="mt-0.5">{activityIcon(a.action_type)}</div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-foreground">
-                          <span className="font-medium">{a.user}</span>
+                          <span className="font-medium">{a.user_name}</span>
                           <span className="text-muted-foreground"> {a.action}</span>
                         </p>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <Building2 className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-[10px] text-muted-foreground">{a.org}</span>
-                          <span className="text-[10px] text-muted-foreground">· {a.time}</span>
+                          {a.organization && <><Building2 className="w-3 h-3 text-muted-foreground" /><span className="text-[10px] text-muted-foreground">{a.organization}</span></>}
+                          <span className="text-[10px] text-muted-foreground">· {timeAgo(a.created_at)}</span>
                         </div>
                       </div>
                     </div>
@@ -433,19 +560,22 @@ const DataRoomsPage = () => {
                   </div>
                   <div className="space-y-4">
                     {[
-                      { label: "End-to-end encryption", desc: "All files encrypted at rest and in transit", active: true },
-                      { label: "Watermarked downloads", desc: "Downloaded files include user-specific watermarks", active: true },
-                      { label: "Access expiration", desc: "Automatically revoke access after set period", active: true },
-                      { label: "IP-based restrictions", desc: "Restrict access to specific IP ranges", active: false },
-                      { label: "Two-factor authentication", desc: "Require 2FA for all room access", active: true },
-                      { label: "Download limits", desc: "Limit number of file downloads per user", active: false },
+                      { field: "encryption_enabled", label: "End-to-end encryption", desc: "All files encrypted at rest and in transit" },
+                      { field: "watermarking_enabled", label: "Watermarked downloads", desc: "Downloaded files include user-specific watermarks" },
+                      { field: "access_expiration_enabled", label: "Access expiration", desc: "Automatically revoke access after set period" },
+                      { field: "ip_restrictions_enabled", label: "IP-based restrictions", desc: "Restrict access to specific IP ranges" },
+                      { field: "two_factor_required", label: "Two-factor authentication", desc: "Require 2FA for all room access" },
+                      { field: "download_limits_enabled", label: "Download limits", desc: "Limit number of file downloads per user" },
                     ].map((f) => (
-                      <div key={f.label} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                      <div key={f.field} className="flex items-center justify-between p-3 rounded-lg border border-border">
                         <div>
                           <p className="text-xs font-medium text-foreground">{f.label}</p>
                           <p className="text-[10px] text-muted-foreground mt-0.5">{f.desc}</p>
                         </div>
-                        <Switch checked={f.active} onCheckedChange={() => toast.success(`${f.label} toggled`)} />
+                        <Switch
+                          checked={!!(currentRoom as any)?.[f.field]}
+                          onCheckedChange={(val) => toggleSecurity(f.field, val)}
+                        />
                       </div>
                     ))}
                   </div>
@@ -487,12 +617,15 @@ const DataRoomsPage = () => {
                 <p className="text-sm font-medium">Enable Watermarking</p>
                 <p className="text-xs text-muted-foreground">All downloaded files will be watermarked</p>
               </div>
-              <Switch defaultChecked />
+              <Switch checked={watermark} onCheckedChange={setWatermark} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button onClick={() => { setCreateOpen(false); toast.success("Data room created!"); }}>Create Room</Button>
+            <Button onClick={createRoom} disabled={creating || !roomName.trim()}>
+              {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Create Room
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -509,6 +642,14 @@ const DataRoomsPage = () => {
               <Input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="colleague@organization.com" type="email" />
             </div>
             <div>
+              <label className="text-sm font-medium mb-1.5 block">Full Name</label>
+              <Input value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Dr. Jane Smith" />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Organization</label>
+              <Input value={inviteOrg} onChange={(e) => setInviteOrg(e.target.value)} placeholder="Mayo Clinic" />
+            </div>
+            <div>
               <label className="text-sm font-medium mb-1.5 block">Permission Level</label>
               <Select value={inviteRole} onValueChange={setInviteRole}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -522,7 +663,7 @@ const DataRoomsPage = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
-            <Button onClick={() => { setInviteOpen(false); setInviteEmail(""); toast.success("Invitation sent!"); }}>
+            <Button onClick={inviteMember} disabled={!inviteEmail.trim()}>
               <UserPlus className="w-4 h-4 mr-2" /> Send Invite
             </Button>
           </DialogFooter>

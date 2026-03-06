@@ -242,6 +242,195 @@ export type Database = {
           },
         ]
       }
+      data_room_activity: {
+        Row: {
+          action: string
+          action_type: string | null
+          created_at: string
+          id: string
+          organization: string | null
+          room_id: string
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          action: string
+          action_type?: string | null
+          created_at?: string
+          id?: string
+          organization?: string | null
+          room_id: string
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          action?: string
+          action_type?: string | null
+          created_at?: string
+          id?: string
+          organization?: string | null
+          room_id?: string
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_room_activity_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "data_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_room_files: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          room_id: string
+          uploaded_by: string
+          uploaded_by_name: string | null
+          view_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          room_id: string
+          uploaded_by: string
+          uploaded_by_name?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          room_id?: string
+          uploaded_by?: string
+          uploaded_by_name?: string | null
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_room_files_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "data_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_room_members: {
+        Row: {
+          accepted: boolean | null
+          created_at: string
+          email: string
+          id: string
+          invited_by: string
+          last_active_at: string | null
+          name: string | null
+          organization: string | null
+          role: string
+          room_id: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted?: boolean | null
+          created_at?: string
+          email: string
+          id?: string
+          invited_by: string
+          last_active_at?: string | null
+          name?: string | null
+          organization?: string | null
+          role?: string
+          room_id: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted?: boolean | null
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string
+          last_active_at?: string | null
+          name?: string | null
+          organization?: string | null
+          role?: string
+          room_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_room_members_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "data_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_rooms: {
+        Row: {
+          access_expiration_enabled: boolean | null
+          access_level: string
+          created_at: string
+          description: string | null
+          download_limits_enabled: boolean | null
+          encryption_enabled: boolean | null
+          id: string
+          ip_restrictions_enabled: boolean | null
+          name: string
+          status: string
+          two_factor_required: boolean | null
+          updated_at: string
+          user_id: string
+          watermarking_enabled: boolean | null
+        }
+        Insert: {
+          access_expiration_enabled?: boolean | null
+          access_level?: string
+          created_at?: string
+          description?: string | null
+          download_limits_enabled?: boolean | null
+          encryption_enabled?: boolean | null
+          id?: string
+          ip_restrictions_enabled?: boolean | null
+          name: string
+          status?: string
+          two_factor_required?: boolean | null
+          updated_at?: string
+          user_id: string
+          watermarking_enabled?: boolean | null
+        }
+        Update: {
+          access_expiration_enabled?: boolean | null
+          access_level?: string
+          created_at?: string
+          description?: string | null
+          download_limits_enabled?: boolean | null
+          encryption_enabled?: boolean | null
+          id?: string
+          ip_restrictions_enabled?: boolean | null
+          name?: string
+          status?: string
+          two_factor_required?: boolean | null
+          updated_at?: string
+          user_id?: string
+          watermarking_enabled?: boolean | null
+        }
+        Relationships: []
+      }
       epidemic_alerts: {
         Row: {
           case_count: number | null
@@ -628,6 +817,42 @@ export type Database = {
         }
         Relationships: []
       }
+      pipelines: {
+        Row: {
+          created_at: string
+          id: string
+          last_run_at: string | null
+          last_run_records: number | null
+          last_run_status: string | null
+          name: string
+          steps: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_run_at?: string | null
+          last_run_records?: number | null
+          last_run_status?: string | null
+          name?: string
+          steps?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_run_at?: string | null
+          last_run_records?: number | null
+          last_run_status?: string | null
+          name?: string
+          steps?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -908,6 +1133,57 @@ export type Database = {
           redacted_text?: string | null
           specialty?: string | null
           status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      regulatory_documents: {
+        Row: {
+          compliance_checks: Json | null
+          created_at: string
+          document_type: string
+          id: string
+          name: string
+          pages: number | null
+          sections: Json | null
+          status: string
+          study_description: string | null
+          study_name: string | null
+          target_agency: string | null
+          template_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          compliance_checks?: Json | null
+          created_at?: string
+          document_type: string
+          id?: string
+          name: string
+          pages?: number | null
+          sections?: Json | null
+          status?: string
+          study_description?: string | null
+          study_name?: string | null
+          target_agency?: string | null
+          template_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          compliance_checks?: Json | null
+          created_at?: string
+          document_type?: string
+          id?: string
+          name?: string
+          pages?: number | null
+          sections?: Json | null
+          status?: string
+          study_description?: string | null
+          study_name?: string | null
+          target_agency?: string | null
+          template_id?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
