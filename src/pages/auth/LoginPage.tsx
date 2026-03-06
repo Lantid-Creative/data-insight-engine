@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowRight, Eye, EyeOff, Zap, Shield, BarChart3 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, Eye, EyeOff, Zap, Shield, BarChart3, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
