@@ -574,7 +574,7 @@ export default function CommunityForumPage() {
                             <span className="text-xs font-semibold text-foreground">{getName(reply.user_id)}</span>
                             <span className="text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}</span>
                           </div>
-                          <p className="text-sm text-foreground/90 whitespace-pre-wrap">{reply.content}</p>
+                          <p className="text-sm text-foreground/90 whitespace-pre-wrap">{renderMentions(reply.content)}</p>
                           {reply.file_url && <FilePreview url={reply.file_url} />}
                           <div className="mt-1"><ReactionBar replyId={reply.id} /></div>
                         </div>
