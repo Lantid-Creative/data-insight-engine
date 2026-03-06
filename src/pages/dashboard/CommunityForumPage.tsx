@@ -92,6 +92,9 @@ export default function CommunityForumPage() {
   const [sortBy, setSortBy] = useState<"recent" | "trending">("recent");
   const postFileRef = useRef<HTMLInputElement>(null);
   const replyFileRef = useRef<HTMLInputElement>(null);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionTarget, setMentionTarget] = useState<"post" | "reply">("post");
 
   // Fetch channels
   const { data: channels = [] } = useQuery({
