@@ -554,7 +554,7 @@ export default function CommunityForumPage() {
                           <Badge key={tag} variant="secondary" className="text-[10px] h-4">{tag}</Badge>
                         ))}
                       </div>
-                      <p className="text-sm text-foreground/90 whitespace-pre-wrap">{activePostData.content}</p>
+                      <p className="text-sm text-foreground/90 whitespace-pre-wrap">{renderMentions(activePostData.content)}</p>
                       {activePostData.file_url && <FilePreview url={activePostData.file_url} />}
                       <div className="mt-2"><ReactionBar postId={activePostData.id} /></div>
                     </div>
