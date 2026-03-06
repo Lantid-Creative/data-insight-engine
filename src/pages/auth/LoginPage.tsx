@@ -3,19 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowRight, Eye, EyeOff, Zap, Shield, BarChart3 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, Eye, EyeOff, Zap, Shield, BarChart3, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
+
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const { signIn, user, isAdmin, applicationStatus, loading: authLoading } = useAuth();
-  const { toast } = useToast();
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -35,12 +35,21 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     setLoading(true);
     const { error } = await signIn(email, password);
     setLoading(false);
 
     if (error) {
-      toast({ title: "Sign in failed", description: error, variant: "destructive" });
+      // Map Supabase error messages to user-friendly ones
+      const friendly = error.toLowerCase().includes("invalid login")
+        ? "Incorrect email or password. Please try again."
+        : error.toLowerCase().includes("email not confirmed")
+        ? "Your email hasn't been verified yet. Check your inbox."
+        : error.toLowerCase().includes("too many requests")
+        ? "Too many attempts. Please wait a moment and try again."
+        : error;
+      setErrorMessage(friendly);
     }
   };
 
@@ -155,12 +164,33 @@ const LoginPage = () => {
               </div>
             </div>
 
+            <AnimatePresence>
+              {errorMessage && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  className="flex items-start gap-2.5 p-3 rounded-xl bg-destructive/10 border border-destructive/20"
+                >
+                  <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-destructive font-medium">{errorMessage}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <Button
               type="submit"
               disabled={loading}
               className="w-full h-12 bg-gradient-primary text-primary-foreground hover:opacity-90 font-bold rounded-xl shadow-glow text-base transition-all"
             >
-              {loading ? "Signing in..." : <>Sign In <ArrowRight className="ml-2 w-4 h-4" /></>}
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Signing in…
+                </span>
+              ) : (
+                <>Sign In <ArrowRight className="ml-2 w-4 h-4" /></>
+              )}
             </Button>
           </form>
 
