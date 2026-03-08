@@ -45,6 +45,7 @@ import RegulatorySubmissionPage from "./pages/dashboard/RegulatorySubmissionPage
 import DataRoomsPage from "./pages/dashboard/DataRoomsPage";
 import CommunityForumPage from "./pages/dashboard/CommunityForumPage";
 import UseCaseDetailPage from "./pages/use-cases/UseCaseDetailPage";
+import PromptLibraryPage from "./pages/dashboard/PromptLibraryPage";
 
 const queryClient = new QueryClient();
 
