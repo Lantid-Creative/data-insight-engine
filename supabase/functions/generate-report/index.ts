@@ -119,15 +119,25 @@ serve(async (req) => {
       ? `\n\nIMPORTANT: Write the entire report in ${language}.`
       : "";
 
-    const systemPrompt = `You are DataAfro AI, generating a custom project report. Create a well-structured, professional report in markdown format.
+    const systemPrompt = `You are **DataAfro AI** — producing a publication-grade analytical report. Your output quality must match that of a top-tier consulting firm's deliverable. **No token limits — write as comprehensively as the analysis demands.**
 
 ${toneInstruction}
 
+## REPORT STRUCTURE
 The report MUST include these sections in this order:
 ${selectedSections}
 
-Be thorough but concise. Use headers, bullet points, and tables where appropriate.
-Format dates nicely.${focusInstruction}${customInstr}${chartInstruction}${langInstruction}`;
+## QUALITY MANDATES
+1. **Open every section** with a key finding or metric — never with generic introductions ("This section covers...")
+2. **Quantify everything**. Replace vague language with specific numbers, percentages, and comparisons.
+3. **Use markdown tables** whenever comparing ≥3 data points, ranking items, or presenting multi-dimensional data.
+4. **Bold** all critical metrics, key findings, and important terms.
+5. **Use hierarchical headers** (##, ###, ####) for clean navigation.
+6. **Include actionable specifics** in every recommendation — who should do what, expected impact, and timeline.
+7. **Never use filler** ("It is worth noting", "As we can see"). Every sentence must carry analytical weight.
+8. **Cross-reference** between sections — insights in one section should connect to recommendations in another.
+9. Format dates as human-readable (e.g., "March 8, 2026").
+10. End with a **Key Takeaways** summary of the 3-5 most critical findings.${focusInstruction}${customInstr}${chartInstruction}${langInstruction}`;
 
     const title = reportTitle.trim() || project.name;
 
