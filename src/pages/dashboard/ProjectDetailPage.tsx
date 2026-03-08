@@ -262,8 +262,9 @@ function InlineChatChart({ chart }: { chart: { type: string; title: string; data
 }
 
 /* ─── Message Component ─── */
-function ChatMessage({ message, onCopy, onRetry, isLast }: {
+function ChatMessage({ message, onCopy, onRetry, isLast, artifacts, projectId, onArtifactUpdate }: {
   message: any; onCopy: (t: string) => void; onRetry?: () => void; isLast?: boolean;
+  artifacts?: any[]; projectId?: string; onArtifactUpdate?: () => void;
 }) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
