@@ -85,6 +85,66 @@ export type Database = {
         }
         Relationships: []
       }
+      artifacts: {
+        Row: {
+          artifact_type: string
+          chat_message_id: string | null
+          content: Json
+          created_at: string
+          description: string | null
+          id: string
+          is_pinned: boolean
+          project_id: string
+          shared: boolean
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          artifact_type?: string
+          chat_message_id?: string | null
+          content?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_pinned?: boolean
+          project_id: string
+          shared?: boolean
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          artifact_type?: string
+          chat_message_id?: string | null
+          content?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_pinned?: boolean
+          project_id?: string
+          shared?: boolean
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artifacts_chat_message_id_fkey"
+            columns: ["chat_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artifacts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           created_at: string
