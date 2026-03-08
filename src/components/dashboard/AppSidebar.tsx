@@ -1,7 +1,7 @@
 import {
   FolderOpen, FileText, Key, CreditCard, Settings,
   LayoutDashboard, Sparkles, ChevronUp, MessageSquare,
-  Users, Shield,
+  Users, Shield, BookOpen,
   Stethoscope, Globe, Workflow, FolderLock, ShieldCheck, Bell,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
