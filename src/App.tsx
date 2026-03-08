@@ -45,6 +45,7 @@ import RegulatorySubmissionPage from "./pages/dashboard/RegulatorySubmissionPage
 import DataRoomsPage from "./pages/dashboard/DataRoomsPage";
 import CommunityForumPage from "./pages/dashboard/CommunityForumPage";
 import UseCaseDetailPage from "./pages/use-cases/UseCaseDetailPage";
+import PromptLibraryPage from "./pages/dashboard/PromptLibraryPage";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +83,7 @@ const App = () => (
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="projects" element={<ProjectsPage />} />
                 <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+                <Route path="prompts" element={<PromptLibraryPage />} />
                 <Route path="billing" element={<BillingPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="api" element={<ApiAccessPage />} />

@@ -15,7 +15,7 @@ import {
   Trash2, Clock, HardDrive, Layers, PieChart, Table2,
   MessageSquare, ChevronLeft, Zap, Brain, Eye, Command,
   Workflow, TrendingUp, Search, Mic, Plus, Hash,
-  Download, RefreshCw, MoreHorizontal, Pencil, UserPlus, Activity,
+  Download, RefreshCw, MoreHorizontal, Pencil, UserPlus, Activity, BookOpen,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -1591,6 +1591,121 @@ function ReportView({ projectId }: { projectId: string }) {
   );
 }
 
+/* ─── Prompt Picker Popover ─── */
+function PromptPicker({ onSelect }: { onSelect: (text: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const { data: prompts = [] } = useQuery({
+    queryKey: ["prompt-library"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("prompt_library")
+        .select("*")
+        .order("is_curated", { ascending: false })
+        .order("use_count", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const filtered = prompts.filter((p: any) =>
+    !search || p.title.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const CATEGORY_COLORS: Record<string, string> = {
+    analysis: "bg-blue-500/10 text-blue-500",
+    visualization: "bg-purple-500/10 text-purple-500",
+    reporting: "bg-emerald-500/10 text-emerald-500",
+    "data-cleaning": "bg-amber-500/10 text-amber-500",
+    artifacts: "bg-primary/10 text-primary",
+    clinical: "bg-red-500/10 text-red-500",
+  };
+
+  if (!open) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            className="p-2 rounded-xl text-muted-foreground/40 hover:text-primary hover:bg-primary/5 transition-all duration-200"
+            onClick={() => setOpen(true)}
+          >
+            <BookOpen className="w-[18px] h-[18px]" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="text-xs">Prompt Library</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <div className="absolute bottom-full left-0 right-0 mb-2 z-50">
+      <motion.div
+        initial={{ opacity: 0, y: 8, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 8, scale: 0.97 }}
+        transition={{ duration: 0.2 }}
+        className="rounded-2xl border border-border/60 bg-card shadow-2xl overflow-hidden"
+        style={{ boxShadow: "0 16px 48px hsl(0 0% 0% / 0.15)" }}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-4 h-4 text-primary" />
+            <span className="text-sm font-bold text-foreground">Prompt Library</span>
+          </div>
+          <button
+            onClick={() => { setOpen(false); setSearch(""); }}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Close
+          </button>
+        </div>
+        <div className="px-3 pt-2 pb-1">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input
+              placeholder="Search prompts..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-8 pr-3 py-2 rounded-lg bg-muted/50 border border-border/40 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/30"
+              autoFocus
+            />
+          </div>
+        </div>
+        <div className="max-h-[280px] overflow-y-auto p-2 space-y-0.5">
+          {filtered.length === 0 ? (
+            <div className="text-center py-6 text-sm text-muted-foreground">No prompts found</div>
+          ) : (
+            filtered.map((p: any) => (
+              <button
+                key={p.id}
+                onClick={() => {
+                  onSelect(p.prompt_text);
+                  setOpen(false);
+                  setSearch("");
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-muted/60 transition-all group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-foreground truncate">{p.title}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{p.description}</p>
+                </div>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${CATEGORY_COLORS[p.category] || "bg-muted text-muted-foreground"}`}>
+                  {p.category.replace("-", " ").toUpperCase()}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 /* ─── Command Input ─── */
 function CommandInput({
   textareaRef, chatInput, setChatInput, inputFocused, setInputFocused,
@@ -1643,6 +1758,7 @@ function CommandInput({
             </TooltipTrigger>
             <TooltipContent side="top" className="text-xs">Attach files</TooltipContent>
           </Tooltip>
+          <PromptPicker onSelect={(text) => setChatInput(text)} />
           {uploading && (
             <div className="flex items-center gap-2 ml-1">
               <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
