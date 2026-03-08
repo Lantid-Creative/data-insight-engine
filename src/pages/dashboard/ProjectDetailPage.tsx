@@ -671,6 +671,7 @@ const ProjectDetailPage = () => {
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setStreaming(true);
     setStreamingContent("");
+    setStreamingArtifact(null);
 
     queryClient.setQueryData(["chat-messages", projectId], (old: any[] = []) => [
       ...old,
@@ -706,17 +707,24 @@ const ProjectDetailPage = () => {
           if (!line.startsWith("data: ") || line.includes("[DONE]")) continue;
           try {
             const parsed = JSON.parse(line.slice(6));
+            // Check for artifact event
+            if (parsed.artifact) {
+              setStreamingArtifact(parsed.artifact);
+              continue;
+            }
             const delta = parsed.choices?.[0]?.delta?.content;
             if (delta) { full += delta; setStreamingContent(full); }
           } catch { /* partial */ }
         }
       }
       queryClient.invalidateQueries({ queryKey: ["chat-messages", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["artifacts", projectId] });
     } catch (e: any) {
       toast.error(e.message || "Failed to send message");
     } finally {
       setStreaming(false);
       setStreamingContent("");
+      setStreamingArtifact(null);
     }
   };
 
