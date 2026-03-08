@@ -61,7 +61,7 @@ const Community = () => (
       <div className="flex flex-wrap items-center justify-center gap-8 mb-10 text-muted-foreground text-sm">
         <span className="flex items-center gap-1.5"><ThumbsUp className="h-4 w-4 text-primary" /> Upvotes &amp; Reactions</span>
         <span className="flex items-center gap-1.5"><Heart className="h-4 w-4 text-destructive" /> Pinned Posts</span>
-        <span className="flex items-center gap-1.5"><Flame className="h-4 w-4 text-orange-500" /> Announcements</span>
+        <span className="flex items-center gap-1.5"><Flame className="h-4 w-4 text-primary" /> Announcements</span>
         <span className="flex items-center gap-1.5"><Users className="h-4 w-4 text-primary" /> Member Directory</span>
       </div>
 
