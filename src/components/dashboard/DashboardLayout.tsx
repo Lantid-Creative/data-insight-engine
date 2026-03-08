@@ -43,6 +43,8 @@ const parentMap: Record<string, string> = {
 const DashboardLayout = () => {
   const location = useLocation();
   const isProjectDetail = /^\/dashboard\/projects\/[^/]+$/.test(location.pathname);
+  const isFullHeightPage = ["/dashboard/copilot", "/dashboard/phi-redaction", "/dashboard/community"].includes(location.pathname);
+  const noPadding = isProjectDetail || isFullHeightPage;
   const pageTitle = breadcrumbMap[location.pathname] || (isProjectDetail ? "Project" : "Dashboard");
   const parentLabel = parentMap[location.pathname];
 
