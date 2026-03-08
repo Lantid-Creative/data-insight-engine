@@ -78,6 +78,12 @@ const App = () => (
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/pending" element={<PendingApprovalPage />} />
+              
+              {/* HMS Routes */}
+              <Route path="/hms" element={<HMSLandingPage />} />
+              <Route path="/hms/login" element={<HMSLoginPage />} />
+              <Route path="/hms/register" element={<HMSRegisterPage />} />
+
               <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
                 <Route index element={<DashboardHome />} />
