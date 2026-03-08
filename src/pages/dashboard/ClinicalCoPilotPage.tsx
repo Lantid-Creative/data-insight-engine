@@ -10,7 +10,17 @@ import {
   Sparkles, Copy, ThumbsUp, ThumbsDown, Loader2, Heart, Brain,
   Activity, Syringe, ClipboardList, Plus, Trash2, MessageSquare,
   Download, Search, PanelLeftClose, PanelLeft, Paperclip, X, File,
+  MoreHorizontal, Pencil,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Input as DialogInput } from "@/components/ui/input";
+import { isToday, isYesterday, isThisWeek, isThisMonth } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
@@ -386,11 +396,48 @@ const ClinicalCoPilotPage = () => {
     return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
   };
 
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameName, setRenameName] = useState("");
+
+  const renameConversation = async () => {
+    if (!renameId || !renameName.trim()) return;
+    await supabase.from("copilot_conversations").update({ title: renameName.trim() }).eq("id", renameId);
+    setConversations((prev) => prev.map((c) => c.id === renameId ? { ...c, title: renameName.trim() } : c));
+    setRenameOpen(false);
+    toast.success("Conversation renamed");
+  };
+
   const filteredConversations = conversations.filter((c) =>
     c.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Group conversations by date
+  const groupConversations = (convos: Conversation[]) => {
+    const groups: { label: string; items: Conversation[] }[] = [];
+    const buckets: Record<string, Conversation[]> = {};
+    const order = ["Today", "Yesterday", "This Week", "This Month", "Older"];
+    order.forEach((k) => (buckets[k] = []));
+
+    convos.forEach((c) => {
+      const d = new Date(c.updated_at);
+      if (isToday(d)) buckets["Today"].push(c);
+      else if (isYesterday(d)) buckets["Yesterday"].push(c);
+      else if (isThisWeek(d, { weekStartsOn: 1 })) buckets["This Week"].push(c);
+      else if (isThisMonth(d)) buckets["This Month"].push(c);
+      else buckets["Older"].push(c);
+    });
+
+    order.forEach((label) => {
+      if (buckets[label].length > 0) groups.push({ label, items: buckets[label] });
+    });
+    return groups;
+  };
+
+  const groupedConversations = groupConversations(filteredConversations);
+
   return (
+    <>
     <div className="h-[calc(100vh-3.5rem)] flex flex-col gap-0 p-0">
       {/* Header */}
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border flex-shrink-0">
@@ -463,35 +510,55 @@ const ClinicalCoPilotPage = () => {
               </div>
 
               <ScrollArea className="flex-1">
-                <div className="p-2 space-y-1">
-                  {filteredConversations.length === 0 && (
+                <div className="p-2 space-y-0.5">
+                  {groupedConversations.length === 0 && (
                     <p className="text-xs text-muted-foreground text-center py-4">No conversations yet</p>
                   )}
-                  {filteredConversations.map((convo) => (
-                    <div
-                      key={convo.id}
-                      className={`group flex items-center gap-2 p-2.5 rounded-lg cursor-pointer transition-colors ${
-                        activeConvoId === convo.id
-                          ? "bg-primary/10 border border-primary/20"
-                          : "hover:bg-muted/50 border border-transparent"
-                      }`}
-                      onClick={() => setActiveConvoId(convo.id)}
-                    >
-                      <MessageSquare className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">{convo.title}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {new Date(convo.updated_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                        onClick={(e) => { e.stopPropagation(); deleteConversation(convo.id); }}
-                      >
-                        <Trash2 className="w-3 h-3 text-muted-foreground" />
-                      </Button>
+                  {groupedConversations.map((group) => (
+                    <div key={group.label}>
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-3 pb-1.5">{group.label}</p>
+                      {group.items.map((convo) => (
+                        <div
+                          key={convo.id}
+                          className={`group/item flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors ${
+                            activeConvoId === convo.id
+                              ? "bg-primary/10 border border-primary/20"
+                              : "hover:bg-muted/50 border border-transparent"
+                          }`}
+                          onClick={() => setActiveConvoId(convo.id)}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                          <p className="text-xs font-medium text-foreground truncate flex-1 min-w-0">{convo.title}</p>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                className="opacity-0 group-hover/item:opacity-100 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-all flex-shrink-0"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="w-3.5 h-3.5" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" side="right" onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuItem onClick={() => {
+                                setRenameId(convo.id);
+                                setRenameName(convo.title);
+                                setRenameOpen(true);
+                              }}>
+                                <Pencil className="w-3.5 h-3.5 mr-2" />
+                                Rename
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => deleteConversation(convo.id)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
@@ -643,6 +710,28 @@ const ClinicalCoPilotPage = () => {
         </div>
       </div>
     </div>
+
+    {/* Rename Conversation Dialog */}
+    <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Rename Conversation</DialogTitle>
+        </DialogHeader>
+        <div className="pt-2">
+          <DialogInput
+            value={renameName}
+            onChange={(e) => setRenameName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && renameConversation()}
+            placeholder="Conversation title"
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setRenameOpen(false)}>Cancel</Button>
+          <Button disabled={!renameName.trim()} onClick={renameConversation}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 
