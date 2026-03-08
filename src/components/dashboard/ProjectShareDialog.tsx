@@ -90,8 +90,10 @@ export function ProjectShareDialog({ open, onOpenChange, projectId, projectName 
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project-shares", projectId] }),
   });
 
+  const shareUrl = `https://dataafro.com/dashboard/projects/${projectId}`;
+
   const copyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/dashboard/projects/${projectId}`);
+    navigator.clipboard.writeText(shareUrl);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2000);
   };
