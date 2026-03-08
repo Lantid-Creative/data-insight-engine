@@ -49,7 +49,8 @@ export function AppSidebar() {
     ? user.user_metadata.full_name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
     : user?.email?.slice(0, 2).toUpperCase() || "U";
 
-  const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
+  const rawName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
+  const displayName = rawName.split(" ").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 
   const handleNavClick = () => {
     if (isMobile) setOpenMobile(false);
