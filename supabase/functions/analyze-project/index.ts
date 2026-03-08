@@ -7,6 +7,56 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function gatherWorkspaceSnapshot(supabase: any, userId: string) {
+  const [
+    profileRes, allProjectsRes, allFilesRes, teamsRes,
+    copilotRes, redactionRes, alertsRes, pipelinesRes, regDocsRes, dataRoomsRes, activityRes,
+  ] = await Promise.all([
+    supabase.from("profiles").select("full_name, expertise_tags").eq("user_id", userId).single(),
+    supabase.from("projects").select("id, name, description, created_at").eq("user_id", userId).limit(20),
+    supabase.from("project_files").select("file_name, mime_type, file_size, project_id").eq("user_id", userId).limit(50),
+    supabase.from("teams").select("id, name").eq("owner_id", userId),
+    supabase.from("copilot_conversations").select("id, title, specialty").eq("user_id", userId).limit(10),
+    supabase.from("redaction_jobs").select("id, status, entity_count").eq("user_id", userId).limit(10),
+    supabase.from("epidemic_alerts").select("id, title, severity, is_active").eq("user_id", userId).limit(10),
+    supabase.from("pipelines").select("id, name, last_run_status").eq("user_id", userId).limit(10),
+    supabase.from("regulatory_documents").select("id, name, document_type, status").eq("user_id", userId).limit(10),
+    supabase.from("data_rooms").select("id, name, status").eq("user_id", userId).limit(10),
+    supabase.from("activity_log").select("action, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(15),
+  ]);
+
+  const profile = profileRes.data;
+  const projects = allProjectsRes.data || [];
+  const files = allFilesRes.data || [];
+  const teams = teamsRes.data || [];
+  const copilot = copilotRes.data || [];
+  const redaction = redactionRes.data || [];
+  const alerts = alertsRes.data || [];
+  const pipelines = pipelinesRes.data || [];
+  const regDocs = regDocsRes.data || [];
+  const dataRooms = dataRoomsRes.data || [];
+  const activity = activityRes.data || [];
+
+  let ctx = `\n## Workspace Snapshot (${profile?.full_name || "User"})`;
+  ctx += `\n- ${projects.length} projects, ${files.length} total files across workspace`;
+  ctx += `\n- ${teams.length} teams owned`;
+  if (copilot.length) ctx += `\n- ${copilot.length} Clinical Co-Pilot conversations (specialties: ${[...new Set(copilot.map((c: any) => c.specialty || "General"))].join(", ")})`;
+  if (redaction.length) {
+    const totalEntities = redaction.reduce((s: number, j: any) => s + (j.entity_count || 0), 0);
+    ctx += `\n- ${redaction.length} PHI Redaction scans (${totalEntities} entities found)`;
+  }
+  if (alerts.length) {
+    const active = alerts.filter((a: any) => a.is_active).length;
+    ctx += `\n- ${alerts.length} Epidemic alerts (${active} active)`;
+  }
+  if (pipelines.length) ctx += `\n- ${pipelines.length} pipelines`;
+  if (regDocs.length) ctx += `\n- ${regDocs.length} regulatory documents`;
+  if (dataRooms.length) ctx += `\n- ${dataRooms.length} data rooms`;
+  if (activity.length) ctx += `\n- Recent actions: ${activity.slice(0, 5).map((a: any) => a.action).join(", ")}`;
+
+  return ctx;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -35,19 +85,15 @@ serve(async (req) => {
       .single();
     if (projErr || !project) throw new Error("Project not found");
 
-    // Get project files for context
-    const { data: files } = await supabase
-      .from("project_files")
-      .select("file_name, mime_type, file_size, created_at")
-      .eq("project_id", projectId);
+    // Gather all context in parallel
+    const [filesRes, messagesRes, workspaceSnapshot] = await Promise.all([
+      supabase.from("project_files").select("file_name, mime_type, file_size, created_at").eq("project_id", projectId),
+      supabase.from("chat_messages").select("role, content, created_at").eq("project_id", projectId).order("created_at", { ascending: true }).limit(100),
+      gatherWorkspaceSnapshot(supabase, user.id),
+    ]);
 
-    // Get chat messages for analysis
-    const { data: messages } = await supabase
-      .from("chat_messages")
-      .select("role, content, created_at")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: true })
-      .limit(100);
+    const files = filesRes.data;
+    const messages = messagesRes.data;
 
     const fileContext = files?.length
       ? files.map((f: any) => `- ${f.file_name} (${f.mime_type}, ${(f.file_size / 1024).toFixed(1)}KB, uploaded ${f.created_at})`).join("\n")
@@ -69,9 +115,10 @@ ${fileContext}
 
 Chat Activity:
 ${chatSummary}
+${workspaceSnapshot}
 
 ## MANDATE
-Produce an exhaustive analytical dashboard from the available project data. Do NOT hold back — generate the maximum useful analysis. If data is limited, perform meta-analysis on file composition, activity patterns, temporal distribution, and data quality signals.
+Produce an exhaustive analytical dashboard from the available project data AND the user's broader workspace context. Do NOT hold back — generate the maximum useful analysis. Leverage cross-project patterns, Intelligence Suite usage, team activity, and file distributions to produce deeper, more contextual insights.
 
 IMPORTANT: You MUST return a valid JSON object with the following structure. No markdown, no explanation, ONLY JSON:
 
@@ -112,9 +159,9 @@ IMPORTANT: You MUST return a valid JSON object with the following structure. No 
 - Generate **1-3** data tables for detailed breakdowns, comparisons, and rankings
 - Generate **3-5** recommendations ranked by impact, each with a concrete expected outcome
 - Every "description" field must contain a genuine analytical observation — zero filler
-- Chart data must be realistic, internally consistent, and derived from actual project context
+- Chart data must be realistic, internally consistent, and derived from actual project + workspace context
 - The "code" field must contain production-grade React/Recharts code
-- If data is sparse, perform second-order analysis: file type distribution, upload velocity, engagement patterns, data completeness scoring`;
+- If data is sparse, perform second-order analysis: file type distribution, upload velocity, engagement patterns, cross-project correlations, Intelligence Suite utilization`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -138,14 +185,12 @@ IMPORTANT: You MUST return a valid JSON object with the following structure. No 
 
     if (aiResponse.status === 429) {
       return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (aiResponse.status === 402) {
       return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }), {
-        status: 402,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (!aiResponse.ok) {
@@ -156,24 +201,18 @@ IMPORTANT: You MUST return a valid JSON object with the following structure. No 
 
     const result = await aiResponse.json();
     const content = result.choices?.[0]?.message?.content || "";
-    
-    // Try to parse JSON from the response (it might be wrapped in ```json blocks)
+
     let analysisData;
     try {
       const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
       const jsonStr = jsonMatch ? jsonMatch[1] : content;
       analysisData = JSON.parse(jsonStr.trim());
     } catch {
-      // If JSON parsing fails, return a structured error with raw content
       analysisData = {
-        insights: [
-          { title: "Analysis Status", value: "Partial", change: "neutral", description: "AI returned unstructured data" }
-        ],
+        insights: [{ title: "Analysis Status", value: "Partial", change: "neutral", description: "AI returned unstructured data" }],
         charts: [],
         tables: [],
-        recommendations: [
-          { title: "Retry Analysis", description: "The AI response was not properly structured. Try again or refine your prompt.", priority: "high" }
-        ],
+        recommendations: [{ title: "Retry Analysis", description: "The AI response was not properly structured. Try again or refine your prompt.", priority: "high" }],
         rawContent: content,
       };
     }
@@ -184,8 +223,7 @@ IMPORTANT: You MUST return a valid JSON object with the following structure. No 
   } catch (e) {
     console.error("analyze-project error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

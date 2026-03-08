@@ -7,6 +7,48 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function gatherWorkspaceSnapshot(supabase: any, userId: string) {
+  const [
+    profileRes, allProjectsRes, allFilesRes, teamsRes,
+    copilotRes, redactionRes, alertsRes, pipelinesRes, regDocsRes, dataRoomsRes,
+  ] = await Promise.all([
+    supabase.from("profiles").select("full_name, expertise_tags").eq("user_id", userId).single(),
+    supabase.from("projects").select("id, name, description").eq("user_id", userId).limit(20),
+    supabase.from("project_files").select("file_name, project_id").eq("user_id", userId).limit(50),
+    supabase.from("teams").select("id, name").eq("owner_id", userId),
+    supabase.from("copilot_conversations").select("id, title, specialty").eq("user_id", userId).limit(10),
+    supabase.from("redaction_jobs").select("id, status, entity_count").eq("user_id", userId).limit(10),
+    supabase.from("epidemic_alerts").select("id, title, severity, is_active").eq("user_id", userId).limit(10),
+    supabase.from("pipelines").select("id, name, last_run_status").eq("user_id", userId).limit(10),
+    supabase.from("regulatory_documents").select("id, name, document_type, status").eq("user_id", userId).limit(10),
+    supabase.from("data_rooms").select("id, name, status").eq("user_id", userId).limit(10),
+  ]);
+
+  const profile = profileRes.data;
+  const projects = allProjectsRes.data || [];
+  const files = allFilesRes.data || [];
+
+  let ctx = `\n\n## Workspace Context (${profile?.full_name || "User"})`;
+  ctx += `\n- ${projects.length} projects, ${files.length} total files`;
+  if ((teamsRes.data || []).length) ctx += `\n- ${teamsRes.data.length} teams owned`;
+  if ((copilotRes.data || []).length) ctx += `\n- ${copilotRes.data.length} Clinical Co-Pilot conversations`;
+  if ((redactionRes.data || []).length) {
+    const entities = redactionRes.data.reduce((s: number, j: any) => s + (j.entity_count || 0), 0);
+    ctx += `\n- ${redactionRes.data.length} PHI scans (${entities} entities)`;
+  }
+  if ((alertsRes.data || []).length) ctx += `\n- ${alertsRes.data.filter((a: any) => a.is_active).length} active epidemic alerts`;
+  if ((pipelinesRes.data || []).length) ctx += `\n- ${pipelinesRes.data.length} pipelines`;
+  if ((regDocsRes.data || []).length) ctx += `\n- ${regDocsRes.data.length} regulatory documents`;
+  if ((dataRoomsRes.data || []).length) ctx += `\n- ${dataRoomsRes.data.length} data rooms`;
+
+  // Other projects for cross-referencing
+  if (projects.length > 1) {
+    ctx += `\n\nOther projects: ${projects.map((p: any) => `"${p.name}"`).join(", ")}`;
+  }
+
+  return ctx;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -26,7 +68,6 @@ serve(async (req) => {
     const { projectId, config } = await req.json();
     if (!projectId) throw new Error("projectId is required");
 
-    // Destructure custom config with defaults
     const {
       sections = ["executive_summary", "data_overview", "key_insights", "recommendations", "conclusion"],
       tone = "professional",
@@ -46,20 +87,15 @@ serve(async (req) => {
       .single();
     if (projErr || !project) throw new Error("Project not found");
 
-    // Get project files
-    const { data: files } = await supabase
-      .from("project_files")
-      .select("file_name, mime_type, file_size, created_at")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: true });
+    // Gather all context in parallel
+    const [filesRes, historyRes, workspaceSnapshot] = await Promise.all([
+      supabase.from("project_files").select("file_name, mime_type, file_size, created_at").eq("project_id", projectId).order("created_at", { ascending: true }),
+      supabase.from("chat_messages").select("role, content, created_at").eq("project_id", projectId).order("created_at", { ascending: true }).limit(100),
+      gatherWorkspaceSnapshot(supabase, user.id),
+    ]);
 
-    // Get all chat history
-    const { data: history } = await supabase
-      .from("chat_messages")
-      .select("role, content, created_at")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: true })
-      .limit(100);
+    const files = filesRes.data;
+    const history = historyRes.data;
 
     const fileList = files?.length
       ? files.map((f: any) => `- ${f.file_name} (${f.mime_type}, ${(f.file_size / 1024).toFixed(1)}KB, uploaded ${f.created_at})`).join("\n")
@@ -69,7 +105,6 @@ serve(async (req) => {
       ? history.map((m: any) => `[${m.role}]: ${m.content.slice(0, 500)}`).join("\n\n")
       : "No conversations yet.";
 
-    // Build section instructions
     const sectionMap: Record<string, string> = {
       executive_summary: "**Executive Summary** - A concise overview of the project, its purpose, and the most critical findings. Highlight the main takeaway.",
       data_overview: "**Data Overview** - Summary of all uploaded files including types, sizes, structure, and data quality observations.",
@@ -84,13 +119,8 @@ serve(async (req) => {
       appendix: "**Appendix** - Additional data tables, raw numbers, or supplementary information referenced in the report.",
     };
 
-    const selectedSections = sections
-      .map((s: string) => sectionMap[s])
-      .filter(Boolean)
-      .map((s: string, i: number) => `${i + 1}. ${s}`)
-      .join("\n");
+    const selectedSections = sections.map((s: string) => sectionMap[s]).filter(Boolean).map((s: string, i: number) => `${i + 1}. ${s}`).join("\n");
 
-    // Build tone instruction
     const toneMap: Record<string, string> = {
       professional: "Use formal, professional language suitable for business stakeholders and executives.",
       technical: "Use technical language with precise terminology. Include technical details, methodologies, and specifications.",
@@ -100,28 +130,18 @@ serve(async (req) => {
     };
 
     const toneInstruction = toneMap[tone] || toneMap.professional;
-
-    // Build focus areas instruction
-    const focusInstruction = focusAreas.length > 0
-      ? `\n\nPay special attention to these focus areas and dedicate extra depth to them:\n${focusAreas.map((f: string) => `- ${f}`).join("\n")}`
-      : "";
-
-    // Build custom instructions
-    const customInstr = customInstructions.trim()
-      ? `\n\nAdditional instructions from the user:\n${customInstructions}`
-      : "";
-
-    const chartInstruction = includeCharts
-      ? "\n\nWhere appropriate, suggest data visualizations by describing them in text (e.g., 'A bar chart showing X by Y would reveal...'). Use markdown tables to present data when possible."
-      : "";
-
-    const langInstruction = language !== "English"
-      ? `\n\nIMPORTANT: Write the entire report in ${language}.`
-      : "";
+    const focusInstruction = focusAreas.length > 0 ? `\n\nPay special attention to these focus areas:\n${focusAreas.map((f: string) => `- ${f}`).join("\n")}` : "";
+    const customInstr = customInstructions.trim() ? `\n\nAdditional instructions:\n${customInstructions}` : "";
+    const chartInstruction = includeCharts ? "\n\nWhere appropriate, suggest data visualizations. Use markdown tables to present data when possible." : "";
+    const langInstruction = language !== "English" ? `\n\nIMPORTANT: Write the entire report in ${language}.` : "";
 
     const systemPrompt = `You are **DataAfro AI** — producing a publication-grade analytical report. Your output quality must match that of a top-tier consulting firm's deliverable. **No token limits — write as comprehensively as the analysis demands.**
 
 ${toneInstruction}
+${workspaceSnapshot}
+
+## WORKSPACE AWARENESS
+You have visibility into the user's entire workspace. Use this to enrich the report with cross-project correlations, workspace utilization patterns, and Intelligence Suite findings when relevant.
 
 ## REPORT STRUCTURE
 The report MUST include these sections in this order:
