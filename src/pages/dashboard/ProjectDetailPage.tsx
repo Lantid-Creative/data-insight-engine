@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { ArtifactRenderer, ArtifactCard } from "@/components/dashboard/ArtifactRenderer";
 import {
   Upload, File, Loader2, Sparkles, Paperclip,
   BarChart3, FileText, Wand2, Database, ArrowUp, Copy, Check,
@@ -261,8 +262,9 @@ function InlineChatChart({ chart }: { chart: { type: string; title: string; data
 }
 
 /* ─── Message Component ─── */
-function ChatMessage({ message, onCopy, onRetry, isLast }: {
+function ChatMessage({ message, onCopy, onRetry, isLast, artifacts, projectId, onArtifactUpdate }: {
   message: any; onCopy: (t: string) => void; onRetry?: () => void; isLast?: boolean;
+  artifacts?: any[]; projectId?: string; onArtifactUpdate?: () => void;
 }) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
@@ -335,6 +337,21 @@ function ChatMessage({ message, onCopy, onRetry, isLast }: {
                 <div className="mt-2 space-y-3">
                   {charts.map((chart, i) => (
                     <InlineChatChart key={i} chart={chart} />
+                  ))}
+                </div>
+              )}
+
+              {/* Inline Artifacts */}
+              {artifacts && artifacts.length > 0 && (
+                <div className="mt-3 space-y-3">
+                  {artifacts.map((a: any) => (
+                    <ArtifactRenderer
+                      key={a.id}
+                      artifact={a}
+                      projectId={projectId || ""}
+                      onPinToggle={onArtifactUpdate}
+                      onShareToggle={onArtifactUpdate}
+                    />
                   ))}
                 </div>
               )}
@@ -518,6 +535,7 @@ const ProjectDetailPage = () => {
   const [chatInput, setChatInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
+  const [streamingArtifact, setStreamingArtifact] = useState<any>(null);
   const [panelOpen, setPanelOpen] = useState(true);
   const [activeMode, setActiveMode] = useState<string>("chat");
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -559,6 +577,18 @@ const ProjectDetailPage = () => {
       const { data, error } = await supabase
         .from("chat_messages").select("*").eq("project_id", projectId!)
         .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projectId,
+  });
+
+  const { data: artifacts = [] } = useQuery({
+    queryKey: ["artifacts", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("artifacts").select("*").eq("project_id", projectId!)
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -657,6 +687,7 @@ const ProjectDetailPage = () => {
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setStreaming(true);
     setStreamingContent("");
+    setStreamingArtifact(null);
 
     queryClient.setQueryData(["chat-messages", projectId], (old: any[] = []) => [
       ...old,
@@ -692,17 +723,24 @@ const ProjectDetailPage = () => {
           if (!line.startsWith("data: ") || line.includes("[DONE]")) continue;
           try {
             const parsed = JSON.parse(line.slice(6));
+            // Check for artifact event
+            if (parsed.artifact) {
+              setStreamingArtifact(parsed.artifact);
+              continue;
+            }
             const delta = parsed.choices?.[0]?.delta?.content;
             if (delta) { full += delta; setStreamingContent(full); }
           } catch { /* partial */ }
         }
       }
       queryClient.invalidateQueries({ queryKey: ["chat-messages", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["artifacts", projectId] });
     } catch (e: any) {
       toast.error(e.message || "Failed to send message");
     } finally {
       setStreaming(false);
       setStreamingContent("");
+      setStreamingArtifact(null);
     }
   };
 
@@ -986,8 +1024,19 @@ const ProjectDetailPage = () => {
                               if (lastUserMsg) sendMessage(lastUserMsg.content);
                             } : undefined}
                             isLast={i === messages.length - 1}
+                            artifacts={m.role === "assistant" ? artifacts.filter((a: any) => a.chat_message_id === m.id) : undefined}
+                            projectId={projectId}
+                            onArtifactUpdate={() => queryClient.invalidateQueries({ queryKey: ["artifacts", projectId] })}
                           />
                         ))}
+                        {streaming && streamingArtifact && (
+                          <ArtifactRenderer
+                            artifact={streamingArtifact}
+                            projectId={projectId!}
+                            onPinToggle={() => queryClient.invalidateQueries({ queryKey: ["artifacts", projectId] })}
+                            onShareToggle={() => queryClient.invalidateQueries({ queryKey: ["artifacts", projectId] })}
+                          />
+                        )}
                         {streaming && <ThinkingIndicator content={streamingContent} />}
                         <div ref={chatEndRef} />
                       </div>
@@ -1108,6 +1157,30 @@ const ProjectDetailPage = () => {
                         </div>
                       )}
                     </div>
+
+                    {/* Pinned Artifacts */}
+                    {artifacts.filter((a: any) => a.is_pinned).length > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Pinned Artifacts</span>
+                          <span className="text-[10px] font-mono text-muted-foreground/50 bg-muted/60 px-2 py-0.5 rounded-full">
+                            {artifacts.filter((a: any) => a.is_pinned).length}
+                          </span>
+                        </div>
+                        <div className="space-y-0.5">
+                          {artifacts.filter((a: any) => a.is_pinned).map((a: any) => (
+                            <ArtifactCard
+                              key={a.id}
+                              artifact={a}
+                              onClick={() => {
+                                // Scroll to the artifact in chat or show it
+                                toast.info(`Opening "${a.title}"`);
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Activity Log */}
                     <div>
