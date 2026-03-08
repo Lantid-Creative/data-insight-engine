@@ -1,15 +1,14 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Loader2, Sparkles, TrendingUp, TrendingDown, Minus, Eye, Code2,
-  Download, RefreshCw, BarChart3, PieChart, FileText, Table2,
-  Lightbulb, Copy, Check, ChevronDown, ChevronUp, ArrowRight,
-  ImageDown, FileSpreadsheet,
+  Download, BarChart3, PieChart, FileText, Table2,
+  Lightbulb, Copy, Check, ArrowUp,
+  ImageDown, FileSpreadsheet, Brain,
 } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -17,7 +16,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip,
   AreaChart, Area, LineChart, Line, RadarChart, Radar,
   PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  ScatterChart, Scatter, CartesianGrid, Treemap,
+  ScatterChart, Scatter, CartesianGrid,
 } from "recharts";
 
 /* ─── Types ─── */
@@ -62,6 +61,11 @@ interface AnalysisResult {
   rawContent?: string;
 }
 
+interface PromptHistoryItem {
+  prompt: string;
+  timestamp: string;
+}
+
 const CHART_COLORS = [
   "hsl(var(--primary))",
   "hsl(var(--primary) / 0.7)",
@@ -77,6 +81,14 @@ const PRIORITY_STYLES = {
   medium: "bg-[hsl(var(--primary)/0.1)] text-primary border-primary/20",
   low: "bg-muted text-muted-foreground border-border",
 };
+
+const SUGGESTED_PROMPTS = [
+  "Show me the key patterns and trends in my data",
+  "Create a breakdown of file types and sizes",
+  "Identify anomalies and outliers",
+  "Compare metrics across categories",
+  "What are the top insights from my data?",
+];
 
 /* ─── Chart Renderer ─── */
 function DynamicChart({ chart }: { chart: ChartData }) {
@@ -387,7 +399,7 @@ function TableCard({ table, index }: { table: TableData; index: number }) {
 }
 
 /* ═══════════════════════════════════════════
-   MAIN ANALYZE VIEW
+   MAIN ANALYZE VIEW — CHAT-DRIVEN
    ═══════════════════════════════════════════ */
 export function AnalyzeView({ files, messages, projectName, projectId }: {
   files: any[];
@@ -397,12 +409,26 @@ export function AnalyzeView({ files, messages, projectName, projectId }: {
 }) {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [customPrompt, setCustomPrompt] = useState("");
-  const [showPrompt, setShowPrompt] = useState(false);
+  const [prompt, setPrompt] = useState("");
+  const [promptHistory, setPromptHistory] = useState<PromptHistoryItem[]>([]);
+  const [inputFocused, setInputFocused] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
-  const runAnalysis = useCallback(async (prompt?: string) => {
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 160) + "px";
+    }
+  }, [prompt]);
+
+  const runAnalysis = useCallback(async (userPrompt: string) => {
+    if (!userPrompt.trim()) return;
     setLoading(true);
     setAnalysis(null);
+    setPromptHistory(prev => [...prev, { prompt: userPrompt, timestamp: new Date().toISOString() }]);
+    setPrompt("");
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-project`, {
@@ -412,7 +438,7 @@ export function AnalyzeView({ files, messages, projectName, projectId }: {
           Authorization: `Bearer ${session?.access_token}`,
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({ projectId, prompt }),
+        body: JSON.stringify({ projectId, prompt: userPrompt }),
       });
 
       if (resp.status === 429) { toast.error("Rate limit exceeded. Try again shortly."); return; }
@@ -425,12 +451,19 @@ export function AnalyzeView({ files, messages, projectName, projectId }: {
       const data = await resp.json();
       setAnalysis(data);
       toast.success("Analysis complete!");
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
     } catch (e: any) {
       toast.error(e.message || "Failed to run analysis");
     } finally {
       setLoading(false);
     }
   }, [projectId]);
+
+  const handleSubmit = () => {
+    if (prompt.trim() && !loading) {
+      runAnalysis(prompt);
+    }
+  };
 
   const downloadFullReport = async () => {
     if (!analysis) return;
@@ -447,191 +480,287 @@ export function AnalyzeView({ files, messages, projectName, projectId }: {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto relative z-10">
-      <div className="max-w-[960px] mx-auto py-8 px-6 space-y-8">
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Analyze: {projectName}</h1>
-            <p className="text-sm text-muted-foreground mt-1">AI-powered data visualizations, code, and insights</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {analysis && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Download className="w-3.5 h-3.5" /> Export All
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={downloadFullReport} className="gap-2 text-xs">
-                    <FileText className="w-3.5 h-3.5" /> Full Analysis (JSON)
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            <Button
-              size="sm"
-              onClick={() => runAnalysis(customPrompt || undefined)}
-              disabled={loading}
-              className="gap-2"
-            >
-              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : analysis ? <RefreshCw className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
-              {loading ? "Analyzing…" : analysis ? "Re-analyze" : "Run Analysis"}
-            </Button>
-          </div>
-        </motion.div>
-
-        {/* Custom prompt toggle */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <button
-            onClick={() => setShowPrompt(!showPrompt)}
-            className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {showPrompt ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            Custom analysis prompt (optional)
-          </button>
-          <AnimatePresence>
-            {showPrompt && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                <Textarea
-                  value={customPrompt}
-                  onChange={(e) => setCustomPrompt(e.target.value)}
-                  placeholder="e.g. Focus on file size distribution and recommend optimization strategies…"
-                  rows={2}
-                  className="mt-3 text-sm"
+    <div className="flex flex-col h-full relative z-10">
+      {/* ─── Scrollable Results Area ─── */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-[960px] mx-auto py-6 px-6 space-y-6">
+          {/* Empty state */}
+          {!analysis && !loading && promptHistory.length === 0 && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="relative mb-6">
+                <motion.div
+                  className="absolute inset-0 rounded-[28px] bg-primary/15 blur-2xl"
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.5, 0.3] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                 />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+                <div
+                  className="relative w-20 h-20 rounded-[22px] bg-gradient-to-br from-primary via-primary/90 to-primary/70 flex items-center justify-center"
+                  style={{ boxShadow: "0 8px 32px hsl(var(--primary) / 0.25)" }}
+                >
+                  <BarChart3 className="w-8 h-8 text-primary-foreground" />
+                  <div className="absolute inset-0 rounded-[22px] bg-gradient-to-b from-white/10 to-transparent" />
+                </div>
+              </div>
+              <h2 className="text-xl font-bold text-foreground mb-2">What would you like to analyze?</h2>
+              <p className="text-sm text-muted-foreground max-w-md mb-8">
+                Describe what you want to explore and the AI will generate charts, insights, and data tables automatically.
+              </p>
 
-        {/* Empty state */}
-        {!analysis && !loading && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center mb-6" style={{ boxShadow: "0 12px 40px hsl(var(--primary) / 0.2)" }}>
-              <BarChart3 className="w-8 h-8 text-primary-foreground" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">Ready to analyze</h2>
-            <p className="text-sm text-muted-foreground max-w-md mb-2">
-              {files.length} files and {messages.length} messages ready for AI analysis.
-            </p>
-            <p className="text-xs text-muted-foreground/60 max-w-sm mb-6">
-              AI will generate dynamic charts, data tables, KPI insights, and actionable recommendations — all with the code to reproduce them.
-            </p>
-            <Button onClick={() => runAnalysis()} className="gap-2">
-              <Sparkles className="w-4 h-4" /> Run Analysis
-            </Button>
-          </motion.div>
-        )}
+              {/* Suggested prompts */}
+              <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+                {SUGGESTED_PROMPTS.map((sp, i) => (
+                  <motion.button
+                    key={i}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 + i * 0.05 }}
+                    onClick={() => { setPrompt(sp); textareaRef.current?.focus(); }}
+                    className="px-3.5 py-2 rounded-xl border border-border/50 bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-primary/[0.03] transition-all"
+                  >
+                    {sp}
+                  </motion.button>
+                ))}
+              </div>
 
-        {/* Loading state */}
-        {loading && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-20 text-center">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center mb-6"
-              style={{ boxShadow: "0 8px 32px hsl(var(--primary) / 0.3)" }}
-            >
-              <Sparkles className="w-7 h-7 text-primary-foreground" />
+              <p className="text-[10px] text-muted-foreground/40 mt-8">
+                {files.length} files and {messages.length} messages available for analysis
+              </p>
             </motion.div>
-            <h2 className="text-lg font-bold text-foreground mb-1">Analyzing your data…</h2>
-            <motion.p
-              className="text-sm text-muted-foreground"
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              Generating visualizations, insights & code
-            </motion.p>
-          </motion.div>
-        )}
+          )}
 
-        {/* Results */}
-        {analysis && !loading && (
-          <div className="space-y-8">
-            {/* KPI Insights */}
-            {analysis.insights?.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-                <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <Eye className="w-3.5 h-3.5" /> Key Insights
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {analysis.insights.map((insight, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 + i * 0.04 }}>
-                      <Card className="shadow-soft h-full">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{insight.title}</p>
-                            {insight.change === "up" && <TrendingUp className="w-3.5 h-3.5 text-primary" />}
-                            {insight.change === "down" && <TrendingDown className="w-3.5 h-3.5 text-destructive" />}
-                            {insight.change === "neutral" && <Minus className="w-3.5 h-3.5 text-muted-foreground" />}
-                          </div>
-                          <p className="text-lg font-bold text-foreground leading-none mb-1">{insight.value}</p>
-                          <p className="text-[10px] text-muted-foreground leading-snug">{insight.description}</p>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
+          {/* Prompt history */}
+          {promptHistory.length > 0 && (
+            <div className="space-y-4">
+              {promptHistory.map((item, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex justify-end"
+                >
+                  <div
+                    className="max-w-[75%] rounded-2xl rounded-br-md px-5 py-3.5"
+                    style={{
+                      background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))",
+                      boxShadow: "0 4px 24px hsl(var(--primary) / 0.2)",
+                    }}
+                  >
+                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap text-primary-foreground">{item.prompt}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
 
-            {/* Charts */}
-            {analysis.charts?.length > 0 && (
-              <div>
-                <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <PieChart className="w-3.5 h-3.5" /> Visualizations
-                </h2>
-                <div className="grid md:grid-cols-2 gap-5">
-                  {analysis.charts.map((chart, i) => (
-                    <ChartCard key={chart.id} chart={chart} index={i} />
-                  ))}
+          {/* Loading state */}
+          {loading && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-start gap-3">
+              <div
+                className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 flex items-center justify-center flex-shrink-0"
+                style={{ boxShadow: "0 4px 12px hsl(var(--primary) / 0.2)" }}
+              >
+                <Sparkles className="w-4 h-4 text-primary-foreground" />
+              </div>
+              <div className="rounded-2xl rounded-tl-md border border-border/50 bg-card px-5 py-4" style={{ boxShadow: "0 1px 3px hsl(0 0% 0% / 0.04)" }}>
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-1.5">
+                    {[0, 1, 2].map((j) => (
+                      <motion.div
+                        key={j}
+                        className="w-2 h-2 rounded-full bg-primary/50"
+                        animate={{ scale: [1, 1.4, 1], opacity: [0.3, 1, 0.3] }}
+                        transition={{ duration: 1.2, repeat: Infinity, delay: j * 0.15, ease: "easeInOut" }}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm text-muted-foreground">Generating charts, insights & analysis…</span>
                 </div>
               </div>
-            )}
+            </motion.div>
+          )}
 
-            {/* Tables */}
-            {analysis.tables?.length > 0 && (
-              <div>
-                <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <Table2 className="w-3.5 h-3.5" /> Data Tables
-                </h2>
-                <div className="space-y-5">
-                  {analysis.tables.map((table, i) => (
-                    <TableCard key={table.id} table={table} index={i} />
-                  ))}
+          {/* ─── Results ─── */}
+          {analysis && !loading && (
+            <div ref={resultsRef} className="space-y-8">
+              {/* AI response header */}
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
+                <div
+                  className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 flex items-center justify-center flex-shrink-0"
+                  style={{ boxShadow: "0 4px 12px hsl(var(--primary) / 0.2)" }}
+                >
+                  <Sparkles className="w-4 h-4 text-primary-foreground" />
                 </div>
-              </div>
-            )}
-
-            {/* Recommendations */}
-            {analysis.recommendations?.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-                <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <Lightbulb className="w-3.5 h-3.5" /> Recommendations
-                </h2>
-                <div className="space-y-3">
-                  {analysis.recommendations.map((rec, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.45 + i * 0.06 }}>
-                      <Card className="shadow-soft">
-                        <CardContent className="p-4 flex items-start gap-3">
-                          <span className={`flex-shrink-0 mt-0.5 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border ${PRIORITY_STYLES[rec.priority]}`}>
-                            {rec.priority}
-                          </span>
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">{rec.title}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{rec.description}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-foreground">DataAfro</span>
+                    <span className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[9px] font-bold uppercase tracking-widest border border-primary/10">Analysis</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground/50">Generated just now</span>
+                </div>
+                <div className="ml-auto">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border border-border/50 transition-all">
+                        <Download className="w-3.5 h-3.5" /> Export
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={downloadFullReport} className="gap-2 text-xs">
+                        <FileText className="w-3.5 h-3.5" /> Full Analysis (JSON)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </motion.div>
-            )}
+
+              {/* KPI Insights */}
+              {analysis.insights?.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+                  <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Eye className="w-3.5 h-3.5" /> Key Insights
+                  </h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {analysis.insights.map((insight, i) => (
+                      <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 + i * 0.04 }}>
+                        <Card className="shadow-soft h-full">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-2">
+                              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{insight.title}</p>
+                              {insight.change === "up" && <TrendingUp className="w-3.5 h-3.5 text-primary" />}
+                              {insight.change === "down" && <TrendingDown className="w-3.5 h-3.5 text-destructive" />}
+                              {insight.change === "neutral" && <Minus className="w-3.5 h-3.5 text-muted-foreground" />}
+                            </div>
+                            <p className="text-lg font-bold text-foreground leading-none mb-1">{insight.value}</p>
+                            <p className="text-[10px] text-muted-foreground leading-snug">{insight.description}</p>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Charts */}
+              {analysis.charts?.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <PieChart className="w-3.5 h-3.5" /> Visualizations
+                  </h2>
+                  <div className="grid md:grid-cols-2 gap-5">
+                    {analysis.charts.map((chart, i) => (
+                      <ChartCard key={chart.id} chart={chart} index={i} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Tables */}
+              {analysis.tables?.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Table2 className="w-3.5 h-3.5" /> Data Tables
+                  </h2>
+                  <div className="space-y-5">
+                    {analysis.tables.map((table, i) => (
+                      <TableCard key={table.id} table={table} index={i} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recommendations */}
+              {analysis.recommendations?.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+                  <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Lightbulb className="w-3.5 h-3.5" /> Recommendations
+                  </h2>
+                  <div className="space-y-3">
+                    {analysis.recommendations.map((rec, i) => (
+                      <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.45 + i * 0.06 }}>
+                        <Card className="shadow-soft">
+                          <CardContent className="p-4 flex items-start gap-3">
+                            <span className={`flex-shrink-0 mt-0.5 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border ${PRIORITY_STYLES[rec.priority]}`}>
+                              {rec.priority}
+                            </span>
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">{rec.title}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{rec.description}</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Follow-up suggestion */}
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="pt-2">
+                <p className="text-xs text-muted-foreground/60 text-center mb-3">
+                  <Brain className="w-3 h-3 inline mr-1" />
+                  Want to dig deeper? Ask a follow-up question below.
+                </p>
+              </motion.div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ─── Chat Input (always visible) ─── */}
+      <div className="flex-shrink-0 border-t border-border/30 bg-background/60 backdrop-blur-xl relative z-10">
+        <div className="max-w-[740px] mx-auto px-4 py-3">
+          <div
+            className={`relative rounded-2xl border transition-all duration-300 ${
+              inputFocused
+                ? "border-primary/30 bg-card"
+                : "border-border/50 bg-card/60 hover:border-border"
+            }`}
+            style={{
+              boxShadow: inputFocused
+                ? "0 0 0 3px hsl(var(--primary) / 0.06), 0 8px 32px hsl(var(--primary) / 0.08)"
+                : "0 1px 3px hsl(0 0% 0% / 0.04)",
+            }}
+          >
+            <textarea
+              ref={textareaRef}
+              placeholder={analysis ? "Ask a follow-up or refine the analysis…" : "Describe what you want to analyze…"}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
+              rows={1}
+              className="w-full bg-transparent border-0 outline-none resize-none text-foreground placeholder:text-muted-foreground/40 px-5 pt-4 pb-1 min-h-[44px] max-h-[160px] text-[15px]"
+            />
+            <div className="flex items-center justify-between px-3 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground/40 font-medium">
+                  <BarChart3 className="w-3 h-3 inline mr-1" />
+                  Analyze mode
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {!prompt.trim() && !loading && (
+                  <span className="text-[10px] text-muted-foreground/30 font-mono hidden sm:inline">⏎ Enter to analyze</span>
+                )}
+                <button
+                  onClick={handleSubmit}
+                  disabled={!prompt.trim() || loading}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200
+                    ${prompt.trim() && !loading
+                      ? "bg-primary text-primary-foreground hover:scale-105 active:scale-95"
+                      : "bg-muted text-muted-foreground/30 cursor-not-allowed"
+                    }`}
+                  style={prompt.trim() && !loading ? {
+                    boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)",
+                  } : undefined}
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" strokeWidth={2.5} />}
+                </button>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
