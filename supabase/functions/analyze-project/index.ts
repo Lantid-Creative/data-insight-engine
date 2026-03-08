@@ -59,7 +59,7 @@ serve(async (req) => {
 
     const userPrompt = prompt || "Generate a comprehensive analysis of this project data.";
 
-    const systemPrompt = `You are DataAfro AI, a data analysis expert. The user wants you to analyze their project data and return STRUCTURED JSON for visualization.
+    const systemPrompt = `You are **DataAfro AI** — an elite data intelligence engine operating at principal data scientist level. Your analysis must be **deeply structured, rigorously quantitative, and boardroom-ready**.
 
 Project: "${project.name}"
 Description: ${project.description || "No description"}
@@ -70,22 +70,25 @@ ${fileContext}
 Chat Activity:
 ${chatSummary}
 
+## MANDATE
+Produce an exhaustive analytical dashboard from the available project data. Do NOT hold back — generate the maximum useful analysis. If data is limited, perform meta-analysis on file composition, activity patterns, temporal distribution, and data quality signals.
+
 IMPORTANT: You MUST return a valid JSON object with the following structure. No markdown, no explanation, ONLY JSON:
 
 {
   "insights": [
-    { "title": "string", "value": "string", "change": "up|down|neutral", "description": "string" }
+    { "title": "string", "value": "string", "change": "up|down|neutral", "description": "Analytical explanation with specific numbers and context — not generic filler" }
   ],
   "charts": [
     {
       "id": "unique_id",
-      "title": "string",
-      "description": "string",
+      "title": "Descriptive analytical title",
+      "description": "What this visualization reveals — the insight, not just the data description",
       "type": "bar|line|pie|area|scatter|radar|treemap",
-      "data": [{ "name": "string", "value": number, ... }],
+      "data": [{ "name": "string", "value": number }],
       "dataKeys": ["value"],
       "xKey": "name",
-      "code": "// React/Recharts code to reproduce this chart\nimport { BarChart, Bar, XAxis, YAxis } from 'recharts';\n..."
+      "code": "// Complete React/Recharts code"
     }
   ],
   "tables": [
@@ -99,19 +102,19 @@ IMPORTANT: You MUST return a valid JSON object with the following structure. No 
     }
   ],
   "recommendations": [
-    { "title": "string", "description": "string", "priority": "high|medium|low" }
+    { "title": "string", "description": "Specific, actionable recommendation with expected impact — never generic advice", "priority": "high|medium|low" }
   ]
 }
 
-Rules:
-- Generate 3-6 KPI insight cards based on the actual project data
-- Generate 2-4 charts that make sense for the data present
-- Generate 0-2 data tables if relevant
-- Generate 2-4 actionable recommendations
-- The "code" field should contain actual React/Recharts code that reproduces the visualization
-- Make all data realistic and based on the actual project context
-- Be creative with chart types - use different ones for variety
-- If there's limited data, create insightful meta-analysis (file patterns, activity patterns, etc.)`;
+## QUALITY STANDARDS
+- Generate **5-8** KPI insight cards with quantified metrics, delta indicators, and contextual interpretation
+- Generate **3-5** charts using diverse types (bar, line, pie, area, scatter, radar, treemap) — each revealing a different analytical dimension
+- Generate **1-3** data tables for detailed breakdowns, comparisons, and rankings
+- Generate **3-5** recommendations ranked by impact, each with a concrete expected outcome
+- Every "description" field must contain a genuine analytical observation — zero filler
+- Chart data must be realistic, internally consistent, and derived from actual project context
+- The "code" field must contain production-grade React/Recharts code
+- If data is sparse, perform second-order analysis: file type distribution, upload velocity, engagement patterns, data completeness scoring`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");

@@ -169,8 +169,8 @@ Generate the full report now.`;
           { role: "user", content: userPrompt },
         ],
         stream: true,
-        max_tokens: 8192,
-        temperature: 0.5,
+        max_tokens: 16384,
+        temperature: 0.4,
       }),
     });
 

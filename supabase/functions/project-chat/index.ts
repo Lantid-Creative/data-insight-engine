@@ -123,8 +123,8 @@ Professional yet incisive. No filler phrases ("Sure!", "Great question!", "Happy
         model: "google/gemini-3-flash-preview",
         messages,
         stream: true,
-        max_tokens: 4096,
-        temperature: 0.7,
+        max_tokens: 16384,
+        temperature: 0.5,
       }),
     });
 

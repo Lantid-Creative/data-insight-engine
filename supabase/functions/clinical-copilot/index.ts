@@ -54,8 +54,8 @@ Precise, evidence-based, and authoritative. No hedging without clinical justific
           ...messages,
         ],
         stream: true,
-        max_tokens: 4096,
-        temperature: 0.4,
+        max_tokens: 16384,
+        temperature: 0.3,
       }),
     });
 
