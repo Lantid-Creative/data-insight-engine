@@ -308,6 +308,35 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
+        {/* Recent Co-Pilot Chats */}
+        {!collapsed && recentCopilotChats.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Co-Pilot History</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {recentCopilotChats.map((c: any) => (
+                  <SidebarMenuItem key={c.id}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === "/dashboard/copilot"}
+                    >
+                      <NavLink
+                        to="/dashboard/copilot"
+                        className="hover:bg-sidebar-accent/50 transition-colors"
+                        activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                        onClick={handleNavClick}
+                      >
+                        <Stethoscope className="mr-2 h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="truncate text-xs">{c.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
       </SidebarContent>
 
       {/* User footer */}
