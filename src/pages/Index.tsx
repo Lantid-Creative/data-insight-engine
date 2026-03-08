@@ -18,6 +18,7 @@ import Footer from "@/components/landing/Footer";
 const Index = () => {
   return (
     <div className="min-h-screen">
+      <SEOHead path="/" />
       <Navbar />
       <Hero />
       <Stats />
