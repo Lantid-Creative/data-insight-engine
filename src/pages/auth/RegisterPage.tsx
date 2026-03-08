@@ -10,6 +10,7 @@ import { ArrowRight, Eye, EyeOff, Check, Clock, Building2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { capitalizeName } from "@/lib/utils";
 
 const RegisterPage = () => {
   const [step, setStep] = useState<1 | 2>(1);
@@ -39,7 +40,7 @@ const RegisterPage = () => {
     setLoading(true);
 
     // 1. Create the auth account
-    const { error } = await signUp(email, password, name);
+    const { error } = await signUp(email, password, capitalizeName(name));
     if (error) {
       setLoading(false);
       toast({ title: "Sign up failed", description: error, variant: "destructive" });
@@ -51,7 +52,7 @@ const RegisterPage = () => {
     if (user) {
       const { error: appError } = await supabase.from("user_applications").insert({
         user_id: user.id,
-        full_name: name,
+        full_name: capitalizeName(name),
         email,
         company_name: companyName,
         company_size: companySize || null,

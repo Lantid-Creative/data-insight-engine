@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { capitalizeName } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { X, Plus, User, MessageSquare } from "lucide-react";
@@ -51,7 +52,7 @@ const SettingsPage = () => {
       const { error } = await supabase
         .from("profiles")
         .update({
-          full_name: fullName.trim(),
+          full_name: capitalizeName(fullName),
           bio: bio.trim(),
           expertise_tags: expertiseTags,
         } as any)
