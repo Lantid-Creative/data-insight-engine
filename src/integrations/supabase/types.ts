@@ -1067,6 +1067,51 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_library: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          icon: string | null
+          id: string
+          is_curated: boolean
+          is_favorite: boolean
+          prompt_text: string
+          title: string
+          updated_at: string
+          use_count: number
+          user_id: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string
+          icon?: string | null
+          id?: string
+          is_curated?: boolean
+          is_favorite?: boolean
+          prompt_text: string
+          title: string
+          updated_at?: string
+          use_count?: number
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          icon?: string | null
+          id?: string
+          is_curated?: boolean
+          is_favorite?: boolean
+          prompt_text?: string
+          title?: string
+          updated_at?: string
+          use_count?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       redaction_audit_log: {
         Row: {
           action: string
