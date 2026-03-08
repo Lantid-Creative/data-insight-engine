@@ -1010,6 +1010,14 @@ const ProjectDetailPage = () => {
                             isLast={i === messages.length - 1}
                           />
                         ))}
+                        {streaming && streamingArtifact && (
+                          <ArtifactRenderer
+                            artifact={streamingArtifact}
+                            projectId={projectId!}
+                            onPinToggle={() => queryClient.invalidateQueries({ queryKey: ["artifacts", projectId] })}
+                            onShareToggle={() => queryClient.invalidateQueries({ queryKey: ["artifacts", projectId] })}
+                          />
+                        )}
                         {streaming && <ThinkingIndicator content={streamingContent} />}
                         <div ref={chatEndRef} />
                       </div>
