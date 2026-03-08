@@ -340,6 +340,21 @@ function ChatMessage({ message, onCopy, onRetry, isLast, artifacts, projectId, o
                   ))}
                 </div>
               )}
+
+              {/* Inline Artifacts */}
+              {artifacts && artifacts.length > 0 && (
+                <div className="mt-3 space-y-3">
+                  {artifacts.map((a: any) => (
+                    <ArtifactRenderer
+                      key={a.id}
+                      artifact={a}
+                      projectId={projectId || ""}
+                      onPinToggle={onArtifactUpdate}
+                      onShareToggle={onArtifactUpdate}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Hover action bar */}
