@@ -199,12 +199,15 @@ const ApiAccessPage = () => {
 
       {/* Endpoints reference */}
       <Card className="shadow-soft">
-        <CardHeader><CardTitle>Endpoints</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Edge Function Endpoints</CardTitle></CardHeader>
         <CardContent className="space-y-2 font-mono text-sm">
-          <p><span className="text-emerald-500 font-bold">POST</span> /api/v1/upload</p>
-          <p><span className="text-emerald-500 font-bold">POST</span> /api/v1/analyze</p>
-          <p><span className="text-primary font-bold">GET</span>  /api/v1/reports</p>
-          <p><span className="text-destructive font-bold">DELETE</span> /api/v1/project/:id</p>
+          <p><span className="text-emerald-500 font-bold">POST</span> /functions/v1/analyze-project</p>
+          <p><span className="text-emerald-500 font-bold">POST</span> /functions/v1/generate-report</p>
+          <p><span className="text-emerald-500 font-bold">POST</span> /functions/v1/clinical-copilot</p>
+          <p><span className="text-emerald-500 font-bold">POST</span> /functions/v1/phi-redaction</p>
+          <p><span className="text-emerald-500 font-bold">POST</span> /functions/v1/epidemic-intel</p>
+          <p className="text-xs text-muted-foreground mt-3">Base URL: <code>{import.meta.env.VITE_SUPABASE_URL}</code></p>
+          <p className="text-xs text-muted-foreground">Include your API key in the <code>Authorization: Bearer &lt;key&gt;</code> header.</p>
         </CardContent>
       </Card>
 
