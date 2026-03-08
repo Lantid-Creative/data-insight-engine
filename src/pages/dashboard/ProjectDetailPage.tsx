@@ -1158,6 +1158,30 @@ const ProjectDetailPage = () => {
                       )}
                     </div>
 
+                    {/* Pinned Artifacts */}
+                    {artifacts.filter((a: any) => a.is_pinned).length > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Pinned Artifacts</span>
+                          <span className="text-[10px] font-mono text-muted-foreground/50 bg-muted/60 px-2 py-0.5 rounded-full">
+                            {artifacts.filter((a: any) => a.is_pinned).length}
+                          </span>
+                        </div>
+                        <div className="space-y-0.5">
+                          {artifacts.filter((a: any) => a.is_pinned).map((a: any) => (
+                            <ArtifactCard
+                              key={a.id}
+                              artifact={a}
+                              onClick={() => {
+                                // Scroll to the artifact in chat or show it
+                                toast.info(`Opening "${a.title}"`);
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Activity Log */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
