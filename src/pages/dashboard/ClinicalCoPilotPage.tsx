@@ -10,7 +10,17 @@ import {
   Sparkles, Copy, ThumbsUp, ThumbsDown, Loader2, Heart, Brain,
   Activity, Syringe, ClipboardList, Plus, Trash2, MessageSquare,
   Download, Search, PanelLeftClose, PanelLeft, Paperclip, X, File,
+  MoreHorizontal, Pencil,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Input as DialogInput } from "@/components/ui/input";
+import { isToday, isYesterday, isThisWeek, isThisMonth } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
