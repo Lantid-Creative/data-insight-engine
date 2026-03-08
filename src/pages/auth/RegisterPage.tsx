@@ -40,7 +40,7 @@ const RegisterPage = () => {
     setLoading(true);
 
     // 1. Create the auth account
-    const { error } = await signUp(email, password, name);
+    const { error } = await signUp(email, password, capitalizeName(name));
     if (error) {
       setLoading(false);
       toast({ title: "Sign up failed", description: error, variant: "destructive" });
