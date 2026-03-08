@@ -1189,229 +1189,39 @@ const ProjectDetailPage = () => {
   );
 };
 
-/* ─── Report Config Types ─── */
-const REPORT_SECTIONS = [
-  { id: "executive_summary", label: "Executive Summary", desc: "High-level overview & key takeaways", icon: Sparkles, default: true },
-  { id: "data_overview", label: "Data Overview", desc: "File types, sizes, structure summary", icon: Database, default: true },
-  { id: "key_insights", label: "Key Insights", desc: "Patterns, trends & anomalies", icon: TrendingUp, default: true },
-  { id: "statistical_analysis", label: "Statistical Analysis", desc: "Quantitative metrics & correlations", icon: BarChart3, default: false },
-  { id: "recommendations", label: "Recommendations", desc: "Actionable next steps", icon: Zap, default: true },
-  { id: "risk_assessment", label: "Risk Assessment", desc: "Risks, gaps & data quality issues", icon: Eye, default: false },
-  { id: "methodology", label: "Methodology", desc: "How the analysis was done", icon: Workflow, default: false },
-  { id: "data_quality", label: "Data Quality", desc: "Completeness, accuracy, consistency", icon: Search, default: false },
-  { id: "comparative_analysis", label: "Comparative Analysis", desc: "Segment & period comparisons", icon: Layers, default: false },
-  { id: "conclusion", label: "Conclusion", desc: "Final summary & closing", icon: FileText, default: true },
-  { id: "appendix", label: "Appendix", desc: "Raw data & supplementary info", icon: Table2, default: false },
-] as const;
-
-const TONE_OPTIONS = [
-  { id: "professional", label: "Professional", desc: "Formal business language", emoji: "💼" },
-  { id: "executive", label: "Executive", desc: "Concise, impact-focused", emoji: "🎯" },
-  { id: "technical", label: "Technical", desc: "Detailed & precise", emoji: "⚙️" },
-  { id: "academic", label: "Academic", desc: "Scholarly & methodical", emoji: "📚" },
-  { id: "casual", label: "Casual", desc: "Friendly & accessible", emoji: "😊" },
-] as const;
-
-const FOCUS_AREA_OPTIONS = [
-  "Revenue & Financial Metrics",
-  "Customer Behavior",
-  "Operational Efficiency",
-  "Market Trends",
-  "Risk & Compliance",
-  "Product Performance",
-  "User Engagement",
-  "Cost Optimization",
-  "Growth Opportunities",
-  "Data Quality & Integrity",
+/* ─── Report View (Chat-Driven) ─── */
+const REPORT_SUGGESTIONS = [
+  "Generate an executive summary of my data",
+  "Create a detailed technical report with methodology",
+  "Write a quick overview with key takeaways",
+  "Build a comprehensive deep-dive analysis report",
+  "Summarize findings for leadership in 2 pages",
 ];
 
-const LANGUAGE_OPTIONS = [
-  "English", "Spanish", "French", "German", "Portuguese",
-  "Chinese", "Japanese", "Korean", "Arabic", "Hindi",
-];
-
-const WIZARD_STEPS = [
-  { id: 1, label: "Template", icon: Sparkles },
-  { id: 2, label: "Sections", icon: Layers },
-  { id: 3, label: "Style", icon: Wand2 },
-  { id: 4, label: "Review", icon: Eye },
-] as const;
-
-/* ─── Report Templates ─── */
-const REPORT_TEMPLATES = [
-  {
-    id: "executive_brief",
-    label: "Executive Brief",
-    desc: "Concise 1-2 page overview for leadership",
-    emoji: "🎯",
-    sections: ["executive_summary", "key_insights", "recommendations", "conclusion"],
-    tone: "executive",
-    includeCharts: false,
-  },
-  {
-    id: "deep_dive",
-    label: "Deep Dive Analysis",
-    desc: "Comprehensive analysis with all sections",
-    emoji: "🔬",
-    sections: ["executive_summary", "data_overview", "key_insights", "statistical_analysis", "comparative_analysis", "recommendations", "risk_assessment", "conclusion", "appendix"],
-    tone: "professional",
-    includeCharts: true,
-  },
-  {
-    id: "quick_overview",
-    label: "Quick Overview",
-    desc: "Fast summary with key takeaways",
-    emoji: "⚡",
-    sections: ["executive_summary", "key_insights", "conclusion"],
-    tone: "casual",
-    includeCharts: false,
-  },
-  {
-    id: "technical",
-    label: "Technical Report",
-    desc: "Detailed methodology and data quality focus",
-    emoji: "⚙️",
-    sections: ["executive_summary", "data_overview", "methodology", "data_quality", "statistical_analysis", "key_insights", "recommendations", "conclusion"],
-    tone: "technical",
-    includeCharts: true,
-  },
-  {
-    id: "custom",
-    label: "Custom Report",
-    desc: "Build your own report from scratch",
-    emoji: "✏️",
-    sections: ["executive_summary", "data_overview", "key_insights", "recommendations", "conclusion"],
-    tone: "professional",
-    includeCharts: false,
-  },
-] as const;
-
-/* ─── Smart suggestion helper ─── */
-function extractChatSuggestions(messages: any[]): { suggestedFocusAreas: string[]; suggestedTitle: string; suggestedInstructions: string } {
-  const allText = messages.map(m => m.content).join(" ").toLowerCase();
-
-  const focusMap: Record<string, string[]> = {
-    "Revenue & Financial Metrics": ["revenue", "sales", "profit", "financial", "income", "cost", "budget", "price", "pricing", "money", "payment"],
-    "Customer Behavior": ["customer", "user", "behavior", "retention", "churn", "engagement", "satisfaction", "feedback"],
-    "Operational Efficiency": ["operation", "efficiency", "process", "workflow", "automation", "productivity", "performance"],
-    "Market Trends": ["market", "trend", "competitor", "industry", "growth", "share", "demand"],
-    "Risk & Compliance": ["risk", "compliance", "security", "audit", "regulation", "fraud", "threat"],
-    "Product Performance": ["product", "feature", "usage", "adoption", "conversion", "funnel"],
-    "User Engagement": ["engagement", "session", "click", "visit", "bounce", "page view", "active user"],
-    "Cost Optimization": ["cost", "expense", "optimization", "savings", "budget", "spend", "roi"],
-    "Growth Opportunities": ["growth", "opportunity", "expansion", "scale", "new market", "potential"],
-    "Data Quality & Integrity": ["data quality", "missing", "incomplete", "accuracy", "clean", "duplicate", "integrity"],
-  };
-
-  const suggestedFocusAreas: string[] = [];
-  for (const [area, keywords] of Object.entries(focusMap)) {
-    const matches = keywords.filter(k => allText.includes(k)).length;
-    if (matches >= 2) suggestedFocusAreas.push(area);
-  }
-
-  // Extract a suggested title from the most recent user messages
-  const userMessages = messages.filter(m => m.role === "user");
-  const lastUserMsg = userMessages[userMessages.length - 1]?.content || "";
-  const suggestedTitle = lastUserMsg.length > 10 && lastUserMsg.length < 80 ? lastUserMsg : "";
-
-  // Build smart instructions from chat themes
-  const topics = userMessages.slice(-5).map(m => m.content.slice(0, 100)).filter(Boolean);
-  const suggestedInstructions = topics.length > 0
-    ? `Based on our conversation, focus on: ${topics.slice(0, 3).join("; ")}`
-    : "";
-
-  return { suggestedFocusAreas, suggestedTitle, suggestedInstructions };
-}
-
-/* ─── Report View (Wizard) ─── */
 function ReportView({ projectId }: { projectId: string }) {
   const [reportContent, setReportContent] = useState("");
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
-  const [wizardStep, setWizardStep] = useState(1);
-  const [showReport, setShowReport] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState("");
+  const [promptHistory, setPromptHistory] = useState<Array<{ prompt: string; timestamp: string }>>([]);
+  const [inputFocused, setInputFocused] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [exporting, setExporting] = useState<string | null>(null);
 
-  // Config state
-  const [selectedSections, setSelectedSections] = useState<string[]>(
-    REPORT_SECTIONS.filter(s => s.default).map(s => s.id)
-  );
-  const [tone, setTone] = useState("professional");
-  const [focusAreas, setFocusAreas] = useState<string[]>([]);
-  const [customInstructions, setCustomInstructions] = useState("");
-  const [reportTitle, setReportTitle] = useState("");
-  const [includeCharts, setIncludeCharts] = useState(false);
-  const [language, setLanguage] = useState("English");
-
-  const applyTemplate = (templateId: string) => {
-    const template = REPORT_TEMPLATES.find(t => t.id === templateId);
-    if (!template) return;
-    setSelectedTemplate(templateId);
-    setSelectedSections([...template.sections]);
-    setTone(template.tone);
-    setIncludeCharts(template.includeCharts);
-    if (templateId !== "custom") {
-      setWizardStep(2);
-    }
-  };
-
-  const moveSectionUp = (index: number) => {
-    if (index === 0) return;
-    setSelectedSections(prev => {
-      const next = [...prev];
-      [next[index - 1], next[index]] = [next[index], next[index - 1]];
-      return next;
-    });
-  };
-
-  const moveSectionDown = (index: number) => {
-    setSelectedSections(prev => {
-      if (index >= prev.length - 1) return prev;
-      const next = [...prev];
-      [next[index], next[index + 1]] = [next[index + 1], next[index]];
-      return next;
-    });
-  };
-
-  // Load chat messages for smart suggestions
-  const { data: chatMessages = [] } = useQuery({
-    queryKey: ["chat-messages", projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("chat_messages").select("*").eq("project_id", projectId)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!projectId,
-  });
-
-  const suggestions = extractChatSuggestions(chatMessages);
-
-  // Auto-apply chat suggestions on first load
   useEffect(() => {
-    if (chatMessages.length > 0 && focusAreas.length === 0 && suggestions.suggestedFocusAreas.length > 0) {
-      setFocusAreas(suggestions.suggestedFocusAreas);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 160) + "px";
     }
-  }, [chatMessages.length]); // eslint-disable-line
+  }, [prompt]);
 
-  const toggleSection = (id: string) => {
-    setSelectedSections(prev =>
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-    );
-  };
-
-  const toggleFocus = (area: string) => {
-    setFocusAreas(prev =>
-      prev.includes(area) ? prev.filter(f => f !== area) : [...prev, area]
-    );
-  };
-
-  const generateReport = async () => {
+  const generateReport = async (userPrompt: string) => {
+    if (!userPrompt.trim()) return;
     setGenerating(true);
     setReportContent("");
     setGenerated(false);
-    setShowReport(true);
+    setPromptHistory(prev => [...prev, { prompt: userPrompt, timestamp: new Date().toISOString() }]);
+    setPrompt("");
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -1425,13 +1235,13 @@ function ReportView({ projectId }: { projectId: string }) {
         body: JSON.stringify({
           projectId,
           config: {
-            sections: selectedSections,
-            tone,
-            focusAreas,
-            customInstructions,
-            reportTitle,
-            includeCharts,
-            language,
+            sections: ["executive_summary", "data_overview", "key_insights", "statistical_analysis", "recommendations", "conclusion"],
+            tone: "professional",
+            focusAreas: [],
+            customInstructions: userPrompt,
+            reportTitle: "",
+            includeCharts: true,
+            language: "English",
           },
         }),
       });
@@ -1461,6 +1271,7 @@ function ReportView({ projectId }: { projectId: string }) {
         }
       }
       setGenerated(true);
+      toast.success("Report generated!");
     } catch (e: any) {
       toast.error(e.message || "Failed to generate report");
     } finally {
@@ -1468,7 +1279,11 @@ function ReportView({ projectId }: { projectId: string }) {
     }
   };
 
-  const [exporting, setExporting] = useState<string | null>(null);
+  const handleSubmit = () => {
+    if (prompt.trim() && !generating) {
+      generateReport(prompt);
+    }
+  };
 
   const handleExport = async (format: "md" | "pdf" | "docx" | "pptx") => {
     setExporting(format);
@@ -1497,570 +1312,202 @@ function ReportView({ projectId }: { projectId: string }) {
     }
   };
 
-  const canProceed = () => {
-    if (wizardStep === 1) return true;
-    if (wizardStep === 2) return selectedSections.length > 0;
-    if (wizardStep === 3) return true;
-    return true;
-  };
-
-  // Show generated report
-  if (showReport) {
-    return (
-      <div className="flex-1 overflow-y-auto relative z-10">
-        <div className="max-w-[800px] mx-auto py-8 px-6 space-y-6">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">{reportTitle || "Generated Report"}</h1>
-              <p className="text-sm text-muted-foreground mt-1">AI-generated from your project data & conversations</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => { setShowReport(false); setWizardStep(1); }}>
-                <Wand2 className="w-3.5 h-3.5" />
-                New Report
-              </Button>
-              {generated && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2" disabled={!!exporting}>
-                      {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                      {exporting ? `Exporting…` : "Export"}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleExport("pdf")} className="gap-2"><FileText className="w-4 h-4 text-red-500" /> PDF</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport("docx")} className="gap-2"><FileText className="w-4 h-4 text-blue-500" /> Word (.docx)</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport("pptx")} className="gap-2"><FileText className="w-4 h-4 text-orange-500" /> PowerPoint (.pptx)</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleExport("md")} className="gap-2"><FileText className="w-4 h-4 text-muted-foreground" /> Markdown (.md)</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          </motion.div>
-
-          <Card className="shadow-soft">
-            <CardContent className="p-6 sm:p-8">
-              <div className="flex flex-wrap gap-2 mb-6 pb-4 border-b border-border/40">
-                <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">{tone}</span>
-                <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-[10px] font-bold">{selectedSections.length} sections</span>
-                {language !== "English" && <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-[10px] font-bold">{language}</span>}
-                {focusAreas.length > 0 && <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-[10px] font-bold">{focusAreas.length} focus areas</span>}
+  return (
+    <div className="flex flex-col h-full relative z-10">
+      {/* ─── Scrollable Content ─── */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-[800px] mx-auto py-6 px-6 space-y-6">
+          {/* Empty state */}
+          {!reportContent && !generating && promptHistory.length === 0 && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="relative mb-6">
+                <motion.div
+                  className="absolute inset-0 rounded-[28px] bg-primary/15 blur-2xl"
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.5, 0.3] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                />
+                <div
+                  className="relative w-20 h-20 rounded-[22px] bg-gradient-to-br from-primary via-primary/90 to-primary/70 flex items-center justify-center"
+                  style={{ boxShadow: "0 8px 32px hsl(var(--primary) / 0.25)" }}
+                >
+                  <FileText className="w-8 h-8 text-primary-foreground" />
+                  <div className="absolute inset-0 rounded-[22px] bg-gradient-to-b from-white/10 to-transparent" />
+                </div>
               </div>
-              <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-[1.85]
-                [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mt-6 [&>h1]:mb-3
-                [&>h2]:text-lg [&>h2]:font-bold [&>h2]:mt-5 [&>h2]:mb-2
-                [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mt-4 [&>h3]:mb-2
-                [&>p]:mb-3 [&>ul]:mb-3 [&>ol]:mb-3 [&>li]:mb-1
-                [&>blockquote]:border-l-2 [&>blockquote]:border-primary/40 [&>blockquote]:pl-4 [&>blockquote]:text-muted-foreground
-                [&_code]:bg-primary/5 [&_code]:text-primary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-sm [&_code]:font-mono [&_code]:border [&_code]:border-primary/10
-                [&>table]:w-full [&>table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:bg-muted [&_th]:text-left [&_th]:text-sm [&_th]:font-semibold
-                [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm">
-                <ReactMarkdown>{reportContent}</ReactMarkdown>
-                {generating && (
-                  <motion.span
-                    className="inline-block w-0.5 h-5 bg-primary ml-0.5 align-text-bottom rounded-full"
-                    animate={{ opacity: [1, 0] }}
-                    transition={{ duration: 0.6, repeat: Infinity, repeatType: "reverse" }}
-                  />
+              <h2 className="text-xl font-bold text-foreground mb-2">What report do you need?</h2>
+              <p className="text-sm text-muted-foreground max-w-md mb-8">
+                Describe the report you want and the AI will generate it from your data and conversations. You can refine it with follow-ups.
+              </p>
+
+              <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+                {REPORT_SUGGESTIONS.map((sp, i) => (
+                  <motion.button
+                    key={i}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 + i * 0.05 }}
+                    onClick={() => { setPrompt(sp); textareaRef.current?.focus(); }}
+                    className="px-3.5 py-2 rounded-xl border border-border/50 bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-primary/[0.03] transition-all"
+                  >
+                    {sp}
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Prompt history */}
+          {promptHistory.length > 0 && (
+            <div className="space-y-4">
+              {promptHistory.map((item, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex justify-end"
+                >
+                  <div
+                    className="max-w-[75%] rounded-2xl rounded-br-md px-5 py-3.5"
+                    style={{
+                      background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))",
+                      boxShadow: "0 4px 24px hsl(var(--primary) / 0.2)",
+                    }}
+                  >
+                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap text-primary-foreground">{item.prompt}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* Report content / streaming */}
+          {(reportContent || generating) && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              {/* AI header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 flex items-center justify-center flex-shrink-0"
+                  style={{ boxShadow: "0 4px 12px hsl(var(--primary) / 0.2)" }}
+                >
+                  <Sparkles className="w-4 h-4 text-primary-foreground" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-foreground">DataAfro</span>
+                    <span className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[9px] font-bold uppercase tracking-widest border border-primary/10">Report</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground/50">{generating ? "Generating…" : "Generated just now"}</span>
+                </div>
+                {generated && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border border-border/50 transition-all" disabled={!!exporting}>
+                        {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                        {exporting ? "Exporting…" : "Export"}
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleExport("pdf")} className="gap-2"><FileText className="w-4 h-4 text-red-500" /> PDF</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExport("docx")} className="gap-2"><FileText className="w-4 h-4 text-blue-500" /> Word (.docx)</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExport("pptx")} className="gap-2"><FileText className="w-4 h-4 text-orange-500" /> PowerPoint (.pptx)</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleExport("md")} className="gap-2"><FileText className="w-4 h-4 text-muted-foreground" /> Markdown (.md)</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </div>
-            </CardContent>
-          </Card>
+
+              <Card className="shadow-soft">
+                <CardContent className="p-6 sm:p-8">
+                  <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-[1.85]
+                    [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mt-6 [&>h1]:mb-3
+                    [&>h2]:text-lg [&>h2]:font-bold [&>h2]:mt-5 [&>h2]:mb-2
+                    [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mt-4 [&>h3]:mb-2
+                    [&>p]:mb-3 [&>ul]:mb-3 [&>ol]:mb-3 [&>li]:mb-1
+                    [&>blockquote]:border-l-2 [&>blockquote]:border-primary/40 [&>blockquote]:pl-4 [&>blockquote]:text-muted-foreground
+                    [&_code]:bg-primary/5 [&_code]:text-primary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-sm [&_code]:font-mono [&_code]:border [&_code]:border-primary/10
+                    [&>table]:w-full [&>table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:bg-muted [&_th]:text-left [&_th]:text-sm [&_th]:font-semibold
+                    [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm">
+                    <ReactMarkdown>{reportContent}</ReactMarkdown>
+                    {generating && (
+                      <motion.span
+                        className="inline-block w-0.5 h-5 bg-primary ml-0.5 align-text-bottom rounded-full"
+                        animate={{ opacity: [1, 0] }}
+                        transition={{ duration: 0.6, repeat: Infinity, repeatType: "reverse" }}
+                      />
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {generated && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="pt-4">
+                  <p className="text-xs text-muted-foreground/60 text-center">
+                    <Brain className="w-3 h-3 inline mr-1" />
+                    Want changes? Describe what to add, remove, or adjust below.
+                  </p>
+                </motion.div>
+              )}
+            </motion.div>
+          )}
         </div>
       </div>
-    );
-  }
 
-  // Wizard UI
-  return (
-    <div className="flex-1 overflow-y-auto relative z-10">
-      <div className="max-w-[640px] mx-auto py-8 px-6">
-        {/* Wizard Header */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/70 mb-4"
-            style={{ boxShadow: "0 8px 24px hsl(var(--primary) / 0.25)" }}>
-            <FileText className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">Report Wizard</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {chatMessages.length > 0
-              ? `Powered by ${chatMessages.length} messages from your conversation`
-              : "Configure your custom AI-generated report"}
-          </p>
-        </motion.div>
-
-        {/* Step Indicator */}
-        <div className="flex items-center justify-center gap-1 mb-8">
-          {WIZARD_STEPS.map((step, i) => (
-            <div key={step.id} className="flex items-center">
-              <button
-                onClick={() => step.id < wizardStep && setWizardStep(step.id)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-300 ${
-                  wizardStep === step.id
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : wizardStep > step.id
-                      ? "bg-primary/10 text-primary cursor-pointer hover:bg-primary/20"
-                      : "bg-muted/50 text-muted-foreground/50"
-                }`}
-                disabled={step.id > wizardStep}
-              >
-                {wizardStep > step.id ? (
-                  <Check className="w-3.5 h-3.5" />
-                ) : (
-                  <step.icon className="w-3.5 h-3.5" />
-                )}
-                <span className="hidden sm:inline">{step.label}</span>
-                <span className="sm:hidden">{step.id}</span>
-              </button>
-              {i < WIZARD_STEPS.length - 1 && (
-                <div className={`w-6 h-px mx-1 transition-colors ${wizardStep > step.id ? "bg-primary/30" : "bg-border/40"}`} />
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Step Content */}
-        <AnimatePresence mode="wait">
-          {/* Step 1: Template Selection */}
-          {wizardStep === 1 && (
-            <motion.div
-              key="step1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-5"
-            >
-              <Card className="shadow-soft">
-                <CardContent className="p-6">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4 block">Choose a Template</label>
-                  <div className="grid grid-cols-1 gap-2.5">
-                    {REPORT_TEMPLATES.map((template) => (
-                      <button
-                        key={template.id}
-                        onClick={() => applyTemplate(template.id)}
-                        className={`flex items-center gap-4 p-4 rounded-xl border text-left transition-all duration-200 ${
-                          selectedTemplate === template.id
-                            ? "border-primary/30 bg-primary/[0.04] ring-1 ring-primary/20"
-                            : "border-border/50 bg-card hover:border-border hover:bg-muted/20"
-                        }`}
-                      >
-                        <span className="text-2xl">{template.emoji}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-bold ${selectedTemplate === template.id ? "text-foreground" : "text-foreground/80"}`}>{template.label}</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">{template.desc}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="px-2 py-0.5 rounded-md bg-muted text-[9px] font-bold text-muted-foreground uppercase">{template.sections.length} sections</span>
-                            <span className="px-2 py-0.5 rounded-md bg-muted text-[9px] font-bold text-muted-foreground uppercase">{template.tone}</span>
-                            {template.includeCharts && <span className="px-2 py-0.5 rounded-md bg-primary/10 text-[9px] font-bold text-primary uppercase">Charts</span>}
-                          </div>
-                        </div>
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                          selectedTemplate === template.id ? "border-primary bg-primary" : "border-border"
-                        }`}>
-                          {selectedTemplate === template.id && <Check className="w-3 h-3 text-primary-foreground" />}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-soft">
-                <CardContent className="p-6">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">Report Title</label>
-                  <Input
-                    placeholder="e.g. Q1 2026 Financial Analysis"
-                    value={reportTitle}
-                    onChange={(e) => setReportTitle(e.target.value)}
-                    className="bg-muted/30 border-border/50 h-12 text-base"
-                  />
-                  {suggestions.suggestedTitle && !reportTitle && (
-                    <button
-                      onClick={() => setReportTitle(suggestions.suggestedTitle)}
-                      className="mt-3 flex items-center gap-2 text-xs text-primary hover:underline"
-                    >
-                      <Brain className="w-3 h-3" />
-                      <span>Suggested: "{suggestions.suggestedTitle.slice(0, 50)}…"</span>
-                    </button>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-soft">
-                <CardContent className="p-6 space-y-4">
-                  <div>
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">Language</label>
-                    <div className="flex flex-wrap gap-2">
-                      {LANGUAGE_OPTIONS.map((lang) => (
-                        <button
-                          key={lang}
-                          onClick={() => setLanguage(lang)}
-                          className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
-                            language === lang
-                              ? "border-primary/30 bg-primary/10 text-primary"
-                              : "border-border/50 text-muted-foreground hover:border-border"
-                          }`}
-                        >
-                          {lang}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Step 2: Sections */}
-          {wizardStep === 2 && (
-            <motion.div
-              key="step2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-5"
-            >
-              {/* Add/remove sections */}
-              <Card className="shadow-soft">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Toggle Sections</label>
-                      <p className="text-[11px] text-muted-foreground mt-1">Click to add or remove sections</p>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
-                      {selectedSections.length} selected
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {REPORT_SECTIONS.map((section) => {
-                      const selected = selectedSections.includes(section.id);
-                      return (
-                        <button
-                          key={section.id}
-                          onClick={() => toggleSection(section.id)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold border transition-all ${
-                            selected
-                              ? "border-primary/30 bg-primary/10 text-primary"
-                              : "border-border/50 text-muted-foreground hover:border-border"
-                          }`}
-                        >
-                          <section.icon className="w-3.5 h-3.5" />
-                          {section.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Reorder selected sections */}
-              <Card className="shadow-soft">
-                <CardContent className="p-6">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">Section Order</label>
-                  <p className="text-[11px] text-muted-foreground mb-4">Drag or use arrows to reorder your report sections</p>
-                  <div className="space-y-1.5">
-                    {selectedSections.map((sectionId, index) => {
-                      const section = REPORT_SECTIONS.find(s => s.id === sectionId);
-                      if (!section) return null;
-                      const SIcon = section.icon;
-                      return (
-                        <motion.div
-                          key={sectionId}
-                          layout
-                          initial={{ opacity: 0, x: -8 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-card group"
-                        >
-                          <span className="text-[10px] font-mono text-muted-foreground/40 w-5 text-center">{index + 1}</span>
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <SIcon className="w-3.5 h-3.5 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-foreground">{section.label}</p>
-                            <p className="text-[10px] text-muted-foreground/60">{section.desc}</p>
-                          </div>
-                          <div className="flex flex-col gap-0.5">
-                            <button
-                              onClick={() => moveSectionUp(index)}
-                              disabled={index === 0}
-                              className="p-1 rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                            >
-                              <ChevronLeft className="w-3 h-3 rotate-90" />
-                            </button>
-                            <button
-                              onClick={() => moveSectionDown(index)}
-                              disabled={index === selectedSections.length - 1}
-                              className="p-1 rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                            >
-                              <ChevronLeft className="w-3 h-3 -rotate-90" />
-                            </button>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Tone selector (moved from step 1) */}
-              <Card className="shadow-soft">
-                <CardContent className="p-6">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 block">Tone & Style</label>
-                  <div className="grid grid-cols-1 gap-2">
-                    {TONE_OPTIONS.map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => setTone(t.id)}
-                        className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-200 ${
-                          tone === t.id
-                            ? "border-primary/30 bg-primary/[0.04]"
-                            : "border-border/50 bg-card hover:border-border"
-                        }`}
-                      >
-                        <span className="text-lg">{t.emoji}</span>
-                        <div className="flex-1">
-                          <p className={`text-sm font-semibold ${tone === t.id ? "text-foreground" : "text-muted-foreground"}`}>{t.label}</p>
-                          <p className="text-[11px] text-muted-foreground/60">{t.desc}</p>
-                        </div>
-                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                          tone === t.id ? "border-primary bg-primary" : "border-border"
-                        }`}>
-                          {tone === t.id && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Step 3: Focus & Details */}
-          {wizardStep === 3 && (
-            <motion.div
-              key="step3"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-5"
-            >
-              <Card className="shadow-soft">
-                <CardContent className="p-6">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Focus Areas</label>
-                  <p className="text-[11px] text-muted-foreground mb-4">
-                    {suggestions.suggestedFocusAreas.length > 0
-                      ? "✨ We pre-selected areas based on your chat history. Adjust as needed."
-                      : "Select areas you want the AI to emphasize."}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {FOCUS_AREA_OPTIONS.map((area) => {
-                      const active = focusAreas.includes(area);
-                      const suggested = suggestions.suggestedFocusAreas.includes(area);
-                      return (
-                        <button
-                          key={area}
-                          onClick={() => toggleFocus(area)}
-                          className={`px-3 py-2 rounded-xl text-[11px] font-semibold border transition-all relative ${
-                            active
-                              ? "border-primary/30 bg-primary/10 text-primary"
-                              : "border-border/50 text-muted-foreground hover:border-border"
-                          }`}
-                        >
-                          {suggested && !active && (
-                            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
-                          )}
-                          {area}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-soft">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <button
-                      onClick={() => setIncludeCharts(!includeCharts)}
-                      className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${includeCharts ? "bg-primary" : "bg-muted border border-border"}`}
-                    >
-                      <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${includeCharts ? "left-[20px]" : "left-0.5"}`} />
-                    </button>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">Include chart suggestions</p>
-                      <p className="text-[11px] text-muted-foreground">AI will describe recommended visualizations</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-soft">
-                <CardContent className="p-6">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Custom Instructions</label>
-                  <Textarea
-                    placeholder="e.g. Focus on year-over-year growth, mention competitor analysis, keep it under 3 pages..."
-                    value={customInstructions}
-                    onChange={(e) => setCustomInstructions(e.target.value)}
-                    rows={3}
-                    className="bg-muted/30 border-border/50 text-sm"
-                  />
-                  {suggestions.suggestedInstructions && !customInstructions && (
-                    <button
-                      onClick={() => setCustomInstructions(suggestions.suggestedInstructions)}
-                      className="mt-3 flex items-center gap-2 text-xs text-primary hover:underline"
-                    >
-                      <Brain className="w-3 h-3" />
-                      <span>Use AI-suggested instructions based on your chat</span>
-                    </button>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Step 4: Review */}
-          {wizardStep === 4 && (
-            <motion.div
-              key="step4"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-5"
-            >
-              <Card className="shadow-soft">
-                <CardContent className="p-6 space-y-5">
-                  <h3 className="text-sm font-bold text-foreground">Review Your Report Configuration</h3>
-
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
-                      <FileText className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Title</p>
-                        <p className="text-sm text-foreground">{reportTitle || "Auto-generated from project name"}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
-                      <Wand2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Tone & Language</p>
-                        <p className="text-sm text-foreground capitalize">{tone} · {language}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
-                      <Layers className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Sections ({selectedSections.length})</p>
-                        <div className="flex flex-wrap gap-1.5 mt-1.5">
-                          {selectedSections.map(id => {
-                            const sec = REPORT_SECTIONS.find(s => s.id === id);
-                            return sec ? (
-                              <span key={id} className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold">
-                                {sec.label}
-                              </span>
-                            ) : null;
-                          })}
-                        </div>
-                      </div>
-                    </div>
-
-                    {focusAreas.length > 0 && (
-                      <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
-                        <TrendingUp className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Focus Areas</p>
-                          <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {focusAreas.map(area => (
-                              <span key={area} className="px-2 py-0.5 rounded-md bg-muted text-muted-foreground text-[10px] font-semibold">
-                                {area}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {customInstructions && (
-                      <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
-                        <MessageSquare className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Custom Instructions</p>
-                          <p className="text-xs text-muted-foreground mt-1">{customInstructions}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {chatMessages.length > 0 && (
-                      <div className="flex items-center gap-2 p-3 rounded-xl bg-primary/[0.04] border border-primary/10">
-                        <Brain className="w-4 h-4 text-primary flex-shrink-0" />
-                        <p className="text-xs text-primary font-medium">
-                          AI will use {chatMessages.length} chat messages as additional context for a smarter report
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="flex justify-center pt-2 pb-8">
-                <Button
-                  size="lg"
-                  onClick={generateReport}
-                  disabled={selectedSections.length === 0}
-                  className="gap-2 h-14 px-10 rounded-xl font-bold text-base bg-gradient-primary text-primary-foreground shadow-glow-strong hover:opacity-90 transition-all"
-                >
-                  <Sparkles className="w-5 h-5" />
-                  Generate Report
-                </Button>
+      {/* ─── Chat Input (always visible) ─── */}
+      <div className="flex-shrink-0 border-t border-border/30 bg-background/60 backdrop-blur-xl relative z-10">
+        <div className="max-w-[740px] mx-auto px-4 py-3">
+          <div
+            className={`relative rounded-2xl border transition-all duration-300 ${
+              inputFocused
+                ? "border-primary/30 bg-card"
+                : "border-border/50 bg-card/60 hover:border-border"
+            }`}
+            style={{
+              boxShadow: inputFocused
+                ? "0 0 0 3px hsl(var(--primary) / 0.06), 0 8px 32px hsl(var(--primary) / 0.08)"
+                : "0 1px 3px hsl(0 0% 0% / 0.04)",
+            }}
+          >
+            <textarea
+              ref={textareaRef}
+              placeholder={reportContent ? "Describe changes or generate a new report…" : "Describe the report you need…"}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
+              rows={1}
+              className="w-full bg-transparent border-0 outline-none resize-none text-foreground placeholder:text-muted-foreground/40 px-5 pt-4 pb-1 min-h-[44px] max-h-[160px] text-[15px]"
+            />
+            <div className="flex items-center justify-between px-3 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground/40 font-medium">
+                  <FileText className="w-3 h-3 inline mr-1" />
+                  Report mode
+                </span>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Navigation Buttons */}
-        {wizardStep < 4 && (
-          <div className="flex items-center justify-between mt-8 pb-8">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setWizardStep(s => Math.max(1, s - 1))}
-              disabled={wizardStep === 1}
-              className="gap-2"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              Back
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setWizardStep(s => Math.min(4, s + 1))}
-              disabled={!canProceed()}
-              className="gap-2"
-            >
-              Next
-              <ArrowUp className="w-3.5 h-3.5 rotate-90" />
-            </Button>
+              <div className="flex items-center gap-2">
+                {!prompt.trim() && !generating && (
+                  <span className="text-[10px] text-muted-foreground/30 font-mono hidden sm:inline">⏎ Enter to generate</span>
+                )}
+                <button
+                  onClick={handleSubmit}
+                  disabled={!prompt.trim() || generating}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200
+                    ${prompt.trim() && !generating
+                      ? "bg-primary text-primary-foreground hover:scale-105 active:scale-95"
+                      : "bg-muted text-muted-foreground/30 cursor-not-allowed"
+                    }`}
+                  style={prompt.trim() && !generating ? {
+                    boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)",
+                  } : undefined}
+                >
+                  {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" strokeWidth={2.5} />}
+                </button>
+              </div>
+            </div>
           </div>
-        )}
-        {wizardStep === 4 && (
-          <div className="flex items-center justify-start pb-8">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setWizardStep(3)}
-              className="gap-2"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              Back
-            </Button>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
