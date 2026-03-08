@@ -709,6 +709,28 @@ const ClinicalCoPilotPage = () => {
         </div>
       </div>
     </div>
+
+    {/* Rename Conversation Dialog */}
+    <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Rename Conversation</DialogTitle>
+        </DialogHeader>
+        <div className="pt-2">
+          <DialogInput
+            value={renameName}
+            onChange={(e) => setRenameName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && renameConversation()}
+            placeholder="Conversation title"
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setRenameOpen(false)}>Cancel</Button>
+          <Button disabled={!renameName.trim()} onClick={renameConversation}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 
