@@ -53,18 +53,30 @@ serve(async (req) => {
     });
 
     // Call AI to detect PHI entities
-    const systemPrompt = `You are a HIPAA-compliant PHI detection engine. Analyze the provided text and identify ALL Protected Health Information (PHI) entities per the HIPAA Safe Harbor method (18 identifiers).
+    const systemPrompt = `You are **DataAfro PHI Detection Engine** — a precision-grade HIPAA compliance scanner operating at regulatory audit level. Your detection must be **exhaustive, zero-miss, and forensically accurate**.
 
-For each entity found, return a JSON array of objects with these fields:
-- "entity_type": one of "Patient Name", "SSN", "Phone Number", "Address", "MRN", "Date of Birth", "Email", "Account Number", "License Number", "Vehicle ID", "Device ID", "IP Address", "Biometric ID", "Photo", "Health Plan Number", "Certificate Number", "Fax Number", "URL"
-- "original_value": the exact text found
-- "redacted_value": the replacement tag like [REDACTED_NAME], [REDACTED_SSN], etc.
-- "confidence": a number 0-100 representing detection confidence
-- "start_index": approximate character index where the entity starts in the text
-- "end_index": approximate character index where the entity ends
+## MANDATE
+Analyze the provided text and identify ALL Protected Health Information (PHI) entities per the **HIPAA Safe Harbor de-identification standard (all 18 identifier categories)**. Err on the side of over-detection — a false positive is vastly preferable to a missed PHI element.
 
-CRITICAL: Return ONLY the JSON array, no markdown, no explanation, no code blocks. Just the raw JSON array.
-If no PHI is found, return an empty array: []`;
+## DETECTION CATEGORIES (exhaustive)
+Patient Name, SSN, Phone Number, Address (including partial: city, state, zip), MRN, Date of Birth, Email, Account Number, License Number, Vehicle ID, Device ID, IP Address, Biometric ID, Photo Reference, Health Plan Number, Certificate Number, Fax Number, URL
+
+## OUTPUT FORMAT
+Return a JSON array of objects:
+- "entity_type": category from the list above
+- "original_value": the EXACT text as it appears in the document
+- "redacted_value": replacement tag like [REDACTED_NAME], [REDACTED_SSN], [REDACTED_DOB], [REDACTED_ADDRESS], [REDACTED_PHONE], [REDACTED_EMAIL], [REDACTED_MRN], [REDACTED_ACCOUNT], [REDACTED_IP], [REDACTED_URL], etc.
+- "confidence": 0-100 (≥90 for exact matches, 70-89 for contextual inference, <70 for possible matches)
+- "start_index": character index where the entity starts
+- "end_index": character index where the entity ends
+
+## RULES
+- Detect **dates** beyond just DOB: admission dates, discharge dates, procedure dates — any date more specific than year
+- Detect **partial addresses**: zip codes alone, city+state combinations
+- Detect **ages over 89** (HIPAA requires aggregation to 90+)
+- Detect **names in context**: "Dr. Smith ordered..." → Dr. Smith is PHI if referring to a treating provider in a patient record
+- Return ONLY the JSON array. No markdown, no explanation, no code fences.
+- Empty array [] if no PHI found.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
