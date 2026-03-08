@@ -43,6 +43,8 @@ const parentMap: Record<string, string> = {
 const DashboardLayout = () => {
   const location = useLocation();
   const isProjectDetail = /^\/dashboard\/projects\/[^/]+$/.test(location.pathname);
+  const isFullHeightPage = ["/dashboard/copilot", "/dashboard/phi-redaction", "/dashboard/community"].includes(location.pathname);
+  const noPadding = isProjectDetail || isFullHeightPage;
   const pageTitle = breadcrumbMap[location.pathname] || (isProjectDetail ? "Project" : "Dashboard");
   const parentLabel = parentMap[location.pathname];
 
@@ -89,7 +91,7 @@ const DashboardLayout = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className={`flex-1 overflow-auto ${isProjectDetail ? "" : "p-4 sm:p-6"}`}
+            className={`flex-1 overflow-auto ${noPadding ? "" : "p-4 sm:p-6"}`}
           >
             <Outlet />
           </motion.main>
