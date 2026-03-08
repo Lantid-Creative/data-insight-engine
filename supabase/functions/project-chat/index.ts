@@ -8,22 +8,10 @@ const corsHeaders = {
 };
 
 async function gatherWorkspaceContext(supabase: any, userId: string, currentProjectId: string) {
-  // All queries run in parallel for speed
   const [
-    profileRes,
-    allProjectsRes,
-    allFilesRes,
-    teamsRes,
-    teamMembersRes,
-    copilotConvsRes,
-    redactionJobsRes,
-    epidemicAlertsRes,
-    epidemicReportsRes,
-    pipelinesRes,
-    regDocsRes,
-    dataRoomsRes,
-    recentActivityRes,
-    forumPostsRes,
+    profileRes, allProjectsRes, allFilesRes, teamsRes, teamMembersRes,
+    copilotConvsRes, redactionJobsRes, epidemicAlertsRes, epidemicReportsRes,
+    pipelinesRes, regDocsRes, dataRoomsRes, recentActivityRes, forumPostsRes,
   ] = await Promise.all([
     supabase.from("profiles").select("full_name, bio, expertise_tags").eq("user_id", userId).single(),
     supabase.from("projects").select("id, name, description, created_at, updated_at").eq("user_id", userId).order("updated_at", { ascending: false }).limit(20),
@@ -56,13 +44,17 @@ async function gatherWorkspaceContext(supabase: any, userId: string, currentProj
   const recentActivity = recentActivityRes.data || [];
   const forumPosts = forumPostsRes.data || [];
 
-  // Build workspace context string
-  let ctx = `\n\n---\n## 🌐 FULL WORKSPACE CONTEXT (User: ${profile?.full_name || "Unknown"})\n`;
+  let ctx = `
+
+---
+## 🌐 FULL WORKSPACE CONTEXT (User: ${profile?.full_name || "Unknown"})
+`;
   if (profile?.bio) ctx += `Bio: ${profile.bio}\n`;
   if (profile?.expertise_tags?.length) ctx += `Expertise: ${profile.expertise_tags.join(", ")}\n`;
 
-  // All projects overview
-  ctx += `\n### My Projects (${allProjects.length} total)\n`;
+  ctx += `
+### My Projects (${allProjects.length} total)
+`;
   const otherProjects = allProjects.filter((p: any) => p.id !== currentProjectId);
   if (otherProjects.length) {
     ctx += otherProjects.map((p: any) => {
@@ -71,76 +63,116 @@ async function gatherWorkspaceContext(supabase: any, userId: string, currentProj
     }).join("\n") + "\n";
   }
 
-  // Teams
   if (teams.length || teamMemberships.length) {
-    ctx += `\n### Teams\n`;
+    ctx += `
+### Teams
+`;
     if (teams.length) ctx += `Owns: ${teams.map((t: any) => t.name).join(", ")}\n`;
     if (teamMemberships.length) ctx += `Member of: ${teamMemberships.length} team(s) (roles: ${teamMemberships.map((m: any) => m.role).join(", ")})\n`;
   }
 
-  // Intelligence Suite - Clinical Co-Pilot
   if (copilotConvs.length) {
-    ctx += `\n### Clinical Co-Pilot (${copilotConvs.length} conversations)\n`;
+    ctx += `
+### Clinical Co-Pilot (${copilotConvs.length} conversations)
+`;
     ctx += copilotConvs.slice(0, 5).map((c: any) => `- "${c.title}" (${c.specialty || "General"}) — ${c.updated_at}`).join("\n") + "\n";
   }
 
-  // PHI Redaction
   if (redactionJobs.length) {
     const completed = redactionJobs.filter((j: any) => j.status === "complete");
     const totalEntities = completed.reduce((sum: number, j: any) => sum + (j.entity_count || 0), 0);
-    ctx += `\n### PHI Redaction (${redactionJobs.length} scans, ${totalEntities} entities detected)\n`;
+    ctx += `
+### PHI Redaction (${redactionJobs.length} scans, ${totalEntities} entities detected)
+`;
     ctx += redactionJobs.slice(0, 5).map((j: any) => `- "${j.file_name}" — ${j.status}, ${j.entity_count || 0} entities, ${j.avg_confidence || 0}% avg confidence`).join("\n") + "\n";
   }
 
-  // Epidemic Intelligence
   if (epidemicAlerts.length || epidemicReports.length) {
-    ctx += `\n### Epidemic Intelligence\n`;
+    ctx += `
+### Epidemic Intelligence
+`;
     if (epidemicAlerts.length) {
       const active = epidemicAlerts.filter((a: any) => a.is_active);
       ctx += `Active alerts: ${active.length}/${epidemicAlerts.length} total\n`;
       ctx += active.slice(0, 5).map((a: any) => `- [${a.severity.toUpperCase()}] ${a.title} — ${a.region} (${a.disease_category})`).join("\n") + "\n";
     }
-    if (epidemicReports.length) {
-      ctx += `Reports: ${epidemicReports.length} generated\n`;
-    }
+    if (epidemicReports.length) ctx += `Reports: ${epidemicReports.length} generated\n`;
   }
 
-  // Pipeline Builder
   if (pipelines.length) {
-    ctx += `\n### Pipelines (${pipelines.length} total)\n`;
+    ctx += `
+### Pipelines (${pipelines.length} total)
+`;
     ctx += pipelines.slice(0, 5).map((p: any) => {
       const stepCount = Array.isArray(p.steps) ? p.steps.length : 0;
       return `- "${p.name}" — ${stepCount} steps, last run: ${p.last_run_status || "never"} (${p.last_run_records || 0} records)`;
     }).join("\n") + "\n";
   }
 
-  // Regulatory Submissions
   if (regDocs.length) {
-    ctx += `\n### Regulatory Submissions (${regDocs.length} documents)\n`;
+    ctx += `
+### Regulatory Submissions (${regDocs.length} documents)
+`;
     ctx += regDocs.slice(0, 5).map((d: any) => `- "${d.name}" — ${d.document_type} for ${d.target_agency?.toUpperCase() || "FDA"}, status: ${d.status}`).join("\n") + "\n";
   }
 
-  // Data Rooms
   if (dataRooms.length) {
-    ctx += `\n### Data Rooms (${dataRooms.length} rooms)\n`;
+    ctx += `
+### Data Rooms (${dataRooms.length} rooms)
+`;
     ctx += dataRooms.slice(0, 5).map((r: any) => `- "${r.name}" — ${r.status}, access: ${r.access_level}`).join("\n") + "\n";
   }
 
-  // Community Forum
   if (forumPosts.length) {
-    ctx += `\n### Community Forum (${forumPosts.length} posts)\n`;
+    ctx += `
+### Community Forum (${forumPosts.length} posts)
+`;
     ctx += forumPosts.slice(0, 3).map((p: any) => `- "${p.title}" — ${p.created_at}`).join("\n") + "\n";
   }
 
-  // Recent Activity Feed
   if (recentActivity.length) {
-    ctx += `\n### Recent Activity (last ${recentActivity.length} actions)\n`;
+    ctx += `
+### Recent Activity (last ${recentActivity.length} actions)
+`;
     ctx += recentActivity.slice(0, 10).map((a: any) => `- ${a.action} — ${a.created_at}`).join("\n") + "\n";
   }
 
   ctx += `---\n`;
   return ctx;
 }
+
+// Tool definitions for artifact generation
+const ARTIFACT_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "create_artifact",
+      description: `Create an interactive artifact when the user asks you to BUILD, CREATE, MAKE, or GENERATE something functional — such as a calculator, dashboard, form, tracker, tool, visualization, converter, or any interactive widget. Also create artifacts for rich structured documents like comparison tables, checklists, scorecards, and templates. Do NOT create artifacts for simple Q&A, summaries, or explanations — just respond normally in those cases.`,
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Short descriptive title for the artifact" },
+          description: { type: "string", description: "Brief description of what this artifact does" },
+          artifact_type: {
+            type: "string",
+            enum: ["visualization", "form", "code", "document", "dashboard", "calculator", "tracker"],
+            description: "Type of artifact to create"
+          },
+          content: {
+            type: "object",
+            description: "The artifact content structure",
+            properties: {
+              html: { type: "string", description: "Complete self-contained HTML with inline CSS and JavaScript that renders the artifact. Use modern CSS (flexbox/grid), clean design with a dark theme (#1a1a2e background, #e2e8f0 text, #f97316 accent). Must be fully functional and interactive. Include all logic inline. No external dependencies except CDN links for Chart.js or similar if needed." },
+              summary: { type: "string", description: "Plain text summary of what this artifact does and how to use it" },
+            },
+            required: ["html", "summary"],
+          },
+        },
+        required: ["title", "description", "artifact_type", "content"],
+      },
+    },
+  },
+];
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -161,16 +193,11 @@ serve(async (req) => {
     const { projectId, message } = await req.json();
     if (!projectId || !message) throw new Error("projectId and message are required");
 
-    // Verify project ownership
     const { data: project, error: projErr } = await supabase
-      .from("projects")
-      .select("id, name, description")
-      .eq("id", projectId)
-      .eq("user_id", user.id)
-      .single();
+      .from("projects").select("id, name, description")
+      .eq("id", projectId).eq("user_id", user.id).single();
     if (projErr || !project) throw new Error("Project not found");
 
-    // Gather all context in parallel
     const [filesRes, historyRes, workspaceContext] = await Promise.all([
       supabase.from("project_files").select("file_name, mime_type, file_size").eq("project_id", projectId),
       supabase.from("chat_messages").select("role, content").eq("project_id", projectId).order("created_at", { ascending: true }).limit(50),
@@ -181,15 +208,13 @@ serve(async (req) => {
     const history = historyRes.data;
 
     // Save user message
-    await supabase.from("chat_messages").insert({
-      project_id: projectId,
-      user_id: user.id,
-      role: "user",
-      content: message,
-    });
+    const { data: savedMsg } = await supabase.from("chat_messages").insert({
+      project_id: projectId, user_id: user.id, role: "user", content: message,
+    }).select("id").single();
 
     const fileContext = files?.length
-      ? `\nProject files: ${files.map((f: any) => `${f.file_name} (${f.mime_type}, ${(f.file_size / 1024).toFixed(1)}KB)`).join(", ")}`
+      ? `
+Project files: ${files.map((f: any) => `${f.file_name} (${f.mime_type}, ${(f.file_size / 1024).toFixed(1)}KB)`).join(", ")}`
       : "\nNo files uploaded yet.";
 
     const systemPrompt = `You are **DataAfro AI** — a world-class, senior-level data intelligence agent. You operate at the calibre of a McKinsey consultant crossed with a principal data scientist. Every response you produce must be **exceptionally structured, deeply analytical, and presentation-ready**.
@@ -205,6 +230,30 @@ You have complete visibility into the user's entire workspace — all their proj
 - Cross-reference findings across projects when relevant
 - Suggest connections between different workspace activities
 - If the user asks "what have I been working on?" or similar, provide a comprehensive workspace digest
+
+## ARTIFACT CREATION — CRITICAL
+You have the ability to create **live, interactive artifacts** using the \`create_artifact\` tool. Use it when the user asks you to BUILD, CREATE, MAKE, or GENERATE something functional:
+- Calculators, converters, estimators
+- Interactive dashboards with charts
+- Forms, surveys, questionnaires
+- Data trackers, timelines, kanban boards
+- Comparison tables, scorecards, matrices
+- Code tools, generators, validators
+- Any interactive widget or mini-application
+
+**When creating HTML artifacts:**
+- Use a clean, modern dark theme: background #0f0f23, cards #1a1a2e, text #e2e8f0, accent #f97316 (orange)
+- Make them FULLY FUNCTIONAL with real interactivity (buttons work, calculations happen, data updates)
+- Use modern CSS (flexbox, grid, border-radius, subtle shadows)
+- Include pleasant micro-interactions and transitions
+- For charts, use Chart.js via CDN: https://cdn.jsdelivr.net/npm/chart.js
+- For icons, use simple SVG or emoji
+- Make forms actually validate and show results
+- Ensure responsive design
+- The HTML must be completely self-contained — everything in one HTML string
+- NEVER use placeholder/dummy functionality — make everything REAL and WORKING
+
+Do NOT create artifacts for simple Q&A, explanations, or text-heavy responses. Just answer normally.
 
 ## OUTPUT PHILOSOPHY — ZERO MEDIOCRITY
 You have NO token limit anxiety. Output as much as the task demands. A one-line question gets a precise one-line answer. A complex analysis gets a 2,000-word deep dive with tables, charts, and layered reasoning. **Never truncate, never summarize prematurely, never say "and more" — finish the thought completely.**
@@ -236,10 +285,10 @@ When analysis benefits from a visual, include chart blocks using this exact form
 }
 \`\`\`
 
-Supported chart types: "bar", "line", "area", "pie". Always use realistic, relevant data. Include a brief text explanation before and after the chart. You can include multiple charts in one response. **Proactively suggest visualizations** even when not explicitly asked — if data would be clearer as a chart, render it.
+Supported chart types: "bar", "line", "area", "pie". Always use realistic, relevant data.
 
 ## TONE
-Professional yet incisive. No filler phrases ("Sure!", "Great question!", "Happy to help"). Get straight to the substance. Reference uploaded files by name when relevant.`;
+Professional yet incisive. No filler phrases ("Sure!", "Great question!", "Happy to help"). Get straight to the substance.`;
 
     const messages = [
       { role: "system", content: systemPrompt },
@@ -248,10 +297,195 @@ Professional yet incisive. No filler phrases ("Sure!", "Great question!", "Happy
     ];
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // First call: check if the AI wants to create an artifact (non-streaming with tools)
+    const toolCheckResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages,
+        tools: ARTIFACT_TOOLS,
+        tool_choice: "auto",
+        max_tokens: 16384,
+        temperature: 0.5,
+      }),
+    });
+
+    if (toolCheckResponse.status === 429) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (toolCheckResponse.status === 402) {
+      return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }), {
+        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!toolCheckResponse.ok) {
+      const errText = await toolCheckResponse.text();
+      console.error("AI API error:", toolCheckResponse.status, errText);
+      throw new Error(`AI service error: ${toolCheckResponse.status}`);
     }
 
+    const toolCheckData = await toolCheckResponse.json();
+    const choice = toolCheckData.choices?.[0];
+    const toolCalls = choice?.message?.tool_calls;
+
+    // If the AI called the create_artifact tool
+    if (toolCalls && toolCalls.length > 0) {
+      const toolCall = toolCalls[0];
+      if (toolCall.function?.name === "create_artifact") {
+        let artifactData: any;
+        try {
+          artifactData = JSON.parse(toolCall.function.arguments);
+        } catch {
+          throw new Error("Failed to parse artifact data");
+        }
+
+        // Save artifact to database
+        const serviceClient = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+        );
+
+        const { data: artifact, error: artifactErr } = await serviceClient
+          .from("artifacts")
+          .insert({
+            project_id: projectId,
+            user_id: user.id,
+            chat_message_id: savedMsg?.id || null,
+            title: artifactData.title,
+            description: artifactData.description,
+            artifact_type: artifactData.artifact_type,
+            content: artifactData.content,
+          })
+          .select("id")
+          .single();
+
+        if (artifactErr) {
+          console.error("Failed to save artifact:", artifactErr);
+        }
+
+        // Now do a second streaming call to get the text response
+        // Include the tool result so the AI can reference the artifact
+        const followUpMessages = [
+          ...messages,
+          choice.message, // the assistant message with tool_call
+          {
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: JSON.stringify({
+              success: true,
+              artifact_id: artifact?.id || "created",
+              title: artifactData.title,
+            }),
+          },
+        ];
+
+        const streamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "google/gemini-3-flash-preview",
+            messages: followUpMessages,
+            stream: true,
+            max_tokens: 4096,
+            temperature: 0.5,
+          }),
+        });
+
+        if (!streamResponse.ok) {
+          // Fallback: return a non-streaming response with the artifact info
+          const fallbackContent = `${artifactData.content.summary}\n\n*Artifact "${artifactData.title}" has been created and is displayed above.*`;
+          
+          await serviceClient.from("chat_messages").insert({
+            project_id: projectId, user_id: user.id, role: "assistant", content: fallbackContent,
+          });
+
+          // Create a synthetic SSE response with artifact metadata
+          const encoder = new TextEncoder();
+          const body = encoder.encode(
+            `data: ${JSON.stringify({ choices: [{ delta: { content: fallbackContent } }] })}\n\n` +
+            `data: ${JSON.stringify({ choices: [{ delta: {} }], artifact: { id: artifact?.id, ...artifactData } })}\n\n` +
+            `data: [DONE]\n\n`
+          );
+
+          return new Response(body, {
+            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+          });
+        }
+
+        // Stream the follow-up response, prepend artifact metadata
+        const reader = streamResponse.body!.getReader();
+        const encoder = new TextEncoder();
+        const decoder = new TextDecoder();
+        let fullContent = "";
+
+        const stream = new ReadableStream({
+          async start(controller) {
+            try {
+              // First, send the artifact metadata as a special event
+              const artifactEvent = `data: ${JSON.stringify({
+                artifact: {
+                  id: artifact?.id,
+                  title: artifactData.title,
+                  description: artifactData.description,
+                  artifact_type: artifactData.artifact_type,
+                  content: artifactData.content,
+                },
+              })}\n\n`;
+              controller.enqueue(encoder.encode(artifactEvent));
+
+              // Then stream the text response
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value, { stream: true });
+                controller.enqueue(encoder.encode(chunk));
+
+                for (const line of chunk.split("\n")) {
+                  if (!line.startsWith("data: ") || line.includes("[DONE]")) continue;
+                  try {
+                    const parsed = JSON.parse(line.slice(6));
+                    const delta = parsed.choices?.[0]?.delta?.content;
+                    if (delta) fullContent += delta;
+                  } catch { /* partial */ }
+                }
+              }
+
+              // Save assistant message
+              if (fullContent.trim()) {
+                await serviceClient.from("chat_messages").insert({
+                  project_id: projectId, user_id: user.id, role: "assistant", content: fullContent,
+                });
+              }
+
+              controller.close();
+            } catch (e) {
+              controller.error(e);
+            }
+          },
+        });
+
+        return new Response(stream, {
+          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        });
+      }
+    }
+
+    // No tool call — regular streaming response
+    const regularContent = choice?.message?.content || "";
+    
+    // If we got a non-streaming response with content, re-stream it
+    // But better: make a new streaming call
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -267,26 +501,12 @@ Professional yet incisive. No filler phrases ("Sure!", "Great question!", "Happy
       }),
     });
 
-    if (aiResponse.status === 429) {
-      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (aiResponse.status === 402) {
-      return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }), {
-        status: 402,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("AI API error:", aiResponse.status, errText);
       throw new Error(`AI service error: ${aiResponse.status}`);
     }
 
-    // Capture full response while streaming
     const reader = aiResponse.body!.getReader();
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
@@ -298,7 +518,6 @@ Professional yet incisive. No filler phrases ("Sure!", "Great question!", "Happy
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-
             const chunk = decoder.decode(value, { stream: true });
             controller.enqueue(encoder.encode(chunk));
 
@@ -308,21 +527,17 @@ Professional yet incisive. No filler phrases ("Sure!", "Great question!", "Happy
                 const parsed = JSON.parse(line.slice(6));
                 const delta = parsed.choices?.[0]?.delta?.content;
                 if (delta) fullContent += delta;
-              } catch { /* partial JSON */ }
+              } catch { /* partial */ }
             }
           }
 
-          // Save assistant message
           const serviceClient = createClient(
             Deno.env.get("SUPABASE_URL")!,
             Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
           );
           if (fullContent.trim()) {
             await serviceClient.from("chat_messages").insert({
-              project_id: projectId,
-              user_id: user.id,
-              role: "assistant",
-              content: fullContent,
+              project_id: projectId, user_id: user.id, role: "assistant", content: fullContent,
             });
           }
 
