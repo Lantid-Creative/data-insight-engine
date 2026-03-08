@@ -26,6 +26,7 @@ const Index = () => {
       <IntelligenceSuite />
       <UseCases />
       <Testimonials />
+      <TrustSecurity />
       <Pricing />
       <Consulting />
       <FAQ />
