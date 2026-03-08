@@ -52,7 +52,7 @@ const RegisterPage = () => {
     if (user) {
       const { error: appError } = await supabase.from("user_applications").insert({
         user_id: user.id,
-        full_name: name,
+        full_name: capitalizeName(name),
         email,
         company_name: companyName,
         company_size: companySize || null,

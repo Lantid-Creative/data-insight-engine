@@ -51,7 +51,7 @@ const SettingsPage = () => {
       const { error } = await supabase
         .from("profiles")
         .update({
-          full_name: fullName.trim(),
+          full_name: capitalizeName(fullName),
           bio: bio.trim(),
           expertise_tags: expertiseTags,
         } as any)
