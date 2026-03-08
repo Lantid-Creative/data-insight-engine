@@ -100,134 +100,136 @@ export function ProjectShareDialog({ open, onOpenChange, projectId, projectName 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-primary" />
+      <DialogContent className="max-w-md w-[calc(100vw-2rem)] p-0 gap-0 rounded-2xl overflow-hidden">
+        <DialogHeader className="px-5 pt-5 pb-3">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <UserPlus className="w-4 h-4 text-primary" />
             Share "{projectName}"
           </DialogTitle>
         </DialogHeader>
 
-        {/* Copy link */}
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50">
-          <Link2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          <span className="text-xs text-muted-foreground truncate flex-1">
-            {window.location.origin}/dashboard/projects/{projectId.slice(0, 8)}…
-          </span>
-          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={copyLink}>
-            {linkCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-            {linkCopied ? "Copied" : "Copy"}
-          </Button>
-        </div>
-
-        {/* Invite form */}
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Button
-              onClick={() => addShare.mutate()}
-              disabled={!email.includes("@") || addShare.isPending}
-              className="bg-gradient-primary text-primary-foreground"
-            >
-              {addShare.isPending ? "…" : "Invite"}
+        <div className="px-5 space-y-4 pb-5">
+          {/* Copy link */}
+          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/40 border border-border/40">
+            <Link2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <span className="text-xs text-muted-foreground truncate flex-1 select-all">
+              dataafro.com/dashboard/projects/{projectId.slice(0, 8)}…
+            </span>
+            <Button variant="secondary" size="sm" className="h-7 text-xs gap-1.5 rounded-lg flex-shrink-0" onClick={copyLink}>
+              {linkCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+              {linkCopied ? "Copied" : "Copy"}
             </Button>
           </div>
 
-          {/* Permission toggles */}
-          <div className="flex flex-wrap gap-2">
-            {PERMISSIONS.map((p) => (
-              <button
-                key={p.key}
-                onClick={() => setPerms((prev) => ({ ...prev, [p.key]: !prev[p.key] }))}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                  perms[p.key]
-                    ? "bg-primary/10 border-primary/30 text-primary"
-                    : "bg-muted/50 border-border text-muted-foreground hover:border-primary/20"
-                }`}
-              >
-                <p.icon className="w-3 h-3" />
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Existing shares */}
-        <div className="space-y-1">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            People with access ({shares.length + 1})
-          </p>
-          <ScrollArea className="max-h-[200px]">
-            {/* Owner */}
-            <div className="flex items-center gap-3 py-2 px-1">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="text-xs bg-primary/10 text-primary font-bold">
-                  {user?.email?.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user?.email}</p>
-                <p className="text-[10px] text-muted-foreground">Owner</p>
+          {/* Invite form */}
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <div className="relative flex-1 min-w-0">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10 h-10 rounded-xl text-sm"
+                />
               </div>
-              <Badge variant="secondary" className="text-[10px]">Owner</Badge>
+              <Button
+                onClick={() => addShare.mutate()}
+                disabled={!email.includes("@") || addShare.isPending}
+                className="bg-primary text-primary-foreground h-10 px-5 rounded-xl font-semibold flex-shrink-0"
+              >
+                {addShare.isPending ? "…" : "Invite"}
+              </Button>
             </div>
 
-            {shares.map((share: any) => (
-              <div key={share.id} className="flex items-center gap-3 py-2 px-1 group">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="text-xs bg-muted font-bold">
-                    {share.shared_with_email.slice(0, 2).toUpperCase()}
+            {/* Permission toggles */}
+            <div className="flex flex-wrap gap-1.5">
+              {PERMISSIONS.map((p) => (
+                <button
+                  key={p.key}
+                  onClick={() => setPerms((prev) => ({ ...prev, [p.key]: !prev[p.key] }))}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                    perms[p.key]
+                      ? "bg-primary/10 border-primary/30 text-primary"
+                      : "bg-muted/50 border-border text-muted-foreground hover:border-primary/20"
+                  }`}
+                >
+                  <p.icon className="w-3 h-3" />
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Existing shares */}
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+              People with access ({shares.length + 1})
+            </p>
+            <ScrollArea className="max-h-[180px]">
+              {/* Owner */}
+              <div className="flex items-center gap-3 py-2">
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarFallback className="text-xs bg-primary/10 text-primary font-bold">
+                    {user?.email?.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{share.shared_with_email}</p>
-                  <div className="flex gap-1 mt-0.5 flex-wrap">
-                    {PERMISSIONS.filter((p) => share[p.key]).map((p) => (
-                      <button
-                        key={p.key}
-                        onClick={() => updateSharePerm.mutate({ id: share.id, key: p.key, value: !share[p.key] })}
-                        className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                    {PERMISSIONS.filter((p) => !share[p.key]).map((p) => (
-                      <button
-                        key={p.key}
-                        onClick={() => updateSharePerm.mutate({ id: share.id, key: p.key, value: true })}
-                        className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium hover:bg-muted/80 transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        +{p.label}
-                      </button>
-                    ))}
+                  <p className="text-sm font-medium truncate">{user?.email}</p>
+                  <p className="text-[10px] text-muted-foreground">Owner</p>
+                </div>
+                <Badge variant="secondary" className="text-[10px] flex-shrink-0">Owner</Badge>
+              </div>
+
+              {shares.map((share: any) => (
+                <div key={share.id} className="flex items-center gap-3 py-2 group">
+                  <Avatar className="h-8 w-8 flex-shrink-0">
+                    <AvatarFallback className="text-xs bg-muted font-bold">
+                      {share.shared_with_email.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{share.shared_with_email}</p>
+                    <div className="flex gap-1 mt-0.5 flex-wrap">
+                      {PERMISSIONS.filter((p) => share[p.key]).map((p) => (
+                        <button
+                          key={p.key}
+                          onClick={() => updateSharePerm.mutate({ id: share.id, key: p.key, value: !share[p.key] })}
+                          className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                      {PERMISSIONS.filter((p) => !share[p.key]).map((p) => (
+                        <button
+                          key={p.key}
+                          onClick={() => updateSharePerm.mutate({ id: share.id, key: p.key, value: true })}
+                          className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium hover:bg-muted/80 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          +{p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {!share.accepted && (
+                      <Badge variant="outline" className="text-[9px] text-primary border-primary/30">Pending</Badge>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 text-destructive"
+                      onClick={() => removeShare.mutate(share.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  {!share.accepted && (
-                    <Badge variant="outline" className="text-[9px] text-amber-600 border-amber-300">Pending</Badge>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 text-destructive"
-                    onClick={() => removeShare.mutate(share.id)}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </ScrollArea>
+              ))}
+            </ScrollArea>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
