@@ -7,6 +7,141 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function gatherWorkspaceContext(supabase: any, userId: string, currentProjectId: string) {
+  // All queries run in parallel for speed
+  const [
+    profileRes,
+    allProjectsRes,
+    allFilesRes,
+    teamsRes,
+    teamMembersRes,
+    copilotConvsRes,
+    redactionJobsRes,
+    epidemicAlertsRes,
+    epidemicReportsRes,
+    pipelinesRes,
+    regDocsRes,
+    dataRoomsRes,
+    recentActivityRes,
+    forumPostsRes,
+  ] = await Promise.all([
+    supabase.from("profiles").select("full_name, bio, expertise_tags").eq("user_id", userId).single(),
+    supabase.from("projects").select("id, name, description, created_at, updated_at").eq("user_id", userId).order("updated_at", { ascending: false }).limit(20),
+    supabase.from("project_files").select("file_name, mime_type, file_size, project_id, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
+    supabase.from("teams").select("id, name, created_at").eq("owner_id", userId),
+    supabase.from("team_members").select("team_id, role, accepted, email").eq("user_id", userId),
+    supabase.from("copilot_conversations").select("id, title, specialty, updated_at").eq("user_id", userId).order("updated_at", { ascending: false }).limit(10),
+    supabase.from("redaction_jobs").select("id, file_name, status, entity_count, avg_confidence, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(10),
+    supabase.from("epidemic_alerts").select("id, title, severity, region, disease_category, is_active, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(10),
+    supabase.from("epidemic_reports").select("id, title, report_type, total_cases, alert_count, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
+    supabase.from("pipelines").select("id, name, steps, last_run_status, last_run_at, last_run_records").eq("user_id", userId).order("updated_at", { ascending: false }).limit(10),
+    supabase.from("regulatory_documents").select("id, name, document_type, status, target_agency, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(10),
+    supabase.from("data_rooms").select("id, name, status, access_level, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(10),
+    supabase.from("activity_log").select("action, details, created_at, project_id").eq("user_id", userId).order("created_at", { ascending: false }).limit(20),
+    supabase.from("forum_posts").select("id, title, channel_id, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(10),
+  ]);
+
+  const profile = profileRes.data;
+  const allProjects = allProjectsRes.data || [];
+  const allFiles = allFilesRes.data || [];
+  const teams = teamsRes.data || [];
+  const teamMemberships = teamMembersRes.data || [];
+  const copilotConvs = copilotConvsRes.data || [];
+  const redactionJobs = redactionJobsRes.data || [];
+  const epidemicAlerts = epidemicAlertsRes.data || [];
+  const epidemicReports = epidemicReportsRes.data || [];
+  const pipelines = pipelinesRes.data || [];
+  const regDocs = regDocsRes.data || [];
+  const dataRooms = dataRoomsRes.data || [];
+  const recentActivity = recentActivityRes.data || [];
+  const forumPosts = forumPostsRes.data || [];
+
+  // Build workspace context string
+  let ctx = `\n\n---\n## 🌐 FULL WORKSPACE CONTEXT (User: ${profile?.full_name || "Unknown"})\n`;
+  if (profile?.bio) ctx += `Bio: ${profile.bio}\n`;
+  if (profile?.expertise_tags?.length) ctx += `Expertise: ${profile.expertise_tags.join(", ")}\n`;
+
+  // All projects overview
+  ctx += `\n### My Projects (${allProjects.length} total)\n`;
+  const otherProjects = allProjects.filter((p: any) => p.id !== currentProjectId);
+  if (otherProjects.length) {
+    ctx += otherProjects.map((p: any) => {
+      const fileCount = allFiles.filter((f: any) => f.project_id === p.id).length;
+      return `- **${p.name}**: ${p.description || "No description"} | ${fileCount} files | Last updated: ${p.updated_at}`;
+    }).join("\n") + "\n";
+  }
+
+  // Teams
+  if (teams.length || teamMemberships.length) {
+    ctx += `\n### Teams\n`;
+    if (teams.length) ctx += `Owns: ${teams.map((t: any) => t.name).join(", ")}\n`;
+    if (teamMemberships.length) ctx += `Member of: ${teamMemberships.length} team(s) (roles: ${teamMemberships.map((m: any) => m.role).join(", ")})\n`;
+  }
+
+  // Intelligence Suite - Clinical Co-Pilot
+  if (copilotConvs.length) {
+    ctx += `\n### Clinical Co-Pilot (${copilotConvs.length} conversations)\n`;
+    ctx += copilotConvs.slice(0, 5).map((c: any) => `- "${c.title}" (${c.specialty || "General"}) — ${c.updated_at}`).join("\n") + "\n";
+  }
+
+  // PHI Redaction
+  if (redactionJobs.length) {
+    const completed = redactionJobs.filter((j: any) => j.status === "complete");
+    const totalEntities = completed.reduce((sum: number, j: any) => sum + (j.entity_count || 0), 0);
+    ctx += `\n### PHI Redaction (${redactionJobs.length} scans, ${totalEntities} entities detected)\n`;
+    ctx += redactionJobs.slice(0, 5).map((j: any) => `- "${j.file_name}" — ${j.status}, ${j.entity_count || 0} entities, ${j.avg_confidence || 0}% avg confidence`).join("\n") + "\n";
+  }
+
+  // Epidemic Intelligence
+  if (epidemicAlerts.length || epidemicReports.length) {
+    ctx += `\n### Epidemic Intelligence\n`;
+    if (epidemicAlerts.length) {
+      const active = epidemicAlerts.filter((a: any) => a.is_active);
+      ctx += `Active alerts: ${active.length}/${epidemicAlerts.length} total\n`;
+      ctx += active.slice(0, 5).map((a: any) => `- [${a.severity.toUpperCase()}] ${a.title} — ${a.region} (${a.disease_category})`).join("\n") + "\n";
+    }
+    if (epidemicReports.length) {
+      ctx += `Reports: ${epidemicReports.length} generated\n`;
+    }
+  }
+
+  // Pipeline Builder
+  if (pipelines.length) {
+    ctx += `\n### Pipelines (${pipelines.length} total)\n`;
+    ctx += pipelines.slice(0, 5).map((p: any) => {
+      const stepCount = Array.isArray(p.steps) ? p.steps.length : 0;
+      return `- "${p.name}" — ${stepCount} steps, last run: ${p.last_run_status || "never"} (${p.last_run_records || 0} records)`;
+    }).join("\n") + "\n";
+  }
+
+  // Regulatory Submissions
+  if (regDocs.length) {
+    ctx += `\n### Regulatory Submissions (${regDocs.length} documents)\n`;
+    ctx += regDocs.slice(0, 5).map((d: any) => `- "${d.name}" — ${d.document_type} for ${d.target_agency?.toUpperCase() || "FDA"}, status: ${d.status}`).join("\n") + "\n";
+  }
+
+  // Data Rooms
+  if (dataRooms.length) {
+    ctx += `\n### Data Rooms (${dataRooms.length} rooms)\n`;
+    ctx += dataRooms.slice(0, 5).map((r: any) => `- "${r.name}" — ${r.status}, access: ${r.access_level}`).join("\n") + "\n";
+  }
+
+  // Community Forum
+  if (forumPosts.length) {
+    ctx += `\n### Community Forum (${forumPosts.length} posts)\n`;
+    ctx += forumPosts.slice(0, 3).map((p: any) => `- "${p.title}" — ${p.created_at}`).join("\n") + "\n";
+  }
+
+  // Recent Activity Feed
+  if (recentActivity.length) {
+    ctx += `\n### Recent Activity (last ${recentActivity.length} actions)\n`;
+    ctx += recentActivity.slice(0, 10).map((a: any) => `- ${a.action} — ${a.created_at}`).join("\n") + "\n";
+  }
+
+  ctx += `---\n`;
+  return ctx;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -35,19 +170,15 @@ serve(async (req) => {
       .single();
     if (projErr || !project) throw new Error("Project not found");
 
-    // Get project files for context
-    const { data: files } = await supabase
-      .from("project_files")
-      .select("file_name, mime_type, file_size")
-      .eq("project_id", projectId);
+    // Gather all context in parallel
+    const [filesRes, historyRes, workspaceContext] = await Promise.all([
+      supabase.from("project_files").select("file_name, mime_type, file_size").eq("project_id", projectId),
+      supabase.from("chat_messages").select("role, content").eq("project_id", projectId).order("created_at", { ascending: true }).limit(50),
+      gatherWorkspaceContext(supabase, user.id, projectId),
+    ]);
 
-    // Get recent chat history
-    const { data: history } = await supabase
-      .from("chat_messages")
-      .select("role, content")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: true })
-      .limit(50);
+    const files = filesRes.data;
+    const history = historyRes.data;
 
     // Save user message
     await supabase.from("chat_messages").insert({
@@ -66,6 +197,14 @@ serve(async (req) => {
 Current project: "${project.name}"
 Description: ${project.description || "No description"}
 ${fileContext}
+${workspaceContext}
+
+## WORKSPACE AWARENESS
+You have complete visibility into the user's entire workspace — all their projects, teams, Intelligence Suite activity (Clinical Co-Pilot conversations, PHI Redaction scans, Epidemic Intelligence alerts, Pipeline Builder workflows, Regulatory Submissions, and Data Rooms), community forum posts, and recent activity feed. **Use this context proactively**:
+- When the user asks about their work, reference specific projects, files, and tools by name
+- Cross-reference findings across projects when relevant
+- Suggest connections between different workspace activities
+- If the user asks "what have I been working on?" or similar, provide a comprehensive workspace digest
 
 ## OUTPUT PHILOSOPHY — ZERO MEDIOCRITY
 You have NO token limit anxiety. Output as much as the task demands. A one-line question gets a precise one-line answer. A complex analysis gets a 2,000-word deep dive with tables, charts, and layered reasoning. **Never truncate, never summarize prematurely, never say "and more" — finish the thought completely.**
@@ -147,7 +286,7 @@ Professional yet incisive. No filler phrases ("Sure!", "Great question!", "Happy
       throw new Error(`AI service error: ${aiResponse.status}`);
     }
 
-    // We need to capture the full response to save it, while also streaming
+    // Capture full response while streaming
     const reader = aiResponse.body!.getReader();
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
@@ -161,10 +300,8 @@ Professional yet incisive. No filler phrases ("Sure!", "Great question!", "Happy
             if (done) break;
 
             const chunk = decoder.decode(value, { stream: true });
-            // Pass through to client
             controller.enqueue(encoder.encode(chunk));
 
-            // Parse for saving
             for (const line of chunk.split("\n")) {
               if (!line.startsWith("data: ") || line.includes("[DONE]")) continue;
               try {
