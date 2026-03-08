@@ -10,6 +10,7 @@ import { ArrowRight, Eye, EyeOff, Check, Clock, Building2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { capitalizeName } from "@/lib/utils";
 
 const RegisterPage = () => {
   const [step, setStep] = useState<1 | 2>(1);
