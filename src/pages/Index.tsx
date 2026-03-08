@@ -12,6 +12,7 @@ import Consulting from "@/components/landing/Consulting";
 import Testimonials from "@/components/landing/Testimonials";
 import Pricing from "@/components/landing/Pricing";
 import FAQ from "@/components/landing/FAQ";
+import Community from "@/components/landing/Community";
 import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
 
@@ -32,6 +33,7 @@ const Index = () => {
       <Pricing />
       <Consulting />
       <FAQ />
+      <Community />
       <CTA />
       <Footer />
     </div>
