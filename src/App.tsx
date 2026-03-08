@@ -46,6 +46,9 @@ import DataRoomsPage from "./pages/dashboard/DataRoomsPage";
 import CommunityForumPage from "./pages/dashboard/CommunityForumPage";
 import UseCaseDetailPage from "./pages/use-cases/UseCaseDetailPage";
 import PromptLibraryPage from "./pages/dashboard/PromptLibraryPage";
+import HMSLandingPage from "./pages/hms/HMSLandingPage";
+import HMSLoginPage from "./pages/hms/auth/HMSLoginPage";
+import HMSRegisterPage from "./pages/hms/auth/HMSRegisterPage";
 
 const queryClient = new QueryClient();
 
