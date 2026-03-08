@@ -212,10 +212,10 @@ const DashboardHome = () => {
 
       <div className="grid lg:grid-cols-5 gap-6">
         {/* Activity Feed — takes 3 cols */}
-        <motion.div className="lg:col-span-3 space-y-3" {...fadeUp(0.2)}>
+         <motion.div className="lg:col-span-3 space-y-3" {...fadeUp(0.2)}>
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Recent Activity</h2>
 
-          {recentMessages.length === 0 ? (
+          {recentMessages.length === 0 && recentCopilotConvos.length === 0 ? (
             <Card className="shadow-soft">
               <CardContent className="flex flex-col items-center justify-center py-10 text-center">
                 <Clock className="w-8 h-8 text-muted-foreground/40 mb-3" />
@@ -224,7 +224,32 @@ const DashboardHome = () => {
             </Card>
           ) : (
             <div className="space-y-1.5">
-              {recentMessages.map((msg: any, i: number) => (
+              {/* Co-Pilot Conversations */}
+              {recentCopilotConvos.map((convo: any) => (
+                <Card
+                  key={`copilot-${convo.id}`}
+                  className="shadow-soft hover:shadow-card transition-all cursor-pointer group"
+                  onClick={() => navigate("/dashboard/copilot")}
+                >
+                  <CardContent className="p-3.5 flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 bg-primary/10">
+                      <Stethoscope className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-primary/80">Clinical Co-Pilot</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {formatDistanceToNow(new Date(convo.updated_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground/80 truncate mt-0.5">{convo.title}</p>
+                    </div>
+                    <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1 flex-shrink-0" />
+                  </CardContent>
+                </Card>
+              ))}
+              {/* Project Messages */}
+              {recentMessages.map((msg: any) => (
                 <Card
                   key={msg.id}
                   className="shadow-soft hover:shadow-card transition-all cursor-pointer group"

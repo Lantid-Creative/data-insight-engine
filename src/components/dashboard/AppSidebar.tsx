@@ -92,6 +92,21 @@ export function AppSidebar() {
     enabled: !!user?.id,
   });
 
+  const { data: recentCopilotChats = [] } = useQuery({
+    queryKey: ["sidebar-copilot", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("copilot_conversations")
+        .select("id, title, updated_at")
+        .eq("user_id", user!.id)
+        .order("updated_at", { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
   const createProject = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase
