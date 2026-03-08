@@ -437,6 +437,7 @@ const ClinicalCoPilotPage = () => {
   const groupedConversations = groupConversations(filteredConversations);
 
   return (
+    <>
     <div className="h-[calc(100vh-3.5rem)] flex flex-col gap-0 p-0">
       {/* Header */}
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border flex-shrink-0">
