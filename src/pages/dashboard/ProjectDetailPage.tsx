@@ -519,6 +519,7 @@ const ProjectDetailPage = () => {
   const [chatInput, setChatInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
+  const [streamingArtifact, setStreamingArtifact] = useState<any>(null);
   const [panelOpen, setPanelOpen] = useState(true);
   const [activeMode, setActiveMode] = useState<string>("chat");
   const chatEndRef = useRef<HTMLDivElement>(null);
