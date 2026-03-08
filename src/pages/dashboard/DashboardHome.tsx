@@ -84,6 +84,21 @@ const DashboardHome = () => {
     enabled: !!user,
   });
 
+  const { data: recentCopilotConvos = [] } = useQuery({
+    queryKey: ["recent-copilot-convos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("copilot_conversations")
+        .select("id, title, specialty, updated_at")
+        .eq("user_id", user!.id)
+        .order("updated_at", { ascending: false })
+        .limit(4);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
   // Weekly activity data for sparkline
   const sevenDaysAgo = subDays(new Date(), 6).toISOString();
   const { data: weeklyMessages = [] } = useQuery({
