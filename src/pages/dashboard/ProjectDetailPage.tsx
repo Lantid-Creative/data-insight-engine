@@ -1024,6 +1024,9 @@ const ProjectDetailPage = () => {
                               if (lastUserMsg) sendMessage(lastUserMsg.content);
                             } : undefined}
                             isLast={i === messages.length - 1}
+                            artifacts={m.role === "assistant" ? artifacts.filter((a: any) => a.chat_message_id === m.id) : undefined}
+                            projectId={projectId}
+                            onArtifactUpdate={() => queryClient.invalidateQueries({ queryKey: ["artifacts", projectId] })}
                           />
                         ))}
                         {streaming && streamingArtifact && (
