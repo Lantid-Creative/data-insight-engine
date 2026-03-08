@@ -1024,7 +1024,12 @@ const ProjectDetailPage = () => {
                               if (lastUserMsg) sendMessage(lastUserMsg.content);
                             } : undefined}
                             isLast={i === messages.length - 1}
-                            artifacts={m.role === "assistant" ? artifacts.filter((a: any) => a.chat_message_id === m.id) : undefined}
+                            artifacts={m.role === "assistant" ? (() => {
+                              // Artifacts are linked to the user message that triggered them
+                              const msgIndex = messages.indexOf(m);
+                              const prevUserMsg = messages.slice(0, msgIndex).reverse().find((prev: any) => prev.role === "user");
+                              return artifacts.filter((a: any) => a.chat_message_id === m.id || (prevUserMsg && a.chat_message_id === prevUserMsg.id));
+                            })() : undefined}
                             projectId={projectId}
                             onArtifactUpdate={() => queryClient.invalidateQueries({ queryKey: ["artifacts", projectId] })}
                           />
