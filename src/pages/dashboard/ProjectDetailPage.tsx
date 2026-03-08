@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { ArtifactRenderer, ArtifactCard } from "@/components/dashboard/ArtifactRenderer";
 import {
   Upload, File, Loader2, Sparkles, Paperclip,
   BarChart3, FileText, Wand2, Database, ArrowUp, Copy, Check,
