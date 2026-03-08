@@ -21,6 +21,7 @@ import {
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Projects", url: "/dashboard/projects", icon: FolderOpen },
+  { title: "Prompt Library", url: "/dashboard/prompts", icon: BookOpen },
   { title: "Teams", url: "/dashboard/teams", icon: Users },
   { title: "Community", url: "/dashboard/community", icon: MessageSquare },
 ];
