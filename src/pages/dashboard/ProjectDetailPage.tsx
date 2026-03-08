@@ -567,6 +567,18 @@ const ProjectDetailPage = () => {
     enabled: !!projectId,
   });
 
+  const { data: artifacts = [] } = useQuery({
+    queryKey: ["artifacts", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("artifacts").select("*").eq("project_id", projectId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projectId,
+  });
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingContent]);
