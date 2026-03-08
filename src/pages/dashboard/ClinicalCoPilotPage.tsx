@@ -396,9 +396,45 @@ const ClinicalCoPilotPage = () => {
     return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
   };
 
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameName, setRenameName] = useState("");
+
+  const renameConversation = async () => {
+    if (!renameId || !renameName.trim()) return;
+    await supabase.from("copilot_conversations").update({ title: renameName.trim() }).eq("id", renameId);
+    setConversations((prev) => prev.map((c) => c.id === renameId ? { ...c, title: renameName.trim() } : c));
+    setRenameOpen(false);
+    toast.success("Conversation renamed");
+  };
+
   const filteredConversations = conversations.filter((c) =>
     c.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Group conversations by date
+  const groupConversations = (convos: Conversation[]) => {
+    const groups: { label: string; items: Conversation[] }[] = [];
+    const buckets: Record<string, Conversation[]> = {};
+    const order = ["Today", "Yesterday", "This Week", "This Month", "Older"];
+    order.forEach((k) => (buckets[k] = []));
+
+    convos.forEach((c) => {
+      const d = new Date(c.updated_at);
+      if (isToday(d)) buckets["Today"].push(c);
+      else if (isYesterday(d)) buckets["Yesterday"].push(c);
+      else if (isThisWeek(d, { weekStartsOn: 1 })) buckets["This Week"].push(c);
+      else if (isThisMonth(d)) buckets["This Month"].push(c);
+      else buckets["Older"].push(c);
+    });
+
+    order.forEach((label) => {
+      if (buckets[label].length > 0) groups.push({ label, items: buckets[label] });
+    });
+    return groups;
+  };
+
+  const groupedConversations = groupConversations(filteredConversations);
 
   return (
     <div className="h-[calc(100vh-3.5rem)] flex flex-col gap-0 p-0">
