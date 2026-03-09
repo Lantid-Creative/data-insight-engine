@@ -869,33 +869,60 @@ export type Database = {
       }
       hms_hospitals: {
         Row: {
+          about: string | null
+          address: string | null
           capacity: number | null
           contact_email: string | null
           created_at: string | null
+          custom_domain: string | null
           id: string
+          is_public: boolean | null
+          logo_url: string | null
           name: string
           owner_id: string | null
+          phone: string | null
+          primary_color: string | null
           registration_number: string | null
+          slug: string | null
+          tagline: string | null
           updated_at: string | null
         }
         Insert: {
+          about?: string | null
+          address?: string | null
           capacity?: number | null
           contact_email?: string | null
           created_at?: string | null
+          custom_domain?: string | null
           id?: string
+          is_public?: boolean | null
+          logo_url?: string | null
           name: string
           owner_id?: string | null
+          phone?: string | null
+          primary_color?: string | null
           registration_number?: string | null
+          slug?: string | null
+          tagline?: string | null
           updated_at?: string | null
         }
         Update: {
+          about?: string | null
+          address?: string | null
           capacity?: number | null
           contact_email?: string | null
           created_at?: string | null
+          custom_domain?: string | null
           id?: string
+          is_public?: boolean | null
+          logo_url?: string | null
           name?: string
           owner_id?: string | null
+          phone?: string | null
+          primary_color?: string | null
           registration_number?: string | null
+          slug?: string | null
+          tagline?: string | null
           updated_at?: string | null
         }
         Relationships: []
