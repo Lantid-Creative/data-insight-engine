@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { Hospital, LayoutDashboard, Stethoscope, UserRound, Pill, TestTube, Users, CreditCard, LogOut, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const HMSLayout = () => {
   const location = useLocation();
