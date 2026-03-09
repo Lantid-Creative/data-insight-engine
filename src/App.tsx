@@ -58,6 +58,8 @@ import Laboratory from "./pages/hms/departments/Laboratory";
 import Reception from "./pages/hms/departments/Reception";
 import Billing from "./pages/hms/departments/Billing";
 import RosterManagement from "./pages/hms/departments/RosterManagement";
+import HospitalPublicPage from "./pages/hms/HospitalPublicPage";
+import { DomainRedirector } from "./pages/hms/DomainResolver";
 
 const queryClient = new QueryClient();
 
@@ -69,8 +71,10 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <DomainRedirector />
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/h/:slug" element={<HospitalPublicPage />} />
               <Route path="/consulting" element={<ConsultingPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/blog" element={<BlogPage />} />
