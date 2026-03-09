@@ -101,6 +101,7 @@ const App = () => (
                 <Route path="lab" element={<Laboratory />} />
                 <Route path="reception" element={<Reception />} />
                 <Route path="billing" element={<Billing />} />
+                <Route path="roster" element={<RosterManagement />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />

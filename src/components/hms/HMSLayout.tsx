@@ -13,6 +13,7 @@ const HMSLayout = () => {
     { name: "Laboratory", href: "/hms/lab", icon: TestTube },
     { name: "Reception", href: "/hms/reception", icon: Users },
     { name: "Billing", href: "/hms/billing", icon: CreditCard },
+    { name: "Roster & Shifts", href: "/hms/roster", icon: CalendarClock },
   ];
 
   return (
