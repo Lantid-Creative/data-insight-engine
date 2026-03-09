@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Hospital, Building2, Users, ShieldCheck, Activity } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const HMSLandingPage = () => {
   return (
