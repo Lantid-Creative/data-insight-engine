@@ -49,6 +49,14 @@ import PromptLibraryPage from "./pages/dashboard/PromptLibraryPage";
 import HMSLandingPage from "./pages/hms/HMSLandingPage";
 import HMSLoginPage from "./pages/hms/auth/HMSLoginPage";
 import HMSRegisterPage from "./pages/hms/auth/HMSRegisterPage";
+import HMSLayout from "./components/hms/HMSLayout";
+import AdminDashboard from "./pages/hms/departments/AdminDashboard";
+import DoctorPortal from "./pages/hms/departments/DoctorPortal";
+import NurseStation from "./pages/hms/departments/NurseStation";
+import Pharmacy from "./pages/hms/departments/Pharmacy";
+import Laboratory from "./pages/hms/departments/Laboratory";
+import Reception from "./pages/hms/departments/Reception";
+import Billing from "./pages/hms/departments/Billing";
 
 const queryClient = new QueryClient();
 
