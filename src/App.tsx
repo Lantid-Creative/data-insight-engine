@@ -50,7 +50,7 @@ import HMSLandingPage from "./pages/hms/HMSLandingPage";
 import HMSLoginPage from "./pages/hms/auth/HMSLoginPage";
 import HMSRegisterPage from "./pages/hms/auth/HMSRegisterPage";
 import HMSLayout from "./components/hms/HMSLayout";
-import AdminDashboard from "./pages/hms/departments/AdminDashboard";
+import HMSAdminDashboard from "./pages/hms/departments/AdminDashboard";
 import DoctorPortal from "./pages/hms/departments/DoctorPortal";
 import NurseStation from "./pages/hms/departments/NurseStation";
 import Pharmacy from "./pages/hms/departments/Pharmacy";
