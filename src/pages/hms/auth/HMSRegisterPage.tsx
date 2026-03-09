@@ -98,7 +98,8 @@ const HMSRegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 py-12">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 py-12 relative">
+      <div className="absolute top-4 right-4"><ThemeToggle /></div>
       <SEOHead title="Register Hospital | DataAfro HMS" description="Onboard your healthcare facility to DataAfro." />
       
       <div className="w-full max-w-xl space-y-6">
