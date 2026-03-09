@@ -761,6 +761,7 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
+          head_staff_id: string | null
           hospital_id: string | null
           id: string
           name: string
@@ -768,6 +769,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           description?: string | null
+          head_staff_id?: string | null
           hospital_id?: string | null
           id?: string
           name: string
@@ -775,11 +777,19 @@ export type Database = {
         Update: {
           created_at?: string | null
           description?: string | null
+          head_staff_id?: string | null
           hospital_id?: string | null
           id?: string
           name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "hms_departments_head_staff_id_fkey"
+            columns: ["head_staff_id"]
+            isOneToOne: false
+            referencedRelation: "hms_staff"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "hms_departments_hospital_id_fkey"
             columns: ["hospital_id"]
@@ -821,6 +831,64 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      hms_shifts: {
+        Row: {
+          created_at: string | null
+          department_id: string | null
+          end_time: string
+          hospital_id: string | null
+          id: string
+          notes: string | null
+          staff_id: string | null
+          start_time: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department_id?: string | null
+          end_time: string
+          hospital_id?: string | null
+          id?: string
+          notes?: string | null
+          staff_id?: string | null
+          start_time: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department_id?: string | null
+          end_time?: string
+          hospital_id?: string | null
+          id?: string
+          notes?: string | null
+          staff_id?: string | null
+          start_time?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hms_shifts_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "hms_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hms_shifts_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hms_hospitals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hms_shifts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "hms_staff"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hms_staff: {
         Row: {
@@ -1636,6 +1704,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_department_head: {
+        Args: { _department_id: string; _user_id: string }
         Returns: boolean
       }
       is_hospital_admin: {

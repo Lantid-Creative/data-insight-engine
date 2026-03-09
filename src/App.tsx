@@ -57,6 +57,7 @@ import Pharmacy from "./pages/hms/departments/Pharmacy";
 import Laboratory from "./pages/hms/departments/Laboratory";
 import Reception from "./pages/hms/departments/Reception";
 import Billing from "./pages/hms/departments/Billing";
+import RosterManagement from "./pages/hms/departments/RosterManagement";
 
 const queryClient = new QueryClient();
 
@@ -100,6 +101,7 @@ const App = () => (
                 <Route path="lab" element={<Laboratory />} />
                 <Route path="reception" element={<Reception />} />
                 <Route path="billing" element={<Billing />} />
+                <Route path="roster" element={<RosterManagement />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />

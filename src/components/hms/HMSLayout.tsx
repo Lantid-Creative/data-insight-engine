@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Hospital, LayoutDashboard, Stethoscope, UserRound, Pill, TestTube, Users, CreditCard, LogOut } from "lucide-react";
+import { Hospital, LayoutDashboard, Stethoscope, UserRound, Pill, TestTube, Users, CreditCard, LogOut, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const HMSLayout = () => {
@@ -13,6 +13,7 @@ const HMSLayout = () => {
     { name: "Laboratory", href: "/hms/lab", icon: TestTube },
     { name: "Reception", href: "/hms/reception", icon: Users },
     { name: "Billing", href: "/hms/billing", icon: CreditCard },
+    { name: "Roster & Shifts", href: "/hms/roster", icon: CalendarClock },
   ];
 
   return (
