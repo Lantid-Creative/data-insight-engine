@@ -91,6 +91,16 @@ const App = () => (
               <Route path="/hms" element={<HMSLandingPage />} />
               <Route path="/hms/login" element={<HMSLoginPage />} />
               <Route path="/hms/register" element={<HMSRegisterPage />} />
+              
+              <Route path="/hms" element={<ProtectedRoute><HMSLayout /></ProtectedRoute>}>
+                <Route path="admin" element={<AdminDashboard />} />
+                <Route path="doctor" element={<DoctorPortal />} />
+                <Route path="nurse" element={<NurseStation />} />
+                <Route path="pharmacy" element={<Pharmacy />} />
+                <Route path="lab" element={<Laboratory />} />
+                <Route path="reception" element={<Reception />} />
+                <Route path="billing" element={<Billing />} />
+              </Route>
 
               <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
