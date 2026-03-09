@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Hospital, Building2, Users, ShieldCheck, Activity } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const HMSLandingPage = () => {
   return (
@@ -19,6 +20,7 @@ const HMSLandingPage = () => {
             <span className="text-xl font-bold tracking-tight">DataAfro HMS</span>
           </div>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <Link to="/hms/login">
               <Button variant="ghost">Department Login</Button>
             </Link>

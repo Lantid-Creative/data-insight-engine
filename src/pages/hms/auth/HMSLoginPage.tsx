@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Hospital } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const HMSLoginPage = () => {
   const navigate = useNavigate();
@@ -18,7 +19,8 @@ const HMSLoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
+      <div className="absolute top-4 right-4"><ThemeToggle /></div>
       <SEOHead title="Staff Login | DataAfro HMS" description="Login portal for hospital staff and departments." />
       
       <div className="w-full max-w-md space-y-6">

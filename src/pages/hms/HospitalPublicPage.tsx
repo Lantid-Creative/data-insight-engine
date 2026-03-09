@@ -8,6 +8,7 @@ import { Hospital, MapPin, Phone, Mail, Users, Building2, ArrowRight, Shield } f
 import { motion } from "framer-motion";
 import SEOHead from "@/components/SEOHead";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function HospitalPublicPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -90,6 +91,7 @@ export default function HospitalPublicPage() {
             <span className="text-xl font-bold tracking-tight">{hospital.name}</span>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Link to="/hms/login">
               <Button variant="outline" size="sm">Staff Login</Button>
             </Link>

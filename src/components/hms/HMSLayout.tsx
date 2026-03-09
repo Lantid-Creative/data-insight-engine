@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { Hospital, LayoutDashboard, Stethoscope, UserRound, Pill, TestTube, Users, CreditCard, LogOut, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const HMSLayout = () => {
   const location = useLocation();
@@ -46,7 +47,8 @@ const HMSLayout = () => {
           })}
         </div>
         
-        <div className="p-4 border-t">
+        <div className="p-4 border-t space-y-2">
+          <ThemeToggle />
           <Button variant="outline" className="w-full justify-start gap-2" asChild>
             <Link to="/hms">
               <LogOut className="h-4 w-4" />
@@ -58,11 +60,12 @@ const HMSLayout = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 border-b bg-card flex items-center px-6 md:hidden">
+        <header className="h-14 border-b bg-card flex items-center justify-between px-6 md:hidden">
           <div className="flex items-center gap-2">
             <Hospital className="h-5 w-5 text-primary" />
             <span className="font-bold">DataAfro HMS</span>
           </div>
+          <ThemeToggle />
         </header>
         <main className="flex-1 overflow-y-auto p-6 bg-muted/10">
           <Outlet />
