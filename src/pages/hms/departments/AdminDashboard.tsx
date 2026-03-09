@@ -96,117 +96,123 @@ export default function AdminDashboard() {
           <p className="text-muted-foreground">Manage operations for {staffContext.hospital_name || 'your hospital'}.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline"><Settings className="mr-2 h-4 w-4" /> Settings</Button>
           <AssignHeadDialog hospitalId={hospitalId} departments={departments} staff={staffMembers} />
           <AddStaffDialog hospitalId={hospitalId} departments={departments} />
         </div>
       </div>
-      
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{staffMembers.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">{activeStaff} active members</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Departments</CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{departments.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Operational units</p>
-          </CardContent>
-        </Card>
 
-        {/* Temporary static cards until we build patient/appointment modules */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Patients</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground mt-1">Real-time data coming soon</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Appointments Today</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground mt-1">Real-time data coming soon</p>
-          </CardContent>
-        </Card>
-      </div>
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="branding" className="gap-1.5"><Globe className="w-3.5 h-3.5" /> Branding & Domain</TabsTrigger>
+        </TabsList>
 
-      <div className="grid gap-4 md:grid-cols-7">
-        <Card className="md:col-span-7">
-          <CardHeader>
-            <CardTitle>Staff Directory</CardTitle>
-            <CardDescription>All registered staff members and their roles.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {staffLoading ? (
-              <div className="py-4 text-center">Loading staff...</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Staff ID</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Head of Unit</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {staffMembers.length === 0 ? (
+        <TabsContent value="overview" className="space-y-6 mt-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{staffMembers.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">{activeStaff} active members</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Departments</CardTitle>
+                <Building className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{departments.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Operational units</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Patients</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">0</div>
+                <p className="text-xs text-muted-foreground mt-1">Real-time data coming soon</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Appointments Today</CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">0</div>
+                <p className="text-xs text-muted-foreground mt-1">Real-time data coming soon</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Staff Directory</CardTitle>
+              <CardDescription>All registered staff members and their roles.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {staffLoading ? (
+                <div className="py-4 text-center">Loading staff...</div>
+              ) : (
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
-                        No staff members found. Add some to get started.
-                      </TableCell>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Staff ID</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Head of Unit</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ) : (
-                    staffMembers.map((staff) => (
-                      <TableRow key={staff.id}>
-                        <TableCell className="font-medium">
-                          {staff.first_name} {staff.last_name}
-                        </TableCell>
-                        <TableCell>{staff.staff_id_number || '-'}</TableCell>
-                        <TableCell className="capitalize">{staff.role.replace('_', ' ')}</TableCell>
-                        <TableCell>{staff.hms_departments?.name || 'Unassigned'}</TableCell>
-                        <TableCell>
-                          {staff.hms_departments?.head_staff_id === staff.id ? (
-                            <Badge variant="outline" className="bg-primary/10 text-primary">Unit Head</Badge>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={staff.is_active ? "default" : "secondary"}>
-                            {staff.is_active ? "Active" : "Inactive"}
-                          </Badge>
+                  </TableHeader>
+                  <TableBody>
+                    {staffMembers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
+                          No staff members found. Add some to get started.
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                    ) : (
+                      staffMembers.map((staff) => (
+                        <TableRow key={staff.id}>
+                          <TableCell className="font-medium">
+                            {staff.first_name} {staff.last_name}
+                          </TableCell>
+                          <TableCell>{staff.staff_id_number || '-'}</TableCell>
+                          <TableCell className="capitalize">{staff.role.replace('_', ' ')}</TableCell>
+                          <TableCell>{staff.hms_departments?.name || 'Unassigned'}</TableCell>
+                          <TableCell>
+                            {staff.hms_departments?.head_staff_id === staff.id ? (
+                              <Badge variant="outline" className="bg-primary/10 text-primary">Unit Head</Badge>
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={staff.is_active ? "default" : "secondary"}>
+                              {staff.is_active ? "Active" : "Inactive"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="branding" className="mt-4">
+          <HospitalBrandingSettings hospitalId={hospitalId} hospitalName={staffContext.hospital_name || "Hospital"} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
