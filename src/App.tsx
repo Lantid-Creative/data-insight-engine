@@ -57,6 +57,7 @@ import Pharmacy from "./pages/hms/departments/Pharmacy";
 import Laboratory from "./pages/hms/departments/Laboratory";
 import Reception from "./pages/hms/departments/Reception";
 import Billing from "./pages/hms/departments/Billing";
+import RosterManagement from "./pages/hms/departments/RosterManagement";
 
 const queryClient = new QueryClient();
 
