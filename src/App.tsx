@@ -93,7 +93,7 @@ const App = () => (
               <Route path="/hms/register" element={<HMSRegisterPage />} />
               
               <Route path="/hms" element={<ProtectedRoute><HMSLayout /></ProtectedRoute>}>
-                <Route path="admin" element={<AdminDashboard />} />
+                <Route path="admin" element={<HMSAdminDashboard />} />
                 <Route path="doctor" element={<DoctorPortal />} />
                 <Route path="nurse" element={<NurseStation />} />
                 <Route path="pharmacy" element={<Pharmacy />} />
