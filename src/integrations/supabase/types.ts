@@ -757,6 +757,128 @@ export type Database = {
           },
         ]
       }
+      hms_departments: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          hospital_id: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          hospital_id?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          hospital_id?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hms_departments_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hms_hospitals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hms_hospitals: {
+        Row: {
+          capacity: number | null
+          contact_email: string | null
+          created_at: string | null
+          id: string
+          name: string
+          owner_id: string | null
+          registration_number: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          capacity?: number | null
+          contact_email?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          owner_id?: string | null
+          registration_number?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          capacity?: number | null
+          contact_email?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          owner_id?: string | null
+          registration_number?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      hms_staff: {
+        Row: {
+          created_at: string | null
+          department_id: string | null
+          first_name: string
+          hospital_id: string | null
+          id: string
+          is_active: boolean | null
+          last_name: string
+          role: Database["public"]["Enums"]["hms_staff_role"]
+          staff_id_number: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department_id?: string | null
+          first_name: string
+          hospital_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_name: string
+          role: Database["public"]["Enums"]["hms_staff_role"]
+          staff_id_number?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department_id?: string | null
+          first_name?: string
+          hospital_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_name?: string
+          role?: Database["public"]["Enums"]["hms_staff_role"]
+          staff_id_number?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hms_staff_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "hms_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hms_staff_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hms_hospitals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           activity_email: boolean
@@ -1516,6 +1638,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_hospital_admin: {
+        Args: { _hospital_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_hospital_staff: {
+        Args: { _hospital_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_project_owner: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
@@ -1535,6 +1665,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      hms_staff_role:
+        | "hospital_admin"
+        | "doctor"
+        | "nurse"
+        | "pharmacist"
+        | "lab_technician"
+        | "receptionist"
+        | "biller"
       team_role: "owner" | "admin" | "member" | "viewer"
     }
     CompositeTypes: {
@@ -1664,6 +1802,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      hms_staff_role: [
+        "hospital_admin",
+        "doctor",
+        "nurse",
+        "pharmacist",
+        "lab_technician",
+        "receptionist",
+        "biller",
+      ],
       team_role: ["owner", "admin", "member", "viewer"],
     },
   },
