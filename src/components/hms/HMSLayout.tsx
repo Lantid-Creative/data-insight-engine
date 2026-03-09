@@ -60,11 +60,12 @@ const HMSLayout = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 border-b bg-card flex items-center px-6 md:hidden">
+        <header className="h-14 border-b bg-card flex items-center justify-between px-6 md:hidden">
           <div className="flex items-center gap-2">
             <Hospital className="h-5 w-5 text-primary" />
             <span className="font-bold">DataAfro HMS</span>
           </div>
+          <ThemeToggle />
         </header>
         <main className="flex-1 overflow-y-auto p-6 bg-muted/10">
           <Outlet />
