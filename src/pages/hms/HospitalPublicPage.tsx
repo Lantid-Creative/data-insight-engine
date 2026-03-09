@@ -8,6 +8,7 @@ import { Hospital, MapPin, Phone, Mail, Users, Building2, ArrowRight, Shield } f
 import { motion } from "framer-motion";
 import SEOHead from "@/components/SEOHead";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function HospitalPublicPage() {
   const { slug } = useParams<{ slug: string }>();
