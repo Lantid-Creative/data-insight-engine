@@ -4,15 +4,38 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import SEOHead from "@/components/SEOHead";
+import { useHospitalContext } from "@/hooks/useHospitalContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+function getStatus(stock: number, threshold: number): string {
+  if (stock <= threshold * 0.25) return "Critical";
+  if (stock < threshold) return "Low Stock";
+  return "Good";
+}
 
 export default function Pharmacy() {
-  const inventory = [
-    { id: "MED-001", name: "Amoxicillin 500mg", stock: 1250, threshold: 500, status: "Good" },
-    { id: "MED-002", name: "Lisinopril 250mg", stock: 320, threshold: 400, status: "Low Stock" },
-    { id: "MED-003", name: "Ibuprofen 10mg", stock: 85, threshold: 200, status: "Critical" },
-    { id: "MED-004", name: "Metformin 400mg", stock: 2100, threshold: 1000, status: "Good" },
-    { id: "MED-005", name: "Omeprazole 500mg", stock: 450, threshold: 500, status: "Low Stock" },
-  ];
+  const { data: ctx, isLoading: ctxLoading } = useHospitalContext();
+  const hospitalId = ctx?.hospital_id;
+
+  const { data: inventory = [], isLoading } = useQuery({
+    queryKey: ["hms_inventory", hospitalId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hms_inventory")
+        .select("*")
+        .eq("hospital_id", hospitalId!)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!hospitalId,
+  });
+
+  const criticalCount = inventory.filter(i => getStatus(i.stock, i.threshold) === "Critical").length;
+  const lowStockCount = inventory.filter(i => getStatus(i.stock, i.threshold) === "Low Stock").length;
+
+  if (ctxLoading) return <div className="p-8">Loading pharmacy context...</div>;
 
   return (
     <div className="space-y-6">
@@ -30,10 +53,10 @@ export default function Pharmacy() {
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[
-          { title: "Pending Prescriptions", value: "15", icon: FileText, desc: "Needs fulfillment" },
-          { title: "Low Stock Items", value: "8", icon: AlertTriangle, desc: "Below threshold" },
-          { title: "Total Inventory Items", value: "1,240", icon: Pill, desc: "In database" },
-          { title: "Orders Placed", value: "5", icon: ShoppingCart, desc: "Awaiting delivery" },
+          { title: "Pending Prescriptions", value: "0", icon: FileText, desc: "Needs fulfillment" },
+          { title: "Low Stock Items", value: String(lowStockCount + criticalCount), icon: AlertTriangle, desc: `${criticalCount} critical` },
+          { title: "Total Inventory Items", value: String(inventory.length), icon: Pill, desc: "In database" },
+          { title: "Orders Placed", value: "0", icon: ShoppingCart, desc: "Awaiting delivery" },
         ].map((stat) => (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -48,17 +71,21 @@ export default function Pharmacy() {
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-7">
-        <Card className="md:col-span-7">
-          <CardHeader>
-            <CardTitle>Inventory Status</CardTitle>
-            <CardDescription>Current medication stock levels and alerts.</CardDescription>
-          </CardHeader>
-          <CardContent>
+      <Card>
+        <CardHeader>
+          <CardTitle>Inventory Status</CardTitle>
+          <CardDescription>Current medication stock levels and alerts.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="py-4 text-center text-muted-foreground">Loading inventory...</div>
+          ) : inventory.length === 0 ? (
+            <div className="py-4 text-center text-muted-foreground">No inventory items found. Add medications to get started.</div>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Item ID</TableHead>
+                  <TableHead>Item Code</TableHead>
                   <TableHead>Medication Name</TableHead>
                   <TableHead>Current Stock</TableHead>
                   <TableHead>Threshold</TableHead>
@@ -67,32 +94,35 @@ export default function Pharmacy() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {inventory.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.id}</TableCell>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.stock}</TableCell>
-                    <TableCell>{item.threshold}</TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={
-                          item.status === "Critical" ? "destructive" : 
-                          item.status === "Low Stock" ? "secondary" : "default"
-                        }
-                      >
-                        {item.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="ghost">Reorder</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {inventory.map((item) => {
+                  const status = getStatus(item.stock, item.threshold);
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.item_code}</TableCell>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell>{item.stock}</TableCell>
+                      <TableCell>{item.threshold}</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={
+                            status === "Critical" ? "destructive" : 
+                            status === "Low Stock" ? "secondary" : "default"
+                          }
+                        >
+                          {status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="ghost">Reorder</Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
