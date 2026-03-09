@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,15 @@ import { Hospital } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 
 const HMSLoginPage = () => {
+  const navigate = useNavigate();
+  const [department, setDepartment] = useState("admin");
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Simulate login and navigate to the selected department
+    navigate(`/hms/${department}`);
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <SEOHead title="Staff Login | DataAfro HMS" description="Login portal for hospital staff and departments." />
