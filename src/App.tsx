@@ -49,6 +49,14 @@ import PromptLibraryPage from "./pages/dashboard/PromptLibraryPage";
 import HMSLandingPage from "./pages/hms/HMSLandingPage";
 import HMSLoginPage from "./pages/hms/auth/HMSLoginPage";
 import HMSRegisterPage from "./pages/hms/auth/HMSRegisterPage";
+import HMSLayout from "./components/hms/HMSLayout";
+import HMSAdminDashboard from "./pages/hms/departments/AdminDashboard";
+import DoctorPortal from "./pages/hms/departments/DoctorPortal";
+import NurseStation from "./pages/hms/departments/NurseStation";
+import Pharmacy from "./pages/hms/departments/Pharmacy";
+import Laboratory from "./pages/hms/departments/Laboratory";
+import Reception from "./pages/hms/departments/Reception";
+import Billing from "./pages/hms/departments/Billing";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +91,16 @@ const App = () => (
               <Route path="/hms" element={<HMSLandingPage />} />
               <Route path="/hms/login" element={<HMSLoginPage />} />
               <Route path="/hms/register" element={<HMSRegisterPage />} />
+              
+              <Route path="/hms" element={<ProtectedRoute><HMSLayout /></ProtectedRoute>}>
+                <Route path="admin" element={<HMSAdminDashboard />} />
+                <Route path="doctor" element={<DoctorPortal />} />
+                <Route path="nurse" element={<NurseStation />} />
+                <Route path="pharmacy" element={<Pharmacy />} />
+                <Route path="lab" element={<Laboratory />} />
+                <Route path="reception" element={<Reception />} />
+                <Route path="billing" element={<Billing />} />
+              </Route>
 
               <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
