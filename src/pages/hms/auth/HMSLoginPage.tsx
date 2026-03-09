@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Hospital } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const HMSLoginPage = () => {
   const navigate = useNavigate();
