@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Hospital, LayoutDashboard, Stethoscope, UserRound, Pill, TestTube, Users, CreditCard, LogOut } from "lucide-react";
+import { Hospital, LayoutDashboard, Stethoscope, UserRound, Pill, TestTube, Users, CreditCard, LogOut, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const HMSLayout = () => {
