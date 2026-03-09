@@ -757,6 +757,74 @@ export type Database = {
           },
         ]
       }
+      hms_appointments: {
+        Row: {
+          appointment_time: string
+          created_at: string | null
+          department_id: string | null
+          doctor_id: string | null
+          hospital_id: string | null
+          id: string
+          patient_id: string | null
+          status: string | null
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          appointment_time: string
+          created_at?: string | null
+          department_id?: string | null
+          doctor_id?: string | null
+          hospital_id?: string | null
+          id?: string
+          patient_id?: string | null
+          status?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          appointment_time?: string
+          created_at?: string | null
+          department_id?: string | null
+          doctor_id?: string | null
+          hospital_id?: string | null
+          id?: string
+          patient_id?: string | null
+          status?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hms_appointments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "hms_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hms_appointments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "hms_staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hms_appointments_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hms_hospitals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hms_appointments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "hms_patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hms_departments: {
         Row: {
           created_at: string | null
@@ -831,6 +899,103 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      hms_inventory: {
+        Row: {
+          created_at: string | null
+          hospital_id: string | null
+          id: string
+          item_code: string
+          name: string
+          status: string | null
+          stock: number
+          threshold: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          hospital_id?: string | null
+          id?: string
+          item_code: string
+          name: string
+          status?: string | null
+          stock?: number
+          threshold?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          hospital_id?: string | null
+          id?: string
+          item_code?: string
+          name?: string
+          status?: string | null
+          stock?: number
+          threshold?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hms_inventory_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hms_hospitals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hms_patients: {
+        Row: {
+          blood_group: string | null
+          contact_number: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          first_name: string
+          gender: string | null
+          hospital_id: string | null
+          id: string
+          last_name: string
+          patient_id_number: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          blood_group?: string | null
+          contact_number?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          first_name: string
+          gender?: string | null
+          hospital_id?: string | null
+          id?: string
+          last_name: string
+          patient_id_number: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          blood_group?: string | null
+          contact_number?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          first_name?: string
+          gender?: string | null
+          hospital_id?: string | null
+          id?: string
+          last_name?: string
+          patient_id_number?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hms_patients_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hms_hospitals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hms_shifts: {
         Row: {
