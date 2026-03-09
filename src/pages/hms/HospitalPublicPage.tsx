@@ -91,6 +91,7 @@ export default function HospitalPublicPage() {
             <span className="text-xl font-bold tracking-tight">{hospital.name}</span>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Link to="/hms/login">
               <Button variant="outline" size="sm">Staff Login</Button>
             </Link>
