@@ -29,6 +29,7 @@ const Index = () => {
       <FileTypes />
       <IntelligenceSuite />
       <UseCases />
+      <HMSPromo />
       <Testimonials />
       <TrustSecurity />
       <Pricing />
