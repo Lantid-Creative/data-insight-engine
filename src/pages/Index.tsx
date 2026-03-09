@@ -15,6 +15,7 @@ import FAQ from "@/components/landing/FAQ";
 import Community from "@/components/landing/Community";
 import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
+import HMSPromo from "@/components/landing/HMSPromo";
 
 const Index = () => {
   return (
