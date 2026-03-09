@@ -1,13 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, Activity, Building, Calendar, Settings } from "lucide-react";
+import { Users, Activity, Building, Calendar, Settings, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SEOHead from "@/components/SEOHead";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AddStaffDialog } from "@/components/hms/admin/AddStaffDialog";
 import { AssignHeadDialog } from "@/components/hms/admin/AssignHeadDialog";
+import HospitalBrandingSettings from "@/components/hms/admin/HospitalBrandingSettings";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function AdminDashboard() {
