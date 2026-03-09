@@ -47,7 +47,8 @@ const HMSLayout = () => {
           })}
         </div>
         
-        <div className="p-4 border-t">
+        <div className="p-4 border-t space-y-2">
+          <ThemeToggle />
           <Button variant="outline" className="w-full justify-start gap-2" asChild>
             <Link to="/hms">
               <LogOut className="h-4 w-4" />
